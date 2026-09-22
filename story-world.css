@@ -1,0 +1,20 @@
+.region-nav{position:absolute;z-index:5;bottom:160px;left:50%;transform:translateX(-50%);display:flex;gap:5px;padding:4px;border-radius:24px;background:#f0f2e8a6;backdrop-filter:blur(12px);white-space:nowrap}.region-nav button{font:inherit;font-size:12px;color:#52624c;background:transparent;border:0;border-radius:20px;padding:9px 17px;min-height:36px;cursor:pointer}.region-nav button[aria-pressed=true]{background:#fffdf0cf;color:#344d38}.world-hint{bottom:210px;font-size:10px;opacity:.7}.night .region-nav{background:#233c48a8}.night .region-nav button{color:#d6e2d2}.night .region-nav button[aria-pressed=true]{background:#6e8a7d60}.app.focused .region-nav{display:none}.home-copy{pointer-events:none}.home-copy h1{font-size:24px}.world-tools{opacity:.8}.night .playing-title h1,.night .playing-title p{text-shadow:0 1px 10px #172b36}
+.scene:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(240,244,225,.86) 0%,rgba(240,244,225,.64) 17%,transparent 34%,transparent 80%,rgba(234,239,216,.2) 100%)}.night .scene:after{background:linear-gradient(180deg,rgba(20,38,47,.86),rgba(20,38,47,.6) 17%,transparent 34%)}.home-copy h1,.playing-title h1{color:#344e40}.night .home-copy h1,.night .playing-title h1{color:#e6eddb}
+
+/* Keep the interactive controls while presenting an unobstructed garden. */
+.home-copy .eyebrow,.home-copy h1,.home-copy .description,.home-copy .theme-line,.home-copy .home-note,.playing-title,.brand{display:none!important}.topbar{justify-content:flex-end}.scene:after{display:none}.scene .vignette{display:none!important}
+
+/* Let the garden do the talking; these hints remain in the DOM for scripts. */
+.home-note,.world-hint,.floating-tip,.footer-note,.scene-caption{display:none!important}
+
+/* Both sound tabs share the same compact, scrollable half-sheet. */
+#soundOverlay .sheet{height:50svh;max-height:50svh;box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column;padding-top:13px}
+#soundOverlay .sheet-drag-handle{width:38px;height:5px;flex:none;border-radius:99px;background:color-mix(in srgb,var(--ink) 24%,transparent);margin:0 auto 12px;touch-action:none;cursor:grab}
+#soundOverlay .sheet-drag-handle:active{cursor:grabbing}
+#soundOverlay .sheet-head,#soundOverlay .tabs{flex:none}
+#soundOverlay .sheet-head h2{touch-action:none}
+#soundOverlay #soundPanel,#soundOverlay #scenePanel{min-height:0;flex:1;overflow-y:auto;overscroll-behavior:contain;padding:0 2px}
+#soundOverlay .sound-name small,#soundOverlay .sheet-sub,#soundOverlay .weather-description,#soundOverlay .environment-note,#soundOverlay .slider-ends,#soundOverlay .sheet-foot span,#soundOverlay .wind-feature p{display:none!important}
+
+/* An optional timer is a compact bottom sheet, never a required session step. */
+.timer-button{border:0;background:transparent;color:inherit;font:inherit;font-variant-numeric:tabular-nums;min-height:32px;padding:0 4px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}.timer-sheet{height:50svh;max-height:50svh;box-sizing:border-box;border-radius:28px 28px 0 0}.timer-options{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin:20px 0}.timer-options button,.timer-custom button,.timer-cancel{min-height:46px;border:1px solid var(--line);border-radius:23px;background:transparent;color:inherit;font:inherit}.timer-options button[aria-pressed=true]{background:var(--ink);color:var(--paper)}.timer-custom{display:grid;grid-template-columns:1fr 92px;gap:8px;align-items:center;font-size:13px}.timer-custom input{grid-column:1;border:1px solid var(--line);border-radius:12px;background:transparent;color:inherit;font:inherit;padding:12px}.timer-custom button{grid-column:2;grid-row:1 / span 2}.timer-cancel{width:100%;margin-top:24px;color:var(--muted)}

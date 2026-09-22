@@ -1,0 +1,37 @@
+{
+  "pack": "Quaternius Stylized Nature MegaKit — Standard free subset",
+  "license": "CC0-1.0",
+  "source": "https://quaternius.com/packs/stylizednaturemegakit.html",
+  "format": "glTF 2.0 with external .bin buffers and PNG textures",
+  "root": "gltf",
+  "recommended": {
+    "trees": [
+      { "id": "treeCanopyTall", "file": "gltf/CommonTree_3.gltf", "heightY": 9.18, "notes": "tallest rounded broadleaf canopy; main focal tree" },
+      { "id": "treeCanopyWide", "file": "gltf/CommonTree_1.gltf", "heightY": 7.02, "notes": "broad, friendly crown; good repeated hero tree" },
+      { "id": "treeCanopySoft", "file": "gltf/CommonTree_2.gltf", "heightY": 7.40, "notes": "full rounded canopy; companion variation" },
+      { "id": "treeCanopySmall", "file": "gltf/CommonTree_5.gltf", "heightY": 6.76, "notes": "compact broadleaf silhouette; background/midground" }
+    ],
+    "flowers": [
+      { "id": "flowerClusterPink", "file": "gltf/Flower_4_Group.gltf", "heightY": 2.43, "notes": "tall group, leaf + flower textures" },
+      { "id": "flowerClusterWarm", "file": "gltf/Flower_3_Group.gltf", "heightY": 2.02, "notes": "soft cluster, leaf + flower textures" },
+      { "id": "floweringBush", "file": "gltf/Bush_Common_Flowers.gltf", "heightY": 1.35, "notes": "low flowering shrub" }
+    ],
+    "grass": [
+      { "id": "grassTall", "file": "gltf/Grass_Common_Tall.gltf", "heightY": 1.84, "notes": "default garden ground-cover clump" },
+      { "id": "grassWispy", "file": "gltf/Grass_Wispy_Tall.gltf", "heightY": 1.64, "notes": "airier silhouette for variation" }
+    ],
+    "rocks": [
+      { "id": "rockGardenA", "file": "gltf/Rock_Medium_1.gltf", "heightY": 1.99, "notes": "rounded medium garden rock" },
+      { "id": "rockGardenB", "file": "gltf/Rock_Medium_3.gltf", "heightY": 2.00, "notes": "larger irregular garden rock" }
+    ]
+  },
+  "sharedTextures": [
+    "gltf/Bark_NormalTree.png",
+    "gltf/Bark_NormalTree_Normal.png",
+    "gltf/Leaves_NormalTree_C.png",
+    "gltf/Leaves.png",
+    "gltf/Flowers.png",
+    "gltf/Grass.png",
+    "gltf/Rocks_Diffuse.png"
+  ]
+}
