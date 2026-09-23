@@ -24,3 +24,14 @@
 .sheet{border:1px solid #d6decc;box-shadow:0 18px 60px #27432f22}.sheet-head h2{color:var(--ink)}.tabs{background:#e6ebdf;padding:4px}.tabs button[aria-pressed=true]{background:#698568;color:#f8f6e9;box-shadow:none}.sound-icon{background:#e6ebdf;color:#537052}.quick-actions button{background:#f7f5e9;border-color:#d3dccb;color:#526b56}.quick-actions button:hover{background:#e8eee1;filter:none}
 .environment-overlay .sheet{border-color:#d6decc}.weather-options button{background:#f8f5e9}.weather-options button[aria-pressed=true]{background:#e1eadc;border-color:#6f8968;color:#3e5c47}
 @media(max-width:520px){.brand{padding:7px 10px 7px 8px}.brand small{display:none}.top-actions{padding:3px}.top-actions .round,.top-actions .pill{width:38px;height:38px;min-height:38px}.world-tools{right:12px}.world-tools button{width:34px;height:34px}.region-nav{bottom:151px}.home-note{bottom:112px}}
+
+/* Visible welcome layer for the actual 3D home screen. */
+.home-copy{display:block!important;top:100px;left:24px;right:auto;max-width:235px;text-align:left;pointer-events:none;z-index:4}
+.home-copy .eyebrow{display:block!important;margin:0 0 8px;color:#f6f3e3;font-size:10px;letter-spacing:2px;text-shadow:0 1px 6px #294735;opacity:.9}
+.home-copy h1{display:block!important;margin:0;color:#f8f4e4;font-family:"Songti SC","STSong",serif;font-size:26px;line-height:1.35;letter-spacing:2px;text-shadow:0 2px 10px #294735;white-space:nowrap}
+.home-copy .description{display:none!important}.home-copy .theme-line{display:flex!important;margin:13px 0 0;padding:6px 10px;width:max-content;max-width:220px;border:1px solid #ffffff52;border-radius:13px;background:#405f4ca6;color:#f3f1e2;font-size:10px;letter-spacing:.4px;backdrop-filter:blur(9px);box-shadow:0 4px 14px #29473518}.home-copy .live-dot{width:6px;height:6px;background:#d6dcaa;box-shadow:0 0 0 3px #d6dcaa30}
+.home-copy .primary{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);width:calc(100% - 64px);max-width:380px;min-height:60px;border-radius:18px;font-size:14px}
+.home-copy .home-note{display:none!important}
+.topbar{z-index:8}.world-tools{z-index:8}.region-nav{z-index:8}.asset-credits{z-index:8}
+.region-nav button{min-width:67px}.region-nav button[aria-pressed=true]{font-weight:600}
+@media(max-width:520px){.home-copy{top:94px;left:20px}.home-copy h1{font-size:23px}.home-copy .theme-line{margin-top:10px}.home-copy .primary{bottom:72px;width:calc(100% - 52px)} }
