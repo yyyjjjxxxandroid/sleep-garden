@@ -13,9 +13,9 @@ const nGLSL=`float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758
 class StoryWorld extends BaseWorld{
   constructor(opts){
     super(opts);
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));this.renderer.toneMappingExposure=1.02;
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));this.renderer.toneMappingExposure=.96;
     this.sun.shadow.mapSize.set(2048,2048);Object.assign(this.sun.shadow.camera,{left:-24,right:24,top:24,bottom:-24,near:.1,far:90});this.sun.shadow.camera.updateProjectionMatrix();this.sun.shadow.normalBias=.035;this.sun.shadow.bias=-.00018;
-    this.sun.position.set(-15,24,11);this.scene.fog.density=.007;
+    this.sun.position.set(-17,26,13);this.scene.fog.density=.0082;
     const pmrem=new T.PMREMGenerator(this.renderer);this.scene.environment=pmrem.fromScene(new RoomEnvironment(),.08).texture;pmrem.dispose();this.scene.environmentIntensity=.22;
     this.controls.maxDistance=70;this.controls.minDistance=3.6;this.controls.minPolarAngle=.34;this.controls.maxPolarAngle=Math.PI*.465;
     this.buildNavigation();
@@ -31,13 +31,13 @@ class StoryWorld extends BaseWorld{
   pathX(z){return 2.6+Math.sin(z*.16)*2.2+(z<-5?(-z-5)*.24:0)}
   buildTerrain(){
     const geo=new T.PlaneGeometry(170,170,180,180);geo.rotateX(-Math.PI/2);const p=geo.attributes.position,colors=[];
-    const grass=new T.Color('#91ad77'),dark=new T.Color('#76956a'),sand=new T.Color('#cab998');
+    const grass=new T.Color('#8fa77e'),dark=new T.Color('#6d886d'),sand=new T.Color('#c5b792');
     for(let i=0;i<p.count;i++){
       const x=p.getX(i),z=p.getZ(i);p.setY(i,this.groundHeight(x,z));const a=.5+.25*Math.sin(x*.3+Math.sin(z*.2))+.2*Math.cos(z*.24-x*.1);const c=grass.clone().lerp(dark,a*.55);
       const pathDist=Math.abs(x-this.pathX(z)),pathBlend=(1-T.MathUtils.smoothstep(pathDist,.5,1.25))*T.MathUtils.smoothstep(28-Math.abs(z),0,4);
       c.lerp(sand,pathBlend*.82);const shore=Math.sqrt(((x+3.5)/5.6)**2+((z+3.5)/3.8)**2);c.lerp(new T.Color('#b0b38c'),(1-T.MathUtils.smoothstep(Math.abs(shore-1),.03,.19))*.7);colors.push(c.r,c.g,c.b);
     }geo.setAttribute('color',new T.Float32BufferAttribute(colors,3));geo.computeVertexNormals();
-    const mat=new T.MeshStandardMaterial({vertexColors:true,roughness:1});mat.onBeforeCompile=s=>{s.vertexShader='varying vec3 gardenP;\n'+s.vertexShader;s.vertexShader=s.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ngardenP=position;');s.fragmentShader='varying vec3 gardenP;\n'+nGLSL+s.fragmentShader;s.fragmentShader=s.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\nfloat grain=fbm(gardenP.xz*4.);diffuseColor.rgb*=.90+grain*.19;')};this.terrain=this.mesh(geo,mat);
+    const mat=new T.MeshStandardMaterial({vertexColors:true,roughness:1});mat.onBeforeCompile=s=>{s.vertexShader='varying vec3 gardenP;\n'+s.vertexShader;s.vertexShader=s.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ngardenP=position;');s.fragmentShader='varying vec3 gardenP;\n'+nGLSL+s.fragmentShader;s.fragmentShader=s.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\nfloat grain=fbm(gardenP.xz*4.);diffuseColor.rgb*=.92+grain*.12;')};this.terrain=this.mesh(geo,mat);
     // Layered ridgelines wrap the distant landscape; each is an actual terrain mesh.
     for(let layer=0;layer<3;layer++){
       const g=new T.PlaneGeometry(240,95,70,26);g.rotateX(-Math.PI/2);const pp=g.attributes.position;
@@ -69,7 +69,7 @@ class StoryWorld extends BaseWorld{
     T.Cache.enabled=true;const bundle=window.STORY_ASSETS,loader=new GLTFLoader();
     const entries=Object.entries(bundle.models);
     await Promise.all(entries.map(async([name,json])=>{const data=JSON.parse(JSON.stringify(json));for(const b of data.buffers||[])b.uri=bundle.files[b.uri];for(const im of data.images||[]){im.uri=bundle.files[im.uri];im.mimeType='image/webp'}this.models[name]=await loader.parseAsync(JSON.stringify(data),'')}));
-    for(const[name,gltf]of Object.entries(this.models)){gltf.scene.traverse(o=>{if(!o.isMesh)return;o.castShadow=true;o.receiveShadow=true;const m=o.material.clone();m.roughness=.88;m.metalness=0;m.envMapIntensity=.25;if(m.normalScale)m.normalScale.set(.28,.28);if(m.map){m.map.anisotropy=4;m.map.colorSpace=T.SRGBColorSpace}m.alphaTest=Math.max(m.alphaTest||0,.32);const foliage=/Leaves|Grass|Flowers/i.test(m.name);if(foliage){m.side=T.DoubleSide;m.shadowSide=T.DoubleSide;m.emissive.set('#78955f');m.emissiveIntensity=.045;o.geometry.computeBoundingBox();const b=o.geometry.boundingBox;o.material=this.windMaterial(m,b.max.y-b.min.y,b.min.y,name.startsWith('CommonTree')?.22:.10);o.customDepthMaterial=new T.MeshDepthMaterial({depthPacking:T.RGBADepthPacking,map:m.map,alphaTest:m.alphaTest,side:T.DoubleSide});o.customDepthMaterial.onBeforeCompile=o.material.userData.windPatch;o.customDepthMaterial.customProgramCacheKey=o.material.customProgramCacheKey;}else o.material=m;})}
+    for(const[name,gltf]of Object.entries(this.models)){gltf.scene.traverse(o=>{if(!o.isMesh)return;o.castShadow=true;o.receiveShadow=true;const m=o.material.clone();m.roughness=.88;m.metalness=0;m.envMapIntensity=.20;if(m.normalScale)m.normalScale.set(.28,.28);if(m.map){m.map.anisotropy=4;m.map.colorSpace=T.SRGBColorSpace}m.alphaTest=Math.max(m.alphaTest||0,.32);const foliage=/Leaves|Grass|Flowers/i.test(m.name);if(foliage){m.side=T.DoubleSide;m.shadowSide=T.DoubleSide;m.emissive.set('#687f5e');m.emissiveIntensity=.022;o.geometry.computeBoundingBox();const b=o.geometry.boundingBox;o.material=this.windMaterial(m,b.max.y-b.min.y,b.min.y,name.startsWith('CommonTree')?.22:.10);o.customDepthMaterial=new T.MeshDepthMaterial({depthPacking:T.RGBADepthPacking,map:m.map,alphaTest:m.alphaTest,side:T.DoubleSide});o.customDepthMaterial.onBeforeCompile=o.material.userData.windPatch;o.customDepthMaterial.customProgramCacheKey=o.material.customProgramCacheKey;}else o.material=m;})}
     this.staticRoots=[];this.place=(name,x,z,height,angle=rand()*6.28,options={})=>{
       const o=this.models[name].scene.clone(true),box=new T.Box3().setFromObject(o),s=height/(box.max.y-box.min.y),group=new T.Group();o.scale.setScalar(s);o.position.y=-box.min.y*s;group.add(o);group.position.set(x,this.groundHeight(x,z)+(options.lift||0),z);group.rotation.y=angle;if(options.width){group.scale.x=options.width;group.scale.z=options.width}this.scene.add(group);if(!options.dynamic)this.staticRoots.push(group);return group;
     };
@@ -84,11 +84,11 @@ class StoryWorld extends BaseWorld{
     for(let j=0;j<groups.length;j++){const [gx,gz]=groups[j];for(let i=0;i<4;i++){const x=gx+(rand()-.5)*10,z=gz+(rand()-.5)*10;tree(['CommonTree_1','CommonTree_2','CommonTree_3','CommonTree_5'][(j+i)%4],x,z,7+rand()*7)}}
     const flowerBeds=[[-8,2,2.3],[-5,3,2],[-8,-8,2.3],[7,0,2.2],[9,5,2.8],[-5,10,2.4],[5,11,2.5],[15,-12,4.3],[18,-7,3.3],[-9,-21,3]];
     flowerBeds.push([-7,7,2.5],[7,8,2.4],[-10,-2,2],[2,-8,2]);
-    for(let bi=0;bi<flowerBeds.length;bi++){const [x,z,r]=flowerBeds[bi];for(let i=0;i<30;i++){const a=rand()*6.28,rr=Math.sqrt(rand())*r;const px=x+Math.cos(a)*rr,pz=z+Math.sin(a)*rr;if(this.inPond(px,pz))continue;this.place(i%3?'Flower_4_Group':'Flower_3_Group',px,pz,.48+rand()*.52)}}
+    for(let bi=0;bi<flowerBeds.length;bi++){const [x,z,r]=flowerBeds[bi];const count=bi>9?14:19;for(let i=0;i<count;i++){const a=rand()*6.28,rr=Math.sqrt(rand())*r;const px=x+Math.cos(a)*rr,pz=z+Math.sin(a)*rr;if(this.inPond(px,pz))continue;this.place(i%3?'Flower_4_Group':'Flower_3_Group',px,pz,.42+rand()*.43)}}
     for(let i=0;i<26;i++){const x=-38+i*3,z=-43+Math.sin(i*.8)*5;tree('CommonTree_2',x,z,9+rand()*4,1.2)}
     for(let i=0;i<35;i++){const a=rand()*6.28,r=12+rand()*21,x=Math.cos(a)*r,z=Math.sin(a)*r;if(z>14&&Math.abs(x)<13)continue;this.place('Bush_Common_Flowers',x,z,.6+rand()*.65)}
     // Dense patches, with the lawn and the path deliberately left quiet.
-    for(let i=0;i<650;i++){let x=(rand()-.5)*62,z=(rand()-.5)*62;if(this.inPond(x,z)||Math.abs(x-this.pathX(z))<1.2)continue;const centre=Math.hypot(x-1,z-3);if(centre<5.8&&rand()<.9)continue;if(z>14&&Math.abs(x)<9)continue;this.place(i%3?'Grass_Common_Tall':'Grass_Wispy_Tall',x,z,.18+rand()*.43)}
+    for(let i=0;i<430;i++){let x=(rand()-.5)*62,z=(rand()-.5)*62;if(this.inPond(x,z)||Math.abs(x-this.pathX(z))<1.2)continue;const centre=Math.hypot(x-1,z-3);if(centre<6.8&&rand()<.94)continue;if(z>14&&Math.abs(x)<9)continue;this.place(i%3?'Grass_Common_Tall':'Grass_Wispy_Tall',x,z,.16+rand()*.36)}
     [[-8,-5,.6],[-7,0,.4],[-1,-.2,.32],[1,-4,.5],[-5,-7,.5],[-3,-7,.35],[6,-7,.7],[11,6,.55],[-10,6,.9],[14,-13,1.1]].forEach(([x,z,h],i)=>this.place(i%2?'Rock_Medium_1':'Rock_Medium_3',x,z,h));
     // Individual worn stepping stones sit within the dirt trail.
     for(let i=0;i<19;i++){const z=12-i*1.15,x=this.pathX(z);const stone=this.place('Rock_Medium_1',x,z,.13,Math.sin(i)*.2,{width:1.45});stone.scale.y=.7}
@@ -108,7 +108,7 @@ class StoryWorld extends BaseWorld{
     for(const[x,z,s]of [[-6,-4,.32],[-5,-4.5,.24],[-2,-5,.35],[-1,-3,.26]]){const o=this.mesh(new T.CircleGeometry(s,32,0,Math.PI*1.84),leafMat,x,-.104,z);o.rotation.x=-Math.PI/2;o.rotation.z=rand()*6;const stem=this.mesh(new T.SphereGeometry(1,12,8),petal,x,-.07,z);stem.scale.set(.12,.08,.12)}
   }
   makeCat(){
-    this.storyCat=createStoryCat();this.cat=this.storyCat.root;this.cat.scale.setScalar(.65);this.scene.add(this.cat);this.catMixer={update(){}};this.catAction=null;
+    this.storyCat=createStoryCat();this.cat=this.storyCat.root;this.cat.scale.setScalar(.78);this.scene.add(this.cat);this.catMixer={update(){}};this.catAction=null;
     this.catPath=new T.CatmullRomCurve3([V(1.7,0,4.4),V(4,0,3.2),V(5.3,0,1.5),V(7,0,3),V(6,0,6.6),V(3,0,8),V(-1.3,0,7.6),V(-2,0,5.2)],true,'catmullrom',.28);this.catDistance=0;this.pathLength=this.catPath.getLength();this.canvas.dataset.catSource='Original storybook cat';this.canvas.dataset.catAnimation='articulated walk, breathing, blinking, ears and tail';
   }
   updateGrowth(force=false){
@@ -124,8 +124,8 @@ class StoryWorld extends BaseWorld{
   }
   beforeRender(dt){
     const n=this.skyMat.uniforms.night.value,light=this.state.light/100,rain=this.state.weather==='rain',t=this.t;
-    this.hemi.intensity=T.MathUtils.lerp(1.1+light*.35,.68,n);this.hemi.color.set(n>.5?'#aac1d0':'#e9f2ed');this.hemi.groundColor.set(n>.5?'#435856':'#a1b282');
-    this.sun.intensity=T.MathUtils.lerp((.22+light*2.7)*(rain?.52:1),.55,n);this.sun.color.set(n>.5?'#b3cee8':'#fff0d0');this.renderer.toneMappingExposure=T.MathUtils.lerp(1.02,1.0,n);this.scene.fog.color.copy(new T.Color('#c5dcd3').lerp(new T.Color('#283f50'),n));
+    this.hemi.intensity=T.MathUtils.lerp(.92+light*.28,.66,n);this.hemi.color.set(n>.5?'#aac1d0':'#e9f2ed');this.hemi.groundColor.set(n>.5?'#435856':'#9baa7f');
+    this.sun.intensity=T.MathUtils.lerp((.18+light*2.15)*(rain?.52:1),.52,n);this.sun.color.set(n>.5?'#b3cee8':'#fff0d0');this.renderer.toneMappingExposure=T.MathUtils.lerp(.96,1.0,n);this.scene.fog.color.copy(new T.Color('#b9d0c8').lerp(new T.Color('#283f50'),n));
     if(this.storyCat)this.storyCat.animate(t,!(this.follow||t%34>26),this.state.wind/100,this.follow);
     this.details?.update(t,n);
     this.atmosphere?.update(dt,t,n);

@@ -6,7 +6,7 @@ import { mergeGeometries } from './vendor/three/examples/jsm/utils/BufferGeometr
 export function createStoryCat(){
   const root=new T.Group(),bodyRig=new T.Group();root.add(bodyRig);
   const velvet=color=>new T.MeshPhysicalMaterial({color,roughness:.97,metalness:0,sheen:1,sheenColor:new T.Color('#fff4df'),sheenRoughness:1,envMapIntensity:.35});
-  const fur=velvet('#eadfc9'),white=velvet('#fff1da'),patch=velvet('#b9ada0'),pink=velvet('#dcb4af');
+  const fur=velvet('#d9c7b2'),white=velvet('#f2e6d2'),patch=velvet('#9f9286'),pink=velvet('#d4a9a5');
   const ink=new T.MeshStandardMaterial({color:'#3b3530',roughness:.3}),noseMat=velvet('#ba8d88');
   const unitSphere=new T.SphereGeometry(1,32,24);
   function ball(parent,mat,x,y,z,sx,sy,sz){const mesh=new T.Mesh(unitSphere,mat);mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh}

@@ -60,9 +60,9 @@ function placeForest(world) {
   // Three irregular, offset bands read as a continuous woodland from the
   // garden, while their changing heights leave a non-mechanical skyline.
   const backBands = [
-    { z: -43, count: 19, spread: 98 },
-    { z: -52, count: 18, spread: 112 },
-    { z: -62, count: 17, spread: 126 },
+    { z: -43, count: 14, spread: 98 },
+    { z: -52, count: 13, spread: 112 },
+    { z: -62, count: 12, spread: 126 },
   ];
   backBands.forEach(({ z, count, spread }, layer) => {
     for (let i = 0; i < count; i++) {
