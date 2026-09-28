@@ -23,6 +23,12 @@ for entries in manifest['recommended'].values():
             stream=io.BytesIO();im.save(stream,format='WEBP',quality=90,method=6)
             files[name]='data:image/webp;base64,'+base64.b64encode(stream.getvalue()).decode()
             img['mimeType']='image/webp'
-out={'models':models,'files':files}
+cat_path=root/'assets3d-v2/cat-lowpoly.glb'
+binary_models={}
+if cat_path.exists():
+    binary_models['lowPolyCat']='data:application/octet-stream;base64,'+base64.b64encode(cat_path.read_bytes()).decode()
+else:
+    raise FileNotFoundError(cat_path)
+out={'models':models,'files':files,'binaryModels':binary_models}
 (root/'assets3d-v2/embedded.json').write_text(json.dumps(out,separators=(',',':')))
 print(f'Packed {len(models)} textured models, {len(files)} shared resources: {(root/"assets3d-v2/embedded.json").stat().st_size/1024/1024:.2f} MB')

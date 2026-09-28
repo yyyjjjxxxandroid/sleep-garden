@@ -67,8 +67,13 @@ class StoryWorld extends BaseWorld{
   buildPlots(){this.plots=[];this.grown=[];for(let i=0;i<3;i++){const x=-.5+i*1.15,z=6.7,y=this.groundHeight(x,z);const soil=this.mesh(new T.CylinderGeometry(.41,.46,.045,40),this.mat('#a29072'),x,y+.015,z);soil.userData.plot=i;this.plots.push(soil)}}
   async loadAssets(){
     T.Cache.enabled=true;const bundle=window.STORY_ASSETS,loader=new GLTFLoader();
-    const entries=Object.entries(bundle.models);
-    await Promise.all(entries.map(async([name,json])=>{const data=JSON.parse(JSON.stringify(json));for(const b of data.buffers||[])b.uri=bundle.files[b.uri];for(const im of data.images||[]){im.uri=bundle.files[im.uri];im.mimeType='image/webp'}this.models[name]=await loader.parseAsync(JSON.stringify(data),'')}));
+    const entries=Object.entries(bundle.models||{});
+    const binaryEntries=Object.entries(bundle.binaryModels||{});
+    const decodeDataUri=uri=>{const comma=uri.indexOf(',');const raw=atob(comma>=0?uri.slice(comma+1):uri);const bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);return bytes.buffer};
+    await Promise.all([
+      ...entries.map(async([name,json])=>{const data=JSON.parse(JSON.stringify(json));for(const b of data.buffers||[])b.uri=bundle.files[b.uri];for(const im of data.images||[]){im.uri=bundle.files[im.uri];im.mimeType='image/webp'}this.models[name]=await loader.parseAsync(JSON.stringify(data),'')}),
+      ...binaryEntries.map(async([name,uri])=>{this.models[name]=await loader.parseAsync(decodeDataUri(uri),'')})
+    ]);
     for(const[name,gltf]of Object.entries(this.models)){gltf.scene.traverse(o=>{if(!o.isMesh)return;o.castShadow=true;o.receiveShadow=true;const m=o.material.clone();m.roughness=.88;m.metalness=0;m.envMapIntensity=.20;if(m.normalScale)m.normalScale.set(.28,.28);if(m.map){m.map.anisotropy=4;m.map.colorSpace=T.SRGBColorSpace}m.alphaTest=Math.max(m.alphaTest||0,.32);const foliage=/Leaves|Grass|Flowers/i.test(m.name);if(foliage){m.side=T.DoubleSide;m.shadowSide=T.DoubleSide;m.emissive.set('#687f5e');m.emissiveIntensity=.022;o.geometry.computeBoundingBox();const b=o.geometry.boundingBox;o.material=this.windMaterial(m,b.max.y-b.min.y,b.min.y,name.startsWith('CommonTree')?.22:.10);o.customDepthMaterial=new T.MeshDepthMaterial({depthPacking:T.RGBADepthPacking,map:m.map,alphaTest:m.alphaTest,side:T.DoubleSide});o.customDepthMaterial.onBeforeCompile=o.material.userData.windPatch;o.customDepthMaterial.customProgramCacheKey=o.material.customProgramCacheKey;}else o.material=m;})}
     this.staticRoots=[];this.place=(name,x,z,height,angle=rand()*6.28,options={})=>{
       const o=this.models[name].scene.clone(true),box=new T.Box3().setFromObject(o),s=height/(box.max.y-box.min.y),group=new T.Group();o.scale.setScalar(s);o.position.y=-box.min.y*s;group.add(o);group.position.set(x,this.groundHeight(x,z)+(options.lift||0),z);group.rotation.y=angle;if(options.width){group.scale.x=options.width;group.scale.z=options.width}this.scene.add(group);if(!options.dynamic)this.staticRoots.push(group);return group;
@@ -108,9 +113,19 @@ class StoryWorld extends BaseWorld{
     for(const[x,z,s]of [[-6,-4,.32],[-5,-4.5,.24],[-2,-5,.35],[-1,-3,.26]]){const o=this.mesh(new T.CircleGeometry(s,32,0,Math.PI*1.84),leafMat,x,-.104,z);o.rotation.x=-Math.PI/2;o.rotation.z=rand()*6;const stem=this.mesh(new T.SphereGeometry(1,12,8),petal,x,-.07,z);stem.scale.set(.12,.08,.12)}
   }
   makeCat(){
+    const imported=this.models.lowPolyCat;
+    if(imported){
+      const model=imported.scene;model.updateMatrixWorld(true);const box=new T.Box3().setFromObject(model),height=Math.max(.001,box.max.y-box.min.y),scale=1.28/height;
+      model.scale.setScalar(scale);model.position.y=-box.min.y*scale;model.traverse(o=>{if(!o.isMesh)return;o.castShadow=true;o.receiveShadow=true;const m=Array.isArray(o.material)?o.material[0]:o.material;m.roughness=.9;m.metalness=0;m.envMapIntensity=.18;if(m.map){m.map.anisotropy=4;m.map.colorSpace=T.SRGBColorSpace}if(m.normalScale)m.normalScale.set(.32,.32)});
+      this.cat=new T.Group();this.cat.add(model);this.cat.position.set(1.7,0,4.4);this.scene.add(this.cat);this.catModel=model;
+      const clip=imported.animations?.[0];this.catMixer=clip?new T.AnimationMixer(model):{update(){}};this.catAction=clip?this.catMixer.clipAction(clip):null;if(this.catAction)this.catAction.play();
+      this.catPath=new T.CatmullRomCurve3([V(1.7,0,4.4),V(4,0,3.2),V(5.3,0,1.5),V(7,0,3),V(7,0,6.6),V(3,0,8),V(-1.3,0,7.6),V(-2,0,5.2)],true,'catmullrom',.28);this.catDistance=0;this.pathLength=this.catPath.getLength();
+      this.canvas.dataset.catSource='A low-poly s.glb · static GLB';this.canvas.dataset.catAnimation=clip?.name||'none · no embedded animation clips';return;
+    }
     this.storyCat=createStoryCat();this.cat=this.storyCat.root;this.cat.scale.setScalar(.78);this.scene.add(this.cat);this.catMixer={update(){}};this.catAction=null;
-    this.catPath=new T.CatmullRomCurve3([V(1.7,0,4.4),V(4,0,3.2),V(5.3,0,1.5),V(7,0,3),V(6,0,6.6),V(3,0,8),V(-1.3,0,7.6),V(-2,0,5.2)],true,'catmullrom',.28);this.catDistance=0;this.pathLength=this.catPath.getLength();this.canvas.dataset.catSource='Original storybook cat';this.canvas.dataset.catAnimation='articulated walk, breathing, blinking, ears and tail';
+    this.catPath=new T.CatmullRomCurve3([V(1.7,0,4.4),V(4,0,3.2),V(5.3,0,1.5),V(7,0,3),V(7,0,6.6),V(3,0,8),V(-1.3,0,7.6),V(-2,0,5.2)],true,'catmullrom',.28);this.catDistance=0;this.pathLength=this.catPath.getLength();this.canvas.dataset.catSource='Original storybook cat';this.canvas.dataset.catAnimation='articulated walk, breathing, blinking, ears and tail';
   }
+
   updateGrowth(force=false){
     if(!this.place)return;const records=this.state.records.slice(this.state.mode==='session'?-2:-3),signature=this.state.mode+':'+records.map(r=>r.id||r.date).join(',');
     if(force||signature!==this.recordSignature){this.recordSignature=signature;this.grown.forEach(x=>this.scene.remove(x));this.grown=[];for(let i=0;i<3;i++){const r=records[i],name=r?.type==='wind'?'Flower_4_Group':r?.type==='water'?'Bush_Common_Flowers':'Grass_Common_Tall';const plant=this.place(name,-.5+i*1.15,6.7,.63,0,{dynamic:true});this.grown.push(plant)}}for(let i=0;i<3;i++){const r=records[i];const s=r?(r.complete?1:.48):i===records.length&&this.state.mode==='session'?.1+Math.min(1,this.state.elapsed/90)*.7:.02;this.grown[i].scale.setScalar(s)}
