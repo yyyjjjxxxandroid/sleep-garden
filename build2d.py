@@ -13,5 +13,6 @@ for name in ("garden-world.png", "kitten.png"):
     js = js.replace("assets/" + name, "data:image/png;base64," + data)
 html = html.replace('<link rel="stylesheet" href="world.css">', '<style>\n' + css + '\n</style>')
 html = html.replace('<script src="world.js"></script>', '<script>\n' + js + '\n</script>')
+html=html.replace('<script src="session-clock.js"></script>','<script>'+ (root/'session-clock.js').read_text()+'</script>')
 (root / "index.html").write_text(html)
 print(f"Built offline mobile HTML: {root / 'index.html'} ({len(html.encode()) / 1024 / 1024:.1f} MB)")

@@ -18,3 +18,5 @@
 
 /* An optional timer is a compact bottom sheet, never a required session step. */
 .timer-button{border:0;background:transparent;color:inherit;font:inherit;font-variant-numeric:tabular-nums;min-height:32px;padding:0 4px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}.timer-sheet{height:50svh;max-height:50svh;box-sizing:border-box;border-radius:28px 28px 0 0}.timer-options{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin:20px 0}.timer-options button,.timer-custom button,.timer-cancel{min-height:46px;border:1px solid var(--line);border-radius:23px;background:transparent;color:inherit;font:inherit}.timer-options button[aria-pressed=true]{background:var(--ink);color:var(--paper)}.timer-custom{display:grid;grid-template-columns:1fr 92px;gap:8px;align-items:center;font-size:13px}.timer-custom input{grid-column:1;border:1px solid var(--line);border-radius:12px;background:transparent;color:inherit;font:inherit;padding:12px}.timer-custom button{grid-column:2;grid-row:1 / span 2}.timer-cancel{width:100%;margin-top:24px;color:var(--muted)}
+.app:has(#controls:not([hidden])) .region-nav{bottom:184px}
+.timer-custom input{font-size:16px}
