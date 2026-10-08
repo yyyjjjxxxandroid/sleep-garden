@@ -64,7 +64,17 @@ class StoryWorld extends BaseWorld{
     for(let i=0;i<25;i++){const x=30+rand()*190,y=48+rand()*28,r=16+rand()*23;const g=c.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,'rgba(255,255,240,.68)');g.addColorStop(.55,'rgba(255,255,240,.5)');g.addColorStop(1,'rgba(255,255,240,0)');c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2)}
     const tex=new T.CanvasTexture(texCanvas);this.clouds=[];for(let i=0;i<8;i++){const mat=new T.SpriteMaterial({map:tex,color:'#fff8e5',transparent:true,opacity:.75,depthWrite:false,fog:true});const cloud=new T.Sprite(mat);cloud.position.set(-45+i*15,23+rand()*9,-65-rand()*12);cloud.scale.set(28+rand()*18,15+rand()*8,1);this.scene.add(cloud);this.clouds.push(cloud)}
   }
-  buildPlots(){this.plots=[];this.grown=[];for(let i=0;i<3;i++){const x=-.5+i*1.15,z=6.7,y=this.groundHeight(x,z);const soil=this.mesh(new T.CylinderGeometry(.41,.46,.045,40),this.mat('#a29072'),x,y+.015,z);soil.userData.plot=i;this.plots.push(soil)}}
+  plantPlot(i){
+    const x=-.5+i*1.15,z=6.7;
+    // These beds deliberately stay on level lawn: away from the pond shore,
+    // bridge and winding path, so growing assets never intersect scenery.
+    const pondClearance=Math.hypot((x+3.5)/5.6,(z+3.5)/3.8)>1.28;
+    const bridgeClearance=Math.hypot(x+2.5,z+12)>4;
+    const pathClearance=Math.abs(x-this.pathX(z))>1.5;
+    if(!pondClearance||!bridgeClearance||!pathClearance)throw Error('Unsafe plant plot');
+    return {x,z,y:this.groundHeight(x,z)};
+  }
+  buildPlots(){this.plots=[];this.grown=[];this.plotRings=[];for(let i=0;i<3;i++){const {x,z,y}=this.plantPlot(i),soil=this.mesh(new T.CylinderGeometry(.41,.46,.045,40),this.mat('#a29072'),x,y+.015,z);soil.userData.plot=i;this.plots.push(soil);const ring=this.mesh(new T.RingGeometry(.49,.57,40),new T.MeshBasicMaterial({color:'#ffe6a1',transparent:true,opacity:0,side:T.DoubleSide,depthWrite:false}),x,y+.05,z);ring.rotation.x=-Math.PI/2;this.plotRings.push(ring)}}
   async loadAssets(){
     T.Cache.enabled=true;const bundle=window.STORY_ASSETS,loader=new GLTFLoader();
     const entries=Object.entries(bundle.models);
@@ -113,7 +123,7 @@ class StoryWorld extends BaseWorld{
   }
   updateGrowth(force=false){
     if(!this.place)return;const records=this.state.records.slice(this.state.mode==='session'?-2:-3),signature=this.state.mode+':'+records.map(r=>r.id||r.date).join(',');
-    if(force||signature!==this.recordSignature){this.recordSignature=signature;this.grown.forEach(x=>this.scene.remove(x));this.grown=[];for(let i=0;i<3;i++){const r=records[i],name=r?.type==='wind'?'Flower_4_Group':r?.type==='water'?'Bush_Common_Flowers':'Grass_Common_Tall';const plant=this.place(name,-.5+i*1.15,6.7,.63,0,{dynamic:true});this.grown.push(plant)}}for(let i=0;i<3;i++){const r=records[i];const s=r?(r.complete?1:.48):i===records.length&&this.state.mode==='session'?.1+Math.min(1,this.state.elapsed/90)*.7:.02;this.grown[i].scale.setScalar(s)}
+    if(force||signature!==this.recordSignature){this.recordSignature=signature;this.grown.forEach(x=>this.scene.remove(x));this.grown=[];for(let i=0;i<3;i++){const r=records[i],name=r?.type==='wind'?'Flower_4_Group':r?.type==='water'?'Bush_Common_Flowers':'Grass_Common_Tall',plot=this.plantPlot(i);const plant=this.place(name,plot.x,plot.z,.63,0,{dynamic:true});this.grown.push(plant)}}for(let i=0;i<3;i++){const r=records[i];const s=r?(r.growth??(r.complete?1:.72)):i===records.length&&this.state.mode==='session'?.1+Math.min(1,this.state.elapsed/90)*.7:.02;this.grown[i].scale.setScalar(s)}
   }
   home(immediate=false){
     this.follow=false;const weatherSky=['rainbow','aurora','meteor'].includes(this.state.weather),target=weatherSky?V(-1,4,-3):V(-1,2,-1.5),pos=weatherSky?V(6,9.5,27):V(6,12,29);if(immediate){this.camera.position.copy(pos);this.controls.target.copy(target);this.controls.update()}else this.transition={pos,target};this.selectRegion?.('pond');
@@ -131,6 +141,8 @@ class StoryWorld extends BaseWorld{
     this.atmosphere?.update(dt,t,n);
     this.clouds?.forEach((c,i)=>{c.material.opacity=(1-n*.7)*.6;c.material.color.set(n>.5?'#718c9f':'#fff8e8');c.position.x+=dt*.045*(.2+this.state.wind/100)});
     this.rippleRings?.forEach((r,i)=>{const f=(t*.09+i*.17)%1;r.scale.setScalar(.4+f*1.8);r.material.opacity=(1-f)*.095});
+    const planting=this.state.records.find(r=>r.growth!==undefined&&r.growth<1);
+    this.plotRings?.forEach((ring,i)=>{const active=planting&&this.grown[i]?.scale.x===planting.growth;ring.material.opacity=active?(.22+.18*Math.sin(t*8)):0;ring.scale.setScalar(active?1+Math.sin(t*8)*.08:1)});
     // Surface controls stay faint; rendered world diagnostics are DOM-readable.
     this.canvas.dataset.catStyle='storybook';this.canvas.dataset.artVersion='storybook-v2';
   }
