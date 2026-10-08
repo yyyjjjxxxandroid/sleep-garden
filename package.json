@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "description": "Offline mobile 3D soundscape garden demo",
-  "scripts": {"build": "python3 build3d.py"},
-  "devDependencies": {"esbuild": "0.25.10"}
+  "scripts": {
+    "build": "python3 build3d.py"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10"
+  }
 }

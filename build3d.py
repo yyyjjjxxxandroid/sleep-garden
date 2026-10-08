@@ -9,7 +9,7 @@ if not bundler and Path('/private/tmp/garden-esbuild/bin/esbuild').exists():
     bundler='/private/tmp/garden-esbuild/bin/esbuild'
 if bundler:
     subprocess.run([bundler,str(root/'story-world.js'),'--bundle','--format=iife','--minify','--alias:three='+str(root/'vendor/three/build/three.module.js'),'--outfile='+str(root/'world3d.bundle.js')],check=True)
-elif (root/'world3d.bundle.js').exists() and (root/'world3d.bundle.js').stat().st_mtime >= (root/'world3d.js').stat().st_mtime:
+elif (root/'world3d.bundle.js').exists() and (root/'world3d.bundle.js').stat().st_mtime >= (root/'story-world.js').stat().st_mtime:
     print('Using bundled 3D JavaScript; npm install to rebuild changed JavaScript.')
 else:
     raise SystemExit('Run npm install first, or set GARDEN_ESBUILD to an esbuild executable.')

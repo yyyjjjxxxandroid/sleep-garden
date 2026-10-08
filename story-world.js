@@ -13,10 +13,10 @@ const nGLSL=`float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758
 class StoryWorld extends BaseWorld{
   constructor(opts){
     super(opts);
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));this.renderer.toneMappingExposure=1.02;
-    this.sun.shadow.mapSize.set(2048,2048);Object.assign(this.sun.shadow.camera,{left:-24,right:24,top:24,bottom:-24,near:.1,far:90});this.sun.shadow.camera.updateProjectionMatrix();this.sun.shadow.normalBias=.035;this.sun.shadow.bias=-.00018;
+    this.renderer.toneMappingExposure=1.02;
     this.sun.position.set(-15,24,11);this.scene.fog.density=.007;
-    const pmrem=new T.PMREMGenerator(this.renderer);this.scene.environment=pmrem.fromScene(new RoomEnvironment(),.08).texture;pmrem.dispose();this.scene.environmentIntensity=.22;
+    if(this.quality!=='low'){Object.assign(this.sun.shadow.camera,{left:-24,right:24,top:24,bottom:-24,near:.1,far:90});this.sun.shadow.camera.updateProjectionMatrix();this.sun.shadow.normalBias=.035;this.sun.shadow.bias=-.00018;
+      const pmrem=new T.PMREMGenerator(this.renderer);this.scene.environment=pmrem.fromScene(new RoomEnvironment(),.08).texture;pmrem.dispose();this.scene.environmentIntensity=.22;}
     this.controls.maxDistance=70;this.controls.minDistance=3.6;this.controls.minPolarAngle=.34;this.controls.maxPolarAngle=Math.PI*.465;
     this.buildNavigation();
   }
@@ -30,7 +30,8 @@ class StoryWorld extends BaseWorld{
   inPond(x,z){return ((x+3.5)/6.4)**2+((z+3.5)/4.35)**2<1}
   pathX(z){return 2.6+Math.sin(z*.16)*2.2+(z<-5?(-z-5)*.24:0)}
   buildTerrain(){
-    const geo=new T.PlaneGeometry(170,170,180,180);geo.rotateX(-Math.PI/2);const p=geo.attributes.position,colors=[];
+    const seg=this.quality==='high'?120:this.quality==='mid'?80:56;
+    const geo=new T.PlaneGeometry(170,170,seg,seg);geo.rotateX(-Math.PI/2);const p=geo.attributes.position,colors=[];
     const grass=new T.Color('#91ad77'),dark=new T.Color('#76956a'),sand=new T.Color('#cab998');
     for(let i=0;i<p.count;i++){
       const x=p.getX(i),z=p.getZ(i);p.setY(i,this.groundHeight(x,z));const a=.5+.25*Math.sin(x*.3+Math.sin(z*.2))+.2*Math.cos(z*.24-x*.1);const c=grass.clone().lerp(dark,a*.55);
@@ -39,8 +40,9 @@ class StoryWorld extends BaseWorld{
     }geo.setAttribute('color',new T.Float32BufferAttribute(colors,3));geo.computeVertexNormals();
     const mat=new T.MeshStandardMaterial({vertexColors:true,roughness:1});mat.onBeforeCompile=s=>{s.vertexShader='varying vec3 gardenP;\n'+s.vertexShader;s.vertexShader=s.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ngardenP=position;');s.fragmentShader='varying vec3 gardenP;\n'+nGLSL+s.fragmentShader;s.fragmentShader=s.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\nfloat grain=fbm(gardenP.xz*4.);diffuseColor.rgb*=.90+grain*.19;')};this.terrain=this.mesh(geo,mat);
     // Layered ridgelines wrap the distant landscape; each is an actual terrain mesh.
-    for(let layer=0;layer<3;layer++){
-      const g=new T.PlaneGeometry(240,95,70,26);g.rotateX(-Math.PI/2);const pp=g.attributes.position;
+    const ridgeLayers=this.quality==='low'?1:3;
+    for(let layer=0;layer<ridgeLayers;layer++){
+      const g=new T.PlaneGeometry(240,95,this.quality==='high'?70:36,this.quality==='high'?26:14);g.rotateX(-Math.PI/2);const pp=g.attributes.position;
       for(let i=0;i<pp.count;i++){const x=pp.getX(i),z=pp.getZ(i);const h=(Math.sin(x*.023+layer*2)*.5+.5)*10+(Math.sin(x*.058+layer)*.5+.5)*5;pp.setY(i,Math.max(0,Math.sin((z+47.5)/95*Math.PI))*h-2)}g.computeVertexNormals();const o=this.mesh(g,this.mat(['#8faf9b','#9bbbaa','#b3cec0'][layer]),0,0,-103-layer*23);o.receiveShadow=false;
     }
   }
@@ -68,39 +70,41 @@ class StoryWorld extends BaseWorld{
   async loadAssets(){
     T.Cache.enabled=true;const bundle=window.STORY_ASSETS,loader=new GLTFLoader();
     const entries=Object.entries(bundle.models);
-    await Promise.all(entries.map(async([name,json])=>{const data=JSON.parse(JSON.stringify(json));for(const b of data.buffers||[])b.uri=bundle.files[b.uri];for(const im of data.images||[]){im.uri=bundle.files[im.uri];im.mimeType='image/webp'}this.models[name]=await loader.parseAsync(JSON.stringify(data),'')}));
-    for(const[name,gltf]of Object.entries(this.models)){gltf.scene.traverse(o=>{if(!o.isMesh)return;o.castShadow=true;o.receiveShadow=true;const m=o.material.clone();m.roughness=.88;m.metalness=0;m.envMapIntensity=.25;if(m.normalScale)m.normalScale.set(.28,.28);if(m.map){m.map.anisotropy=4;m.map.colorSpace=T.SRGBColorSpace}m.alphaTest=Math.max(m.alphaTest||0,.32);const foliage=/Leaves|Grass|Flowers/i.test(m.name);if(foliage){m.side=T.DoubleSide;m.shadowSide=T.DoubleSide;m.emissive.set('#78955f');m.emissiveIntensity=.045;o.geometry.computeBoundingBox();const b=o.geometry.boundingBox;o.material=this.windMaterial(m,b.max.y-b.min.y,b.min.y,name.startsWith('CommonTree')?.22:.10);o.customDepthMaterial=new T.MeshDepthMaterial({depthPacking:T.RGBADepthPacking,map:m.map,alphaTest:m.alphaTest,side:T.DoubleSide});o.customDepthMaterial.onBeforeCompile=o.material.userData.windPatch;o.customDepthMaterial.customProgramCacheKey=o.material.customProgramCacheKey;}else o.material=m;})}
+    await Promise.all(entries.map(async([name,json])=>{const data=typeof structuredClone==='function'?structuredClone(json):JSON.parse(JSON.stringify(json));for(const b of data.buffers||[])b.uri=bundle.files[b.uri];for(const im of data.images||[]){im.uri=bundle.files[im.uri];im.mimeType='image/webp'}this.models[name]=await loader.parseAsync(JSON.stringify(data),'')}));
+    const q=this.quality;
+    for(const[name,gltf]of Object.entries(this.models)){gltf.scene.traverse(o=>{if(!o.isMesh)return;const m=o.material.clone();m.roughness=.88;m.metalness=0;m.envMapIntensity=.25;if(m.normalScale)m.normalScale.set(.28,.28);if(m.map){m.map.anisotropy=q==='high'?4:1;m.map.colorSpace=T.SRGBColorSpace}m.alphaTest=Math.max(m.alphaTest||0,.32);const foliage=/Leaves|Grass|Flowers/i.test(m.name);o.castShadow=!foliage&&q!=='low';o.receiveShadow=!foliage&&q!=='low';if(foliage){m.side=T.DoubleSide;m.emissive.set('#78955f');m.emissiveIntensity=.045;o.geometry.computeBoundingBox();const b=o.geometry.boundingBox;o.material=this.windMaterial(m,b.max.y-b.min.y,b.min.y,name.startsWith('CommonTree')?.22:.10);if(q==='high'){o.customDepthMaterial=new T.MeshDepthMaterial({depthPacking:T.RGBADepthPacking,map:m.map,alphaTest:m.alphaTest,side:T.DoubleSide});o.customDepthMaterial.onBeforeCompile=o.material.userData.windPatch;o.customDepthMaterial.customProgramCacheKey=o.material.customProgramCacheKey;}}else o.material=m;});this.rememberTemplate(name,gltf.scene)}
     this.staticRoots=[];this.place=(name,x,z,height,angle=rand()*6.28,options={})=>{
-      const o=this.models[name].scene.clone(true),box=new T.Box3().setFromObject(o),s=height/(box.max.y-box.min.y),group=new T.Group();o.scale.setScalar(s);o.position.y=-box.min.y*s;group.add(o);group.position.set(x,this.groundHeight(x,z)+(options.lift||0),z);group.rotation.y=angle;if(options.width){group.scale.x=options.width;group.scale.z=options.width}this.scene.add(group);if(!options.dynamic)this.staticRoots.push(group);return group;
+      const o=this.cloneShared(name),t=this.templates[name],s=height/t.height,group=new T.Group();o.scale.setScalar(s);o.position.y=-t.minY*s;group.add(o);group.position.set(x,this.groundHeight(x,z)+(options.lift||0),z);group.rotation.y=angle;if(options.width){group.scale.x=options.width;group.scale.z=options.width}this.scene.add(group);if(!options.dynamic)this.staticRoots.push(group);return group;
     };
     this.populateGarden();this.details=installDetails(this);this.atmosphere=installAtmosphere(this,T);this.batchScenery();this.makeCat();this.updateGrowth(true);this.buildBridge();this.addLilyPads();
     this.canvas.dataset.artVersion='storybook-v2';this.canvas.dataset.assets='Quaternius textured nature · CC0';
   }
   populateGarden(){
+    const q=this.quality,groupSize=q==='high'?4:q==='mid'?3:2,flowersPerBed=q==='high'?16:q==='mid'?9:5,bushes=q==='high'?28:q==='mid'?18:10,glbGrass=q==='high'?90:q==='mid'?28:0,lineTrees=q==='high'?26:q==='mid'?16:8;
     const tree=(name,x,z,h,w=1)=>this.place(name,x,z,h,rand()*6.28,{width:w});
     tree('CommonTree_1',9,-4,9,1.12);tree('CommonTree_2',-11,-6,8,1.12);tree('CommonTree_3',-7,-17,9);tree('CommonTree_5',15,-14,9);tree('CommonTree_2',9,-22,10);
     // Small groups leave openings towards the bridge, flower slope and woodland.
     const groups=[[-22,-4],[-20,-19],[-13,-31],[0,-36],[19,-30],[29,-14],[27,9],[-22,13]];
-    for(let j=0;j<groups.length;j++){const [gx,gz]=groups[j];for(let i=0;i<4;i++){const x=gx+(rand()-.5)*10,z=gz+(rand()-.5)*10;tree(['CommonTree_1','CommonTree_2','CommonTree_3','CommonTree_5'][(j+i)%4],x,z,7+rand()*7)}}
+    for(let j=0;j<groups.length;j++){const [gx,gz]=groups[j];for(let i=0;i<groupSize;i++){const x=gx+(rand()-.5)*10,z=gz+(rand()-.5)*10;tree(['CommonTree_1','CommonTree_2','CommonTree_3','CommonTree_5'][(j+i)%4],x,z,7+rand()*7)}}
     const flowerBeds=[[-8,2,2.3],[-5,3,2],[-8,-8,2.3],[7,0,2.2],[9,5,2.8],[-5,10,2.4],[5,11,2.5],[15,-12,4.3],[18,-7,3.3],[-9,-21,3]];
     flowerBeds.push([-7,7,2.5],[7,8,2.4],[-10,-2,2],[2,-8,2]);
-    for(let bi=0;bi<flowerBeds.length;bi++){const [x,z,r]=flowerBeds[bi];for(let i=0;i<30;i++){const a=rand()*6.28,rr=Math.sqrt(rand())*r;const px=x+Math.cos(a)*rr,pz=z+Math.sin(a)*rr;if(this.inPond(px,pz))continue;this.place(i%3?'Flower_4_Group':'Flower_3_Group',px,pz,.48+rand()*.52)}}
-    for(let i=0;i<26;i++){const x=-38+i*3,z=-43+Math.sin(i*.8)*5;tree('CommonTree_2',x,z,9+rand()*4,1.2)}
-    for(let i=0;i<35;i++){const a=rand()*6.28,r=12+rand()*21,x=Math.cos(a)*r,z=Math.sin(a)*r;if(z>14&&Math.abs(x)<13)continue;this.place('Bush_Common_Flowers',x,z,.6+rand()*.65)}
+    for(let bi=0;bi<flowerBeds.length;bi++){const [x,z,r]=flowerBeds[bi];for(let i=0;i<flowersPerBed;i++){const a=rand()*6.28,rr=Math.sqrt(rand())*r;const px=x+Math.cos(a)*rr,pz=z+Math.sin(a)*rr;if(this.inPond(px,pz))continue;this.place(i%3?'Flower_4_Group':'Flower_3_Group',px,pz,.48+rand()*.52)}}
+    for(let i=0;i<lineTrees;i++){const x=-38+(lineTrees>1?i*(75/(lineTrees-1)):0),z=-43+Math.sin(i*.8)*5;tree('CommonTree_2',x,z,9+rand()*4,1.2)}
+    for(let i=0;i<bushes;i++){const a=rand()*6.28,r=12+rand()*21,x=Math.cos(a)*r,z=Math.sin(a)*r;if(z>14&&Math.abs(x)<13)continue;this.place('Bush_Common_Flowers',x,z,.6+rand()*.65)}
     // Dense patches, with the lawn and the path deliberately left quiet.
-    for(let i=0;i<650;i++){let x=(rand()-.5)*62,z=(rand()-.5)*62;if(this.inPond(x,z)||Math.abs(x-this.pathX(z))<1.2)continue;const centre=Math.hypot(x-1,z-3);if(centre<5.8&&rand()<.9)continue;if(z>14&&Math.abs(x)<9)continue;this.place(i%3?'Grass_Common_Tall':'Grass_Wispy_Tall',x,z,.18+rand()*.43)}
+    for(let i=0;i<glbGrass;i++){let x=(rand()-.5)*62,z=(rand()-.5)*62;if(this.inPond(x,z)||Math.abs(x-this.pathX(z))<1.2)continue;const centre=Math.hypot(x-1,z-3);if(centre<5.8&&rand()<.9)continue;if(z>14&&Math.abs(x)<9)continue;this.place(i%3?'Grass_Common_Tall':'Grass_Wispy_Tall',x,z,.18+rand()*.43)}
     [[-8,-5,.6],[-7,0,.4],[-1,-.2,.32],[1,-4,.5],[-5,-7,.5],[-3,-7,.35],[6,-7,.7],[11,6,.55],[-10,6,.9],[14,-13,1.1]].forEach(([x,z,h],i)=>this.place(i%2?'Rock_Medium_1':'Rock_Medium_3',x,z,h));
     // Individual worn stepping stones sit within the dirt trail.
     for(let i=0;i<19;i++){const z=12-i*1.15,x=this.pathX(z);const stone=this.place('Rock_Medium_1',x,z,.13,Math.sin(i)*.2,{width:1.45});stone.scale.y=.7}
     this.addScatteredPetals();
   }
   addScatteredPetals(){
-    const geo=new T.SphereGeometry(1,5,3),mat=new T.MeshStandardMaterial({color:'#edddc9',roughness:1});const count=340,mesh=new T.InstancedMesh(geo,mat,count),d=new T.Object3D();
-    for(let i=0;i<count;i++){const x=(rand()-.5)*30,z=(rand()-.5)*30;d.position.set(x,this.groundHeight(x,z)+.025,z);d.scale.set(.027+rand()*.035,.007,.02+rand()*.04);d.rotation.y=rand()*6.28;d.updateMatrix();mesh.setMatrixAt(i,d.matrix);mesh.setColorAt(i,new T.Color(['#d9d7b3','#d9bcc7','#c4c9d2'][i%3]))}mesh.receiveShadow=true;this.scene.add(mesh);
+    const geo=new T.SphereGeometry(1,5,3),mat=new T.MeshStandardMaterial({color:'#edddc9',roughness:1});const count=this.quality==='high'?180:this.quality==='mid'?80:40,mesh=new T.InstancedMesh(geo,mat,count),d=new T.Object3D();
+    for(let i=0;i<count;i++){const x=(rand()-.5)*30,z=(rand()-.5)*30;d.position.set(x,this.groundHeight(x,z)+.025,z);d.scale.set(.027+rand()*.035,.007,.02+rand()*.04);d.rotation.y=rand()*6.28;d.updateMatrix();mesh.setMatrixAt(i,d.matrix);mesh.setColorAt(i,new T.Color(['#d9d7b3','#d9bcc7','#c4c9d2'][i%3]))}mesh.receiveShadow=false;mesh.frustumCulled=false;this.scene.add(mesh);
   }
   buildBridge(){
     const root=new T.Group();root.position.set(-2.5,this.groundHeight(-2.5,-12)+.15,-12);root.rotation.y=-.15;this.scene.add(root);const wood=this.mat('#baa783'),dark=this.mat('#a39377');
-    for(let i=0;i<12;i++){const b=new T.Mesh(new T.BoxGeometry(.22,.09,1.5),wood);b.position.set((i-5.5)*.23,Math.sin(i/11*Math.PI)*.19,0);b.rotation.z=Math.cos(i/11*Math.PI)*.1;b.castShadow=true;b.receiveShadow=true;root.add(b)}
+    for(let i=0;i<12;i++){const b=new T.Mesh(new T.BoxGeometry(.22,.09,1.5),wood);b.position.set((i-5.5)*.23,Math.sin(i/11*Math.PI)*.19,0);b.rotation.z=Math.cos(i/11*Math.PI)*.1;b.castShadow=this.quality!=='low';b.receiveShadow=this.quality!=='low';root.add(b)}
     for(const side of [-1,1]){for(const x of [-1.3,0,1.3]){const p=new T.Mesh(new T.CylinderGeometry(.045,.05,.65,8),dark);p.position.set(x,.37,side*.72);p.castShadow=true;root.add(p)}const c=new T.CatmullRomCurve3([V(-1.4,.65,side*.72),V(0,.77,side*.72),V(1.4,.65,side*.72)]);const rail=new T.Mesh(new T.TubeGeometry(c,18,.03,6,false),dark);root.add(rail)}
   }
   addLilyPads(){
