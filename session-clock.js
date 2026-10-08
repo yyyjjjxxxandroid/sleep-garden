@@ -1,4 +1,4 @@
-// Playback time is independent of frame rate and the garden animation clock.
+// 播放时长独立于帧率和花园动画时钟。
 class SessionClock {
   constructor(timerSeconds = 0) {
     this.timerSeconds = timerSeconds;

@@ -1,5 +1,5 @@
-// Run against a fresh isolated agent-browser session after loading index.html:
-// First use a real click to satisfy browser audio autoplay policy:
+// 加载 index.html 后，在全新且隔离的 agent-browser 会话中运行：
+// 先进行一次真实点击，以满足浏览器的音频自动播放策略：
 // agent-browser --session garden-bugfix click "#startButton"
 // agent-browser --session garden-bugfix eval --stdin < tests/browser-controls.js
 (async () => {
@@ -20,7 +20,7 @@
   click('totalTime'); click('timerCancel'); click('finishButton'); click('returnGarden');
   assert(!$('progress').hasAttribute('aria-valuemax'), 'unlimited progress has no fictitious maximum');
 
-  // Delayed audio resume reproduces rapid start/end races without a real wait.
+  // 延迟恢复音频，用于复现快速开始/结束时的竞态，无需真实等待。
   const originalTimeout = window.setTimeout;
   let timerCallback;
   window.setTimeout = (callback, delay, ...args) => { if(delay >= 59000) timerCallback = callback; return originalTimeout(callback, delay, ...args); };
@@ -38,7 +38,7 @@
   AudioContext.prototype.resume = originalResume;
   click('returnGarden'); click('restartButton'); await waitPlaying();
 
-  // Advance the listening clock while leaving the renderer and UI event loop real.
+  // 推进陪伴时钟，同时保持渲染器和 UI 事件循环真实运行。
   const realNow = performance.now.bind(performance);
   const realTick = SessionClock.prototype.tick;
   let offset = 0;
@@ -87,7 +87,7 @@
   click('gardenButton'); assert(!$('historyOverlay').hidden, 'history button opens records');
   $('historyOverlay').querySelector('.close-sheet').click();
 
-  // Audio failure must leave a retryable paused state.
+  // 音频失败后必须保留可重试的暂停状态。
   click('playButton');
   AudioContext.prototype.resume = () => Promise.reject(Error('simulated audio failure'));
   click('playButton'); await wait(50);

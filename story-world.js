@@ -38,7 +38,7 @@ class StoryWorld extends BaseWorld{
       c.lerp(sand,pathBlend*.82);const shore=Math.sqrt(((x+3.5)/5.6)**2+((z+3.5)/3.8)**2);c.lerp(new T.Color('#b0b38c'),(1-T.MathUtils.smoothstep(Math.abs(shore-1),.03,.19))*.7);colors.push(c.r,c.g,c.b);
     }geo.setAttribute('color',new T.Float32BufferAttribute(colors,3));geo.computeVertexNormals();
     const mat=new T.MeshStandardMaterial({vertexColors:true,roughness:1});mat.onBeforeCompile=s=>{s.vertexShader='varying vec3 gardenP;\n'+s.vertexShader;s.vertexShader=s.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ngardenP=position;');s.fragmentShader='varying vec3 gardenP;\n'+nGLSL+s.fragmentShader;s.fragmentShader=s.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\nfloat grain=fbm(gardenP.xz*4.);diffuseColor.rgb*=.90+grain*.19;')};this.terrain=this.mesh(geo,mat);
-    // Layered ridgelines wrap the distant landscape; each is an actual terrain mesh.
+    // 多层山脊围合远景，每一层都是真实地形网格。
     for(let layer=0;layer<3;layer++){
       const g=new T.PlaneGeometry(240,95,70,26);g.rotateX(-Math.PI/2);const pp=g.attributes.position;
       for(let i=0;i<pp.count;i++){const x=pp.getX(i),z=pp.getZ(i);const h=(Math.sin(x*.023+layer*2)*.5+.5)*10+(Math.sin(x*.058+layer)*.5+.5)*5;pp.setY(i,Math.max(0,Math.sin((z+47.5)/95*Math.PI))*h-2)}g.computeVertexNormals();const o=this.mesh(g,this.mat(['#8faf9b','#9bbbaa','#b3cec0'][layer]),0,0,-103-layer*23);o.receiveShadow=false;
@@ -51,7 +51,7 @@ class StoryWorld extends BaseWorld{
     this.waterMat=new T.ShaderMaterial({uniforms:{time:{value:0},night:{value:0},rain:{value:0},wind:{value:.35}},vertexShader:`varying vec3 vP;varying vec3 vWorld;void main(){vP=position;vWorld=(modelMatrix*vec4(position,1.)).xyz;gl_Position=projectionMatrix*viewMatrix*vec4(vWorld,1.);}`,fragmentShader:`varying vec3 vP,vWorld;uniform float time,night,rain,wind;${nGLSL}
     void main(){vec2 p=vWorld.xz;vec3 view=normalize(cameraPosition-vWorld);float fresnel=pow(1.-max(0.,view.y),3.);float ripple=fbm(p*.95+vec2(time*.07,-time*.05));float r=length(vP.xz/vec2(5.5,3.7));vec3 deep=mix(vec3(.24,.47,.46),vec3(.10,.25,.29),night);vec3 sky=mix(vec3(.62,.79,.77),vec3(.21,.37,.44),night);vec3 col=mix(deep,sky,.22+fresnel*.5);col+=ripple*.045;col=mix(col,mix(vec3(.49,.64,.50),vec3(.22,.35,.31),night),smoothstep(.65,1.03,r)*.55);float wave=sin(p.x*4.+p.y*6.+ripple*8.-time*.4);float glint=pow(max(0.,wave),26.)*.05*(.3+wind);col+=glint;float shore=(1.-smoothstep(.009,.028,abs(r-.985-ripple*.013)))*.08;col+=shore;for(int i=0;i<8;i++){float j=float(i);vec2 c=vec2(hash(vec2(j,2.)),hash(vec2(j,7.)))*8.-4.;float age=fract(time*.3+j*.137);float ring=1.-smoothstep(.012,.040,abs(length(vP.xz-c)-age*1.4));col+=rain*ring*(1.-age)*.12;}gl_FragColor=vec4(col,1.);}`});
     this.water=this.mesh(geo,this.waterMat,-3.5,-.13,-3.5);
-    // A narrow stream extends behind the pond into the woods.
+    // 一条细窄溪流从池塘后方延伸进树林。
     const vertices=[],uv=[],idx=[];for(let i=0;i<=65;i++){const z=-6-i*.43,x=-2.5+Math.sin(z*.18)*1.2;const y=this.groundHeight(x,z)+.025;vertices.push(x-.65,y,z,x+.65,y,z);uv.push(0,i/65,1,i/65);if(i<65){const a=i*2;idx.push(a,a+1,a+2,a+1,a+3,a+2)}}const streamGeo=new T.BufferGeometry();streamGeo.setAttribute('position',new T.Float32BufferAttribute(vertices,3));streamGeo.setAttribute('uv',new T.Float32BufferAttribute(uv,2));streamGeo.setIndex(idx);streamGeo.computeVertexNormals();this.mesh(streamGeo,this.waterMat);
     this.rippleRings=[];for(let i=0;i<6;i++){const ring=this.mesh(new T.RingGeometry(.37,.385,48),new T.MeshBasicMaterial({color:'#d9e6cb',transparent:true,opacity:.1,side:T.DoubleSide,depthWrite:false}),-5+rand()*5,-.11,-5+rand()*3);ring.rotation.x=-Math.PI/2;this.rippleRings.push(ring)}
   }
@@ -66,8 +66,8 @@ class StoryWorld extends BaseWorld{
   }
   plantPlot(i){
     const x=-.5+i*1.15,z=6.7;
-    // These beds deliberately stay on level lawn: away from the pond shore,
-    // bridge and winding path, so growing assets never intersect scenery.
+    // 种植地刻意放在平坦草地，远离池岸、桥梁和蜿蜒小径，
+    // 以避免成长中的模型与场景相交。
     const pondClearance=Math.hypot((x+3.5)/5.6,(z+3.5)/3.8)>1.28;
     const bridgeClearance=Math.hypot(x+2.5,z+12)>4;
     const pathClearance=Math.abs(x-this.pathX(z))>1.5;
@@ -89,7 +89,7 @@ class StoryWorld extends BaseWorld{
   populateGarden(){
     const tree=(name,x,z,h,w=1)=>this.place(name,x,z,h,rand()*6.28,{width:w});
     tree('CommonTree_1',9,-4,9,1.12);tree('CommonTree_2',-11,-6,8,1.12);tree('CommonTree_3',-7,-17,9);tree('CommonTree_5',15,-14,9);tree('CommonTree_2',9,-22,10);
-    // Small groups leave openings towards the bridge, flower slope and woodland.
+    // 小型植物组为小桥、花坡和树林方向留出视线开口。
     const groups=[[-22,-4],[-20,-19],[-13,-31],[0,-36],[19,-30],[29,-14],[27,9],[-22,13]];
     for(let j=0;j<groups.length;j++){const [gx,gz]=groups[j];for(let i=0;i<4;i++){const x=gx+(rand()-.5)*10,z=gz+(rand()-.5)*10;tree(['CommonTree_1','CommonTree_2','CommonTree_3','CommonTree_5'][(j+i)%4],x,z,7+rand()*7)}}
     const flowerBeds=[[-8,2,2.3],[-5,3,2],[-8,-8,2.3],[7,0,2.2],[9,5,2.8],[-5,10,2.4],[5,11,2.5],[15,-12,4.3],[18,-7,3.3],[-9,-21,3]];
@@ -97,10 +97,10 @@ class StoryWorld extends BaseWorld{
     for(let bi=0;bi<flowerBeds.length;bi++){const [x,z,r]=flowerBeds[bi];for(let i=0;i<30;i++){const a=rand()*6.28,rr=Math.sqrt(rand())*r;const px=x+Math.cos(a)*rr,pz=z+Math.sin(a)*rr;if(this.inPond(px,pz))continue;this.place(i%3?'Flower_4_Group':'Flower_3_Group',px,pz,.48+rand()*.52)}}
     for(let i=0;i<26;i++){const x=-38+i*3,z=-43+Math.sin(i*.8)*5;tree('CommonTree_2',x,z,9+rand()*4,1.2)}
     for(let i=0;i<35;i++){const a=rand()*6.28,r=12+rand()*21,x=Math.cos(a)*r,z=Math.sin(a)*r;if(z>14&&Math.abs(x)<13)continue;this.place('Bush_Common_Flowers',x,z,.6+rand()*.65)}
-    // Dense patches, with the lawn and the path deliberately left quiet.
+    // 以密集植被丰富边缘，并刻意保留草坪与小径的留白。
     for(let i=0;i<650;i++){let x=(rand()-.5)*62,z=(rand()-.5)*62;if(this.inPond(x,z)||Math.abs(x-this.pathX(z))<1.2)continue;const centre=Math.hypot(x-1,z-3);if(centre<5.8&&rand()<.9)continue;if(z>14&&Math.abs(x)<9)continue;this.place(i%3?'Grass_Common_Tall':'Grass_Wispy_Tall',x,z,.18+rand()*.43)}
     [[-8,-5,.6],[-7,0,.4],[-1,-.2,.32],[1,-4,.5],[-5,-7,.5],[-3,-7,.35],[6,-7,.7],[11,6,.55],[-10,6,.9],[14,-13,1.1]].forEach(([x,z,h],i)=>this.place(i%2?'Rock_Medium_1':'Rock_Medium_3',x,z,h));
-    // Individual worn stepping stones sit within the dirt trail.
+    // 单独摆放的磨损踏石嵌在土路中。
     for(let i=0;i<19;i++){const z=12-i*1.15,x=this.pathX(z);const stone=this.place('Rock_Medium_1',x,z,.13,Math.sin(i)*.2,{width:1.45});stone.scale.y=.7}
     this.addScatteredPetals();
   }
@@ -143,7 +143,7 @@ class StoryWorld extends BaseWorld{
     this.rippleRings?.forEach((r,i)=>{const f=(t*.09+i*.17)%1;r.scale.setScalar(.4+f*1.8);r.material.opacity=(1-f)*.095});
     const planting=this.state.records.find(r=>r.growth!==undefined&&r.growth<1);
     this.plotRings?.forEach((ring,i)=>{const active=planting&&this.grown[i]?.scale.x===planting.growth;ring.material.opacity=active?(.22+.18*Math.sin(t*8)):0;ring.scale.setScalar(active?1+Math.sin(t*8)*.08:1)});
-    // Surface controls stay faint; rendered world diagnostics are DOM-readable.
+    // 界面控件保持低存在感；渲染世界的诊断信息仍可由 DOM 读取。
     this.canvas.dataset.catStyle='storybook';this.canvas.dataset.artVersion='storybook-v2';
   }
 }

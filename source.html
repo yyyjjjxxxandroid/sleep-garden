@@ -135,7 +135,7 @@ function save(){try{localStorage.setItem('sleepGarden.v1',JSON.stringify({mix:st
 function toast(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,3200)}
 function el(tag,attrs,parent){const n=document.createElementNS(NS,tag);Object.entries(attrs||{}).forEach(([k,v])=>n.setAttribute(k,v));if(parent)parent.append(n);return n}
 let seed=67;function rand(){seed=(seed*16807)%2147483647;return(seed-1)/2147483646}const between=(a,b)=>a+rand()*(b-a);
-// Every moving plant is its own illustrated layer, so wind bends stems rather than shaking a flat picture.
+// 每株会动的植物都是独立绘制层，风会弯折枝干而不是整体晃动一张平面图。
 for(let i=0;i<27;i++){const x=i*43-70,y=between(335,392),h=between(68,137),w=between(24,46);el('path',{d:`M${x-w} ${y+75}Q${x-w-8} ${y-20} ${x} ${y-h/2}Q${x+w} ${y-12} ${x+w} ${y+75}Z`,fill:'var(--tree)',opacity:between(.48,.8),class:'color'},$('distantTrees'))}
 const stems=[];
 for(let i=0;i<10;i++)el('ellipse',{cx:between(594,738),cy:between(320,367),rx:between(35,62),ry:between(36,53),fill:'var(--leaf)',opacity:between(.48,.7),class:'color',filter:'url(#soft-edge)'},$('willowCrown'));
@@ -166,14 +166,14 @@ function petCat(){if(!state.focused){focusCat();return}$('cat').classList.remove
 function modal(id){if(id==='resultOverlay'&&worldEngine)worldEngine.set(650,710,1.4);lastFocus=document.activeElement;document.querySelectorAll('.overlay').forEach(x=>x.hidden=true);$(id).hidden=false;const target=$(id).querySelector('button');if(target)target.focus()}
 function closeModal(){document.querySelectorAll('.overlay').forEach(x=>x.hidden=true);if(lastFocus&&lastFocus.isConnected)lastFocus.focus()}
 document.querySelectorAll('.close-sheet').forEach(b=>b.onclick=closeModal);document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o&&o.id!=='resultOverlay')closeModal()}));
-// Sound and weather share a compact bottom sheet.  Only its handle/title can
-// begin this gesture, so sliders and switches retain their normal touch input.
+// 声音与天气共用紧凑底部面板；仅手柄和标题可以发起下滑手势，
+// 以免干扰滑杆和开关的正常触控。
 const soundSheet=$('soundOverlay'),dragStarts=new Map();
 const dragStart=e=>{if(e.button!==undefined&&e.button!==0)return;dragStarts.set(e.pointerId,e.clientY);e.currentTarget.setPointerCapture?.(e.pointerId)};
 const dragEnd=e=>{const y=dragStarts.get(e.pointerId);dragStarts.delete(e.pointerId);if(y!==undefined&&e.clientY-y>70)closeModal()};
 soundSheet.querySelectorAll('.sheet-drag-handle,.sheet-head h2').forEach(target=>{target.addEventListener('pointerdown',dragStart);target.addEventListener('pointerup',dragEnd);target.addEventListener('pointercancel',e=>dragStarts.delete(e.pointerId))});
 document.addEventListener('keydown',e=>{const m=[...document.querySelectorAll('.overlay')].find(x=>!x.hidden);if(e.key==='Escape'){if(m&&m.id==='resultOverlay')returnGarden();else if(m)closeModal();else if(state.focused)focusCat()}if(e.key==='Tab'&&m){const all=[...m.querySelectorAll('button,input')].filter(x=>x.getClientRects().length&&!x.disabled),first=all[0],last=all[all.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
-// Local procedural audio: six independent, continuously looping tracks. No requests, keys or audio downloads.
+// 本地程序化音频：六条独立循环音轨，不发请求、不使用密钥，也不下载音频。
 class GardenAudio{
  constructor(){const C=window.AudioContext||window.webkitAudioContext;if(!C)throw Error('Audio unavailable');this.ctx=new C();this.master=this.ctx.createGain();this.master.gain.value=0;const limiter=this.ctx.createDynamicsCompressor();limiter.threshold.value=-14;limiter.knee.value=18;limiter.ratio.value=4;this.master.connect(limiter).connect(this.ctx.destination);this.tracks={};const seconds=16,sr=this.ctx.sampleRate;
   for(const key of Object.keys(defaults)){const buffer=this.ctx.createBuffer(2,sr*seconds,sr);for(let c=0;c<2;c++){const a=buffer.getChannelData(c);let low=0,low2=0;for(let i=0;i<a.length;i++){const t=i/sr,n=Math.random()*2-1;low=.986*low+.014*n;low2=.75*low2+.25*n;let v=0;if(key==='rain')v=(.45*n+.55*low2)*.3*(.87+.13*Math.sin(2*Math.PI*t/8));if(key==='wind')v=low*2.2*(.6+.22*Math.sin(2*Math.PI*t/8)+.12*Math.sin(2*Math.PI*t/16));if(key==='water')v=low2*.16+Math.sin(2*Math.PI*(430*t+4*Math.sin(2*Math.PI*t/2)))*.015*(1+Math.sin(2*Math.PI*t/4));if(key==='cat'){const breath=.5+.5*Math.sin(2*Math.PI*t/4);v=(Math.sin(2*Math.PI*52*t)*.55+Math.sin(2*Math.PI*104*t)*.16+low*2)*(.25+.75*Math.pow(.5+.5*Math.sin(2*Math.PI*26*t),2))*(.3+.7*breath)*.19}if(key==='bugs'){const phrase=Math.pow(Math.max(0,Math.sin(2*Math.PI*t/4+c*1.2)),3),pulse=Math.pow(Math.max(0,Math.sin(2*Math.PI*13*t)),5);v=(Math.sin(2*Math.PI*(2600+c*187.5)*t)+.22*Math.sin(2*Math.PI*3700*t))*phrase*pulse*.075}if(key==='sun')v=(Math.sin(2*Math.PI*174*t)+.55*Math.sin(2*Math.PI*261*t)+.3*Math.sin(2*Math.PI*348*t))*.04*(.7+.3*Math.sin(2*Math.PI*t/8));const edge=Math.min(1,t/.03,(seconds-t)/.03);a[i]=v*edge}}
@@ -233,7 +233,7 @@ function history(){const root=$('records');root.replaceChildren();if(!state.reco
 function showPlant(r){state.selected=r;$('plantTitle').textContent=r.name;$('historyPlant').setAttribute('href','#'+plantSymbol(r.type));$('plantDetails').textContent=`${new Date(r.date).toLocaleDateString('zh-CN')} · ${themes[r.type].sound}陪伴了你 ${format(r.duration)}。`;modal('plantOverlay')}
 const soundMeta=[['sun','sun','阳光','暖调氛围音'],['wind','wind','风声','风拂树叶'],['rain','rain','雨声','细雨落在花园'],['bugs','bug','虫鸣声','远处低密度虫鸣'],['cat','cat','猫咪呼噜声','身边安静的陪伴'],['water','water','流水声','池塘边的水声']];const mutedMemory={};
 for(const[key,ic,name,sub]of soundMeta){const row=document.createElement('div');row.className='sound-row';row.innerHTML=`<div class="sound-top"><button class="sound-icon" id="mute-${key}" aria-label="开关${name}" aria-pressed="true">${icon(ic)}</button><label class="sound-name" for="volume-${key}">${name}<small>${sub}</small></label><output class="sound-value" id="value-${key}"></output></div><input class="sound-slider" id="volume-${key}" aria-label="${name}音量" type="range" min="0" max="100">`;$('soundRows').append(row);$('volume-'+key).oninput=e=>{state.mix[key]=Number(e.target.value);if(key==='wind'&&state.windLink){state.wind=state.mix.wind;updateEnvironment()}changedMix()};$('mute-'+key).onclick=()=>{if(state.mix[key]){mutedMemory[key]=state.mix[key];state.mix[key]=0}else state.mix[key]=mutedMemory[key]||defaults[key]||(key==='rain'?60:35);if(key==='wind'&&state.windLink){state.wind=state.mix.wind;updateEnvironment()}changedMix()}}
-// Keep sunlight and its optional ambience together on the weather side.
+// 将阳光与可选的氛围音一同放在天气面板。
 const sunSoundRow=$('volume-sun').closest('.sound-row');
 sunSoundRow.querySelector('.sound-name').innerHTML='阳光氛围音<small>可选的暖调声音 · 与光照强度独立</small>';
 $('volume-sun').setAttribute('aria-label','阳光氛围音音量');
@@ -254,7 +254,7 @@ worldEngine=new GardenWorld({svg:$('world'),scene:document.querySelector('.scene
 $('zoomIn').onclick=()=>worldEngine.zoomBy(1.2);$('zoomOut').onclick=()=>worldEngine.zoomBy(1/1.2);$('recenter').onclick=()=>{state.focused=false;worldEngine.home();showMode()};
 const lessMusic=document.createElement('button');lessMusic.textContent='音乐少一点';lessMusic.onclick=()=>{state.mix.sun=Math.max(0,state.mix.sun-8);changedMix();closeModal();toast('暖调氛围音已经放轻，自然声继续陪你。')};document.querySelector('.quick-actions').append(lessMusic);
 const changeWind=document.createElement('button');changeWind.textContent='换成微风花园';changeWind.onclick=()=>{state.weather='clear';updateWeatherUI();state.mix.wind=60;state.mix.rain=0;state.mix.bugs=20;if(state.windLink)state.wind=60;updateEnvironment();changedMix();closeModal();toast('现在，听听风经过树梢。')};document.querySelector('.quick-actions').append(changeWind);
-// Spatial sound sources are part of the world and stay attached to it while panning.
+// 空间声源属于花园世界的一部分，会在镜头平移时保持与场景相连。
 const hotspots=el('g',{id:'soundSources'},$('camera'));
 [['water',390,473,'池塘水声'],['wind',720,476,'树梢的风'],['bugs',295,621,'草间虫鸣']].forEach(([key,x,y,label])=>{const g=el('g',{transform:`translate(${x} ${y})`,class:'source-hotspot',role:'button',tabindex:0,'aria-label':label},hotspots);el('circle',{cx:0,cy:0,r:15},g);const paths={water:'M0-8Q-8 2-4 6Q0 9 4 6Q8 2 0-8Z',wind:'M-8-3H3Q9-3 6-8M-7 2H7Q11 3 8 7M-5 7H1',bugs:'M-3-5Q0-8 3-5V5Q0 9-3 5ZM-3-2H-7M3-2H7M-3 3H-8M3 3H8'};el('path',{d:paths[key]},g);const act=()=>{if(state.mode!=='session'){toast('开始陪伴后，可以在这里调节'+label+'。');return}selectTab(false);modal('soundOverlay');$('volume-'+key).focus()};g.onclick=act;g.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();act()}}});
 $('waterMarks').setAttribute('transform','translate(0 -115)');

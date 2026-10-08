@@ -1,13 +1,13 @@
 .region-nav{position:absolute;z-index:5;bottom:160px;left:50%;transform:translateX(-50%);display:flex;gap:5px;padding:4px;border-radius:24px;background:#f0f2e8a6;backdrop-filter:blur(12px);white-space:nowrap}.region-nav button{font:inherit;font-size:12px;color:#52624c;background:transparent;border:0;border-radius:20px;padding:9px 17px;min-height:36px;cursor:pointer}.region-nav button[aria-pressed=true]{background:#fffdf0cf;color:#344d38}.world-hint{bottom:210px;font-size:10px;opacity:.7}.night .region-nav{background:#233c48a8}.night .region-nav button{color:#d6e2d2}.night .region-nav button[aria-pressed=true]{background:#6e8a7d60}.app.focused .region-nav{display:none}.home-copy{pointer-events:none}.home-copy h1{font-size:24px}.world-tools{opacity:.8}.night .playing-title h1,.night .playing-title p{text-shadow:0 1px 10px #172b36}
 .scene:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(240,244,225,.86) 0%,rgba(240,244,225,.64) 17%,transparent 34%,transparent 80%,rgba(234,239,216,.2) 100%)}.night .scene:after{background:linear-gradient(180deg,rgba(20,38,47,.86),rgba(20,38,47,.6) 17%,transparent 34%)}.home-copy h1,.playing-title h1{color:#344e40}.night .home-copy h1,.night .playing-title h1{color:#e6eddb}
 
-/* Keep the interactive controls while presenting an unobstructed garden. */
+/* 保留交互控件，同时让花园画面保持开阔。 */
 .home-copy .eyebrow,.home-copy h1,.home-copy .description,.home-copy .theme-line,.home-copy .home-note,.playing-title,.brand{display:none!important}.topbar{justify-content:flex-end}.scene:after{display:none}.scene .vignette{display:none!important}
 
-/* Let the garden do the talking; these hints remain in the DOM for scripts. */
+/* 以花园画面为主；这些提示仍保留在 DOM 中供脚本使用。 */
 .home-note,.world-hint,.floating-tip,.footer-note,.scene-caption{display:none!important}
 
-/* Both sound tabs share the same compact, scrollable half-sheet. */
+/* 两个声音标签页共用紧凑且可滚动的半屏面板。 */
 #soundOverlay .sheet{height:50svh;max-height:50svh;box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column;padding-top:13px}
 #soundOverlay .sheet-drag-handle{width:38px;height:5px;flex:none;border-radius:99px;background:color-mix(in srgb,var(--ink) 24%,transparent);margin:0 auto 12px;touch-action:none;cursor:grab}
 #soundOverlay .sheet-drag-handle:active{cursor:grabbing}
@@ -19,7 +19,7 @@
 .completion-notice{position:absolute;z-index:12;left:50%;top:24%;transform:translateX(-50%);min-width:220px;padding:15px 22px;border:1px solid #fff6c8a8;border-radius:24px;background:#30493dd9;color:#fffbed;text-align:center;box-shadow:0 0 0 7px #fff1a11c,0 10px 32px #1e352a55;animation:completion-in .45s ease-out}.completion-notice strong{display:block;font-family:"Songti SC",serif;font-size:19px;letter-spacing:2px}.completion-notice span{display:block;margin-top:7px;font-size:11px;letter-spacing:1px;opacity:.86}.plot-glow{animation:plot-pulse .7s ease-in-out infinite;filter:drop-shadow(0 0 8px #ffed9a)}.planted-growth{transform-origin:0 0;transition:transform .08s linear}@keyframes completion-in{from{opacity:0;transform:translate(-50%,-14px)}to{opacity:1;transform:translate(-50%,0)}}@keyframes plot-pulse{50%{opacity:.2;transform:scale(1.16)}}
 @media(prefers-reduced-motion:reduce){.completion-notice,.plot-glow{animation:none}.planted-growth{transition:none}}
 
-/* An optional timer is a compact bottom sheet, never a required session step. */
+/* 定时器是可选的紧凑底部面板，不是开始陪伴的必经步骤。 */
 .timer-button{border:0;background:transparent;color:inherit;font:inherit;font-variant-numeric:tabular-nums;min-height:32px;padding:0 4px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}.timer-sheet{height:50svh;max-height:50svh;box-sizing:border-box;border-radius:28px 28px 0 0}.timer-options{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin:20px 0}.timer-options button,.timer-custom button,.timer-cancel{min-height:46px;border:1px solid var(--line);border-radius:23px;background:transparent;color:inherit;font:inherit}.timer-options button[aria-pressed=true]{background:var(--ink);color:var(--paper)}.timer-custom{display:grid;grid-template-columns:1fr 92px;gap:8px;align-items:center;font-size:13px}.timer-custom input{grid-column:1;border:1px solid var(--line);border-radius:12px;background:transparent;color:inherit;font:inherit;padding:12px}.timer-custom button{grid-column:2;grid-row:1 / span 2}.timer-cancel{width:100%;margin-top:24px;color:var(--muted)}
 .app:has(#controls:not([hidden])) .region-nav{bottom:184px}
 .timer-custom input{font-size:16px}
