@@ -11,3 +11,8 @@ __pycache__/
 .idea/
 .vscode/
 
+
+# Capture tooling leftovers
+.wheels/
+docs/ui-diff/.chrome-*/
+docs/.DS_Store

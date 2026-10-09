@@ -59,10 +59,11 @@ function placeForest(world) {
 
   // Three irregular, offset bands read as a continuous woodland from the
   // garden, while their changing heights leave a non-mechanical skyline.
+  const scale = world.quality === 'high' ? 1 : world.quality === 'mid' ? .65 : .4;
   const backBands = [
-    { z: -43, count: 19, spread: 98 },
-    { z: -52, count: 18, spread: 112 },
-    { z: -62, count: 17, spread: 126 },
+    { z: -43, count: Math.round(19 * scale), spread: 98 },
+    { z: -52, count: Math.round(18 * scale), spread: 112 },
+    { z: -62, count: Math.round(17 * scale), spread: 126 },
   ];
   backBands.forEach(({ z, count, spread }, layer) => {
     for (let i = 0; i < count; i++) {
@@ -75,7 +76,7 @@ function placeForest(world) {
   // lawn, or the main approach along the path.
   const sideClusters = [[-48, -24], [47, -27], [-42, 13], [44, 9]];
   for (const [cx, cz] of sideClusters) {
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < Math.round(3 * scale); i++) {
       const angle = random() * Math.PI * 2;
       const radius = 4 + random() * 8;
       add(cx + Math.cos(angle) * radius, cz + Math.sin(angle) * radius, 1);
