@@ -7,24 +7,32 @@ const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z);
 let seed=527;const rnd=()=>((seed=seed*16807%2147483647)-1)/2147483646;
 const mix=(a,b,t)=>a+(b-a)*t;
 const noiseGLSL=`float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+1.),f.x),f.y);}float fbm(vec2 p){return .54*noise(p)+.27*noise(p*2.03)+.13*noise(p*4.07)+.06*noise(p*8.11);}`;
+export function detectQuality(reduced=false){
+  if(reduced)return 'low';
+  const mem=navigator.deviceMemory,touch=navigator.maxTouchPoints>0,shortSide=Math.min(screen.width,screen.height),mobile=touch&&shortSide<920,dpr=window.devicePixelRatio||1;
+  if(mem&&mem<=2)return 'low';
+  if(mobile||(mem&&mem<=4)||dpr>=2.5)return 'mid';
+  return 'high';
+}
 
 export class GardenWorld {
   constructor({svg,scene,state,onExplore}){
-    this.state=state;this.host=scene;this.onExplore=onExplore;this.t=0;this.last=0;this.follow=false;this.wind={time:{value:0},strength:{value:.35}};this.materials=[];this.models={};this.animals=[];this.grown=[];
+    this.state=state;this.host=scene;this.onExplore=onExplore;this.t=0;this.last=0;this.follow=false;this.wind={time:{value:0},strength:{value:.35}};this.materials=[];this.models={};this.templates={};this.animals=[];this.grown=[];this.quality=detectQuality(state.reduced);
     svg.classList.add('legacy-world');
     this.scene=new T.Scene();this.scene.fog=new T.FogExp2('#c9dcd8',.009);
     this.camera=new T.PerspectiveCamera(44,1,.1,220);
-    this.renderer=new T.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=T.PCFSoftShadowMap;this.renderer.outputColorSpace=T.SRGBColorSpace;this.renderer.toneMapping=T.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.12;
-    this.canvas=this.renderer.domElement;this.canvas.className='garden-3d';this.canvas.setAttribute('aria-label','可旋转缩放的三维花园，拖动环绕，双指缩放，轻点小猫靠近');this.canvas.tabIndex=0;scene.prepend(this.canvas);
+    const q=this.quality,high=q==='high';
+    this.renderer=new T.WebGLRenderer({antialias:high,alpha:false,powerPreference:q==='low'?'low-power':'high-performance'});
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio,high?1.5:q==='mid'?1.25:1));this.renderer.shadowMap.enabled=q!=='low';this.renderer.shadowMap.type=high?T.PCFSoftShadowMap:T.PCFShadowMap;this.renderer.outputColorSpace=T.SRGBColorSpace;this.renderer.toneMapping=T.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.12;
+    this.canvas=this.renderer.domElement;this.canvas.className='garden-3d';this.canvas.dataset.quality=q;this.canvas.setAttribute('aria-label','可旋转缩放的三维花园，拖动环绕，双指缩放，轻点小猫靠近');this.canvas.tabIndex=0;scene.prepend(this.canvas);
     this.controls=new OrbitControls(this.camera,this.canvas);Object.assign(this.controls,{enableDamping:true,dampingFactor:.06,minDistance:4,maxDistance:62,maxPolarAngle:Math.PI*.465,minPolarAngle:.22,enablePan:true,screenSpacePanning:false,rotateSpeed:.42,zoomSpeed:.7,panSpeed:.6});
     this.controls.addEventListener('start',()=>{this.follow=false;this.transition=null;onExplore()});
     this.hemi=new T.HemisphereLight('#edf3ed','#829078',2.0);this.scene.add(this.hemi);
-    this.sun=new T.DirectionalLight('#fff1d2',2.5);this.sun.position.set(-16,23,9);this.sun.castShadow=true;Object.assign(this.sun.shadow.camera,{left:-24,right:24,top:24,bottom:-24,near:.5,far:75});this.sun.shadow.mapSize.set(1024,1024);this.sun.shadow.bias=-.0004;this.sun.shadow.normalBias=.035;this.sun.shadow.radius=4;this.scene.add(this.sun);
+    this.sun=new T.DirectionalLight('#fff1d2',2.5);this.sun.position.set(-16,23,9);this.sun.castShadow=q!=='low';Object.assign(this.sun.shadow.camera,{left:-24,right:24,top:24,bottom:-24,near:.5,far:75});this.sun.shadow.mapSize.set(q==='high'?1024:512,q==='high'?1024:512);this.sun.shadow.bias=-.0004;this.sun.shadow.normalBias=.035;this.sun.shadow.radius=4;this.scene.add(this.sun);
     this.buildTerrain();this.buildSky();this.buildWater();this.buildParticles();this.buildPlots();
     this.home(true);this.resize();this.bindPicking();
-    this.status=document.createElement('div');this.status.className='asset-status';this.status.textContent='树木和小猫正在醒来…';scene.append(this.status);
-    this.loadAssets().then(()=>{this.status.remove();this.canvas.dataset.ready='true'}).catch(e=>{console.error(e);this.status.textContent='素材载入失败，请刷新重试';this.canvas.dataset.error=e.message});
+    this.status=document.createElement('div');this.status.className='asset-status';this.status.innerHTML='<span class="loader-dot"></span>花园正在醒来';this.status.setAttribute('role','status');scene.append(this.status);
+    this.loadAssets().then(()=>{this.status.remove();this.canvas.dataset.ready='true';document.getElementById('app')?.classList.add('world-ready')}).catch(e=>{console.error(e);this.status.textContent='素材载入失败，请刷新重试';this.canvas.dataset.error=e.message;document.getElementById('app')?.classList.add('world-ready')});
   }
   groundHeight(x,z){const d=Math.hypot(x,z);return Math.max(0,d-13)*(.025+Math.sin(x*.15)*.013)+Math.max(0,d-18)*Math.sin(z*.11)*.06;}
   mat(color){return new T.MeshStandardMaterial({color,roughness:.95,metalness:0})}
@@ -59,7 +67,8 @@ export class GardenWorld {
     for(const[n,gltf]of Object.entries(this.models)){if(n==='cat')continue;gltf.scene.traverse(o=>{if(!o.isMesh)return;o.castShadow=true;o.receiveShadow=true;o.geometry.computeBoundingBox();const box=o.geometry.boundingBox;const remat=m=>{const m2=this.mat(palette[m.name]||'#adb799');m2.name=m.name;const windable=/leaf|grass|color/i.test(m.name)||/flower|bush|grass/.test(n);return windable?this.windMaterial(m2,box.max.y-box.min.y,box.min.y,n.startsWith('tree')?.045:.065):m2};o.material=Array.isArray(o.material)?o.material.map(remat):remat(o.material);const wm=(Array.isArray(o.material)?o.material:[o.material]).find(m=>m.userData.windPatch);if(wm){o.customDepthMaterial=new T.MeshDepthMaterial({depthPacking:T.RGBADepthPacking});o.customDepthMaterial.onBeforeCompile=wm.userData.windPatch;o.customDepthMaterial.customProgramCacheKey=wm.customProgramCacheKey}})}
     for(const[n,gltf]of Object.entries(this.models)){if(n==='cat')continue;gltf.scene.traverse(o=>{if(!o.isMesh)return;const g=o.geometry.clone();g.deleteAttribute('normal');o.geometry=mergeVertices(g);o.geometry.computeVertexNormals()})}
     this.staticRoots=[];
-    const place=(name,x,z,size,angle=rnd()*6.28)=>{const o=this.models[name].scene.clone(true);const box=new T.Box3().setFromObject(o),h=box.max.y-box.min.y,s=size/h;const wrapper=new T.Group();o.scale.setScalar(s);o.position.y=-box.min.y*s;wrapper.add(o);wrapper.position.set(x,this.groundHeight(x,z),z);wrapper.rotation.y=angle;this.scene.add(wrapper);this.staticRoots.push(wrapper);return wrapper};this.place=place;
+    for(const[n,gltf]of Object.entries(this.models))this.rememberTemplate(n,gltf.scene);
+    const place=(name,x,z,size,angle=rnd()*6.28)=>{const o=this.cloneShared(name),t=this.templates[name],s=size/t.height;const wrapper=new T.Group();o.scale.setScalar(s);o.position.y=-t.minY*s;wrapper.add(o);wrapper.position.set(x,this.groundHeight(x,z),z);wrapper.rotation.y=angle;this.scene.add(wrapper);this.staticRoots.push(wrapper);return wrapper};this.place=place;
     // Grove at the edge of the clearing, allowing a complete orbit and a large lawn.
     for(let i=0;i<42;i++){const a=i/42*Math.PI*2,r=19+rnd()*13;let x=Math.cos(a)*r,z=Math.sin(a)*r;place(i%5===0?'tree_pineTallA':i%2?'tree_oak':'tree_detailed',x,z,4.6+rnd()*5.5)}
     [[-12,-4,5.5],[-10,-13,7.5],[12,-9,6.5],[15,3,7.4],[-15,10,6]].forEach(([x,z,s])=>place('tree_oak',x,z,s));
@@ -74,10 +83,27 @@ export class GardenWorld {
     place('stump_round',8,5,.7);
     this.batchScenery();this.makeCat();this.updateGrowth(true);
   }
+  rememberTemplate(name,scene){
+    scene.updateMatrixWorld(true);const meshes=[];scene.traverse(o=>{if(o.isMesh)meshes.push(o)});
+    const box=new T.Box3().setFromObject(scene);this.templates[name]={scene,meshes,height:Math.max(.01,box.max.y-box.min.y),minY:box.min.y};
+  }
+  cloneShared(name){
+    const t=this.templates[name],o=t.scene.clone(true);let i=0;
+    o.traverse(n=>{if(!n.isMesh)return;const src=t.meshes[i++];n.material=src.material;n.customDepthMaterial=src.customDepthMaterial;n.castShadow=src.castShadow;n.receiveShadow=src.receiveShadow;});
+    return o;
+  }
   batchScenery(){
     this.scene.updateMatrixWorld(true);const buckets=new Map();
-    for(const root of this.staticRoots)root.traverse(o=>{if(!o.isMesh)return;const key=o.geometry.uuid+':'+(Array.isArray(o.material)?o.material.map(m=>m.uuid).join():o.material.uuid);if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(o)});
-    for(const meshes of buckets.values()){const first=meshes[0],batch=new T.InstancedMesh(first.geometry,first.material,meshes.length);batch.castShadow=true;batch.receiveShadow=true;batch.customDepthMaterial=first.customDepthMaterial;meshes.forEach((m,i)=>{batch.setMatrixAt(i,m.matrixWorld);m.visible=false});batch.instanceMatrix.needsUpdate=true;this.scene.add(batch)}
+    for(const root of this.staticRoots)root.traverse(o=>{if(!o.isMesh)return;const mats=Array.isArray(o.material)?o.material:[o.material];const key=o.geometry.uuid+':'+mats.map(m=>m.uuid).join();if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(o)});
+    this.batches=[];
+    for(const meshes of buckets.values()){
+      const first=meshes[0],batch=new T.InstancedMesh(first.geometry,first.material,meshes.length);
+      batch.castShadow=!!first.castShadow;batch.receiveShadow=!!first.receiveShadow;batch.customDepthMaterial=first.customDepthMaterial;batch.frustumCulled=false;
+      const matName=first.material?.name||'';if(/Leaves|Grass|Flowers|leaf|grass|color/i.test(matName))batch.userData.skipReflection=true;
+      meshes.forEach((m,i)=>batch.setMatrixAt(i,m.matrixWorld));batch.instanceMatrix.needsUpdate=true;this.scene.add(batch);this.batches.push(batch);
+    }
+    for(const root of this.staticRoots)this.scene.remove(root);this.staticRoots.length=0;
+    this.canvas.dataset.batches=String(this.batches.length);
   }
   buildWillow(x,z){
     const trunk=this.mesh(new T.CylinderGeometry(.24,.43,4.3,9),this.mat('#948671'),x,2.1,z);trunk.rotation.z=-.1;trunk.castShadow=true;
@@ -123,7 +149,7 @@ export class GardenWorld {
     this.catPath=new T.CatmullRomCurve3([V(3,0,5),V(6,0,3),V(7,0,-1),V(10,0,-5),V(12,0,0),V(10,0,6),V(6,0,9),V(1,0,10),V(-4,0,7),V(-5,0,5),V(0,0,5)],true,'catmullrom',.3);this.catDistance=0;this.pathLength=this.catPath.getLength();
     this.canvas.dataset.catAnimation=clip?.name||'none';this.canvas.dataset.catSource='kenchoo · CC BY 4.0';
   }
-  bindPicking(){let down=null;this.canvas.addEventListener('pointerdown',e=>{down=[e.clientX,e.clientY,performance.now()]});this.canvas.addEventListener('pointerup',e=>{if(!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>8||performance.now()-down[2]>650)return;const r=this.canvas.getBoundingClientRect(),v=new T.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1),ray=new T.Raycaster();ray.setFromCamera(v,this.camera);if(this.cat&&ray.intersectObject(this.cat,true).length){document.getElementById('cat').dispatchEvent(new MouseEvent('click'));return}const hit=ray.intersectObjects(this.plots);if(hit.length){const i=hit[0].object.userData.plot;document.querySelectorAll('#plots > g')[i]?.dispatchEvent(new MouseEvent('click'))}});this.canvas.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','+','-','0'].includes(e.key)){e.preventDefault();if(e.key==='0')this.home();else if(e.key==='+'||e.key==='-')this.zoomBy(e.key==='+'?1.15:1/1.15);else{const d=this.camera.position.clone().sub(this.controls.target);if(e.key==='ArrowLeft'||e.key==='ArrowRight')d.applyAxisAngle(V(0,1,0),e.key==='ArrowLeft'?.15:-.15);else d.y+=e.key==='ArrowUp'?1:-1;this.camera.position.copy(this.controls.target).add(d)}}})}
+  bindPicking(){let down=null;this.canvas.addEventListener('pointerdown',e=>{down=[e.clientX,e.clientY,performance.now()]});this.canvas.addEventListener('pointerup',e=>{if(!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>16||performance.now()-down[2]>700)return;const r=this.canvas.getBoundingClientRect(),v=new T.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1),ray=new T.Raycaster();ray.setFromCamera(v,this.camera);if(this.cat&&ray.intersectObject(this.cat,true).length){document.getElementById('cat').dispatchEvent(new MouseEvent('click'));return}const hit=ray.intersectObjects(this.plots);if(hit.length){const i=hit[0].object.userData.plot;document.querySelectorAll('#plots > g')[i]?.dispatchEvent(new MouseEvent('click'))}});this.canvas.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','+','-','0'].includes(e.key)){e.preventDefault();if(e.key==='0')this.home();else if(e.key==='+'||e.key==='-')this.zoomBy(e.key==='+'?1.15:1/1.15);else{const d=this.camera.position.clone().sub(this.controls.target);if(e.key==='ArrowLeft'||e.key==='ArrowRight')d.applyAxisAngle(V(0,1,0),e.key==='ArrowLeft'?.15:-.15);else d.y+=e.key==='ArrowUp'?1:-1;this.camera.position.copy(this.controls.target).add(d)}}})}
   home(immediate=false){this.follow=false;const skyWeather=['rainbow','aurora','meteor'].includes(this.state.weather);const target=skyWeather?V(0,5,-2):V(0,2.4,-1),pos=skyWeather?V(10,12,30):V(10,14,30);if(immediate){this.camera.position.copy(pos);this.controls.target.copy(target);this.controls.update()}else this.transition={pos,target};}
   focus(){this.follow=true;this.transition=null}
   set(){this.home()}
@@ -136,9 +162,9 @@ export class GardenWorld {
     const n=this.skyMat.uniforms.night.value;this.hemi.intensity=mix(.9+light*1.25,.95,n);this.hemi.color.set(n>.5?'#a4becd':'#edf3ed');this.sun.intensity=mix((.25+light*3.8)*(rain?.55:1),.65,n);this.sun.color.set(n>.5?'#a7c9e5':'#fff0cc');this.scene.fog.color.copy(new T.Color('#c9dcd8').lerp(new T.Color('#263f4b'),n));this.renderer.toneMappingExposure=mix(.93+light*.25,1.05,n);
     this.waterMat.uniforms.time.value=t;this.waterMat.uniforms.night.value=n;this.waterMat.uniforms.rain.value=rain;this.waterMat.uniforms.wind.value=this.state.wind/100;
     this.rainbow.material.uniforms.alpha.value=mix(this.rainbow.material.uniforms.alpha.value,this.state.weather==='rainbow'?1:0,.04);this.auroraMat.uniforms.time.value=t;this.auroraMat.uniforms.alpha.value=mix(this.auroraMat.uniforms.alpha.value,this.state.weather==='aurora'?1:0,.035);this.stars.material.opacity=n*.7;
-    this.rainLines.visible=!!rain;const rp=this.rainLines.geometry.attributes.position;for(let i=0;i<this.rainBase.length;i++){const p=this.rainBase[i],y=25-((t*9+p.y)%25),x=p.x+((t*.9+p.y*.05)*this.state.wind/100)%5;rp.setXYZ(i*2,x,y,p.z);rp.setXYZ(i*2+1,x-.05*this.state.wind/100,y-.38,p.z)}rp.needsUpdate=true;
-    const fp=this.flies.geometry.attributes.position;this.flies.material.opacity=n*(this.state.fireflies?.7:0);this.flyBase.forEach((p,i)=>fp.setXYZ(i,p.x+Math.sin(t*.31+i)*.6,p.y+Math.sin(t*.42+i*2)*.35,p.z+Math.cos(t*.22+i)*.7));fp.needsUpdate=true;
-    this.butterflies.forEach(({group,wings,phase},i)=>{group.visible=n<.5&&!rain;group.position.set(-5+Math.sin(t*.23+phase)*3,1.1+Math.sin(t*.47+phase)*.5,5+Math.cos(t*.19+phase)*4);wings[0].rotation.y=Math.sin(t*12+phase)*1.1;wings[1].rotation.y=-Math.sin(t*12+phase)*1.1;group.rotation.y=t*.2+phase});
+    this.rainLines.visible=!!rain;if(rain){const rp=this.rainLines.geometry.attributes.position;for(let i=0;i<this.rainBase.length;i++){const p=this.rainBase[i],y=25-((t*9+p.y)%25),x=p.x+((t*.9+p.y*.05)*this.state.wind/100)%5;rp.setXYZ(i*2,x,y,p.z);rp.setXYZ(i*2+1,x-.05*this.state.wind/100,y-.38,p.z)}rp.needsUpdate=true}
+    const flyOpacity=n*(this.state.fireflies?.7:0);this.flies.material.opacity=flyOpacity;if(flyOpacity>.01){const fp=this.flies.geometry.attributes.position;this.flyBase.forEach((p,i)=>fp.setXYZ(i,p.x+Math.sin(t*.31+i)*.6,p.y+Math.sin(t*.42+i*2)*.35,p.z+Math.cos(t*.22+i)*.7));fp.needsUpdate=true}
+    this.butterflies.forEach(({group,wings,phase})=>{group.visible=n<.5&&!rain;if(!group.visible)return;group.position.set(-5+Math.sin(t*.23+phase)*3,1.1+Math.sin(t*.47+phase)*.5,5+Math.cos(t*.19+phase)*4);wings[0].rotation.y=Math.sin(t*12+phase)*1.1;wings[1].rotation.y=-Math.sin(t*12+phase)*1.1;group.rotation.y=t*.2+phase});
     const mt=(t-(this.weatherAt||0))%10;this.meteor.visible=this.state.weather==='meteor'&&mt<1.4;this.meteorMat.opacity=Math.sin(Math.min(1,mt/1.4)*Math.PI)*.8;if(this.meteor.visible){const p=V(-3-mt*20,20-mt*6,-45),tail=p.clone().add(V(5,1.5,0));const a=this.meteor.geometry.attributes.position;a.setXYZ(0,...p.toArray());a.setXYZ(1,...tail.toArray());a.needsUpdate=true}
     if(this.cat){const rest=(t%34)>26||this.follow;const speed=rest?0:.64;this.catDistance+=dt*speed*motion;const u=(this.catDistance/this.pathLength)%1,p=this.catPath.getPointAt(u),dir=this.catPath.getTangentAt(u);this.cat.position.copy(p);this.cat.position.y=this.groundHeight(p.x,p.z);if(!rest)this.cat.rotation.y=Math.atan2(dir.x,dir.z);if(this.catAction)this.catAction.timeScale=rest?.07:.65;this.catMixer.update(dt*motion);this.canvas.dataset.catPosition=`${p.x.toFixed(2)},${p.z.toFixed(2)}`;
       if(this.follow){const target=this.cat.position.clone().add(V(0,.8,0)),offset=V(3.8,2.2,5.2).applyAxisAngle(V(0,1,0),this.cat.rotation.y),pos=target.clone().add(offset);this.camera.position.lerp(pos,.06);this.controls.target.lerp(target,.07)}
