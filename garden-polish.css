@@ -1,0 +1,8 @@
+/* Direct scene interaction; visible controls use main's existing styles. */
+.garden-3d[data-interaction="cat"],.garden-3d[data-interaction="stroking"]{cursor:grab}
+.garden-3d[data-interaction="stroking"]{cursor:grabbing}
+.garden-3d[data-interaction="water"]{cursor:crosshair}
+.garden-3d[data-interaction="sound"]{cursor:pointer}
+.water-access,.pet-access>span,.pet-access button{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);padding:0;border:0;white-space:nowrap}
+.water-access:focus-visible,.pet-access button:focus-visible{clip-path:none;width:auto;height:auto;min-height:44px;left:50%;bottom:calc(var(--dock-height,156px) + 36px);transform:translateX(-50%);z-index:6;padding:10px 16px;border-radius:14px;background:var(--paper);color:var(--ink)}
+.app.focused .water-access,.app:has(.garden-3d[data-region="meadow"]) .water-access,.app:has(.garden-3d[data-region="woods"]) .water-access{display:none}

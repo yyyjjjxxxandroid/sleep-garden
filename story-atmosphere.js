@@ -49,7 +49,7 @@ function placeForest(world) {
   };
   const add = (x, z, layer) => {
     if (!safe(x, z)) return false;
-    const height = 8.0 + random() * 5.8 - layer * .42;
+    const height = 7.0 + random() * 3.8 - layer * .42;
     const root = world.place(names[Math.floor(random() * names.length)], x, z, height, random() * Math.PI * 2, {
       width: .88 + random() * .35,
     });
@@ -61,9 +61,9 @@ function placeForest(world) {
   // garden, while their changing heights leave a non-mechanical skyline.
   const scale = world.quality === 'high' ? 1 : world.quality === 'mid' ? .65 : .4;
   const backBands = [
-    { z: -43, count: Math.round(19 * scale), spread: 98 },
-    { z: -52, count: Math.round(18 * scale), spread: 112 },
-    { z: -62, count: Math.round(17 * scale), spread: 126 },
+    { z: -43, count: Math.round(11 * scale), spread: 98 },
+    { z: -52, count: Math.round(10 * scale), spread: 112 },
+    { z: -62, count: Math.round(9 * scale), spread: 126 },
   ];
   backBands.forEach(({ z, count, spread }, layer) => {
     for (let i = 0; i < count; i++) {

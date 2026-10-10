@@ -9,18 +9,18 @@ if not bundler and Path('/private/tmp/garden-esbuild/bin/esbuild').exists():
     bundler='/private/tmp/garden-esbuild/bin/esbuild'
 if bundler:
     subprocess.run([bundler,str(root/'story-world.js'),'--bundle','--format=iife','--minify','--alias:three='+str(root/'vendor/three/build/three.module.js'),'--outfile='+str(root/'world3d.bundle.js')],check=True)
-elif (root/'world3d.bundle.js').exists() and all((root/'world3d.bundle.js').stat().st_mtime >= (root/name).stat().st_mtime for name in ['story-world.js','world-base.js','story-cat.js','story-detail.js','story-atmosphere.js']):
+elif (root/'world3d.bundle.js').exists() and all((root/'world3d.bundle.js').stat().st_mtime >= (root/name).stat().st_mtime for name in ['story-world.js','world-base.js','story-cat.js','garden-botany.js','garden-environment.js','story-detail.js','story-atmosphere.js','garden-art.js']):
     print('Using bundled 3D JavaScript; npm install to rebuild changed JavaScript.')
 else:
     raise SystemExit('Run npm install first, or set GARDEN_ESBUILD to an esbuild executable.')
 assets=json.loads((root/'assets3d-v2/embedded.json').read_text())
 html=(root/'source.html').read_text()
-# Opening the template should display the current 3D product.
-# Remove the template redirect from the generated HTML.
+# source.html is the editable template; opening it should show the 3D product.
+# Remove its redirect from the generated product to prevent a reload loop.
 entry_start=html.index('<!-- source-entry-start -->')
 entry_end=html.index('<!-- source-entry-end -->')+len('<!-- source-entry-end -->')
 html=html[:entry_start]+html[entry_end:]
-css=(root/'world.css').read_text()+(root/'world3d.css').read_text()+(root/'story-world.css').read_text()
+css=(root/'world.css').read_text()+(root/'world3d.css').read_text()+(root/'story-world.css').read_text()+(root/'garden-polish.css').read_text()
 script='window.STORY_ASSETS='+json.dumps(assets)+';\n'+(root/'world3d.bundle.js').read_text()
 html=html.replace('<link rel="stylesheet" href="world.css">','<style>'+css+'</style>')
 html=html.replace('<script src="world.js"></script>','<script>'+script+'</script>')
@@ -36,6 +36,7 @@ html=html.replace("worldEngine.weatherChanged();worldEngine.home()}updateTitle()
 html=html.replace('<title>眠境花园 · 把时间交给风</title>','<title>眠境花园 · 3D 声景世界</title>')
 html=html.replace('</main>','<details class="asset-credits"><summary>素材</summary><p>猫：<a href="https://sketchfab.com/3d-models/bicolor-cat-e623a618ca344a8393d7ba4d63ec23cf" target="_blank" rel="noreferrer">Bicolor Cat / kenchoo</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>，调整比例与材质。<br>植物与石头：Kenney Nature Kit · CC0。<br>Three.js · MIT。其余环境与天气为本 Demo 自制。</p></details></main>')
 html=html.replace('猫：<a href="https://sketchfab.com/3d-models/bicolor-cat-e623a618ca344a8393d7ba4d63ec23cf" target="_blank" rel="noreferrer">Bicolor Cat / kenchoo</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>，调整比例与材质。','猫：本 Demo 原创绘本造型与程序动画。').replace('Kenney Nature Kit · CC0','Quaternius Stylized Nature MegaKit · CC0')
+html=html.replace('植物与石头：Quaternius Stylized Nature MegaKit · CC0。','树木、花簇、石头、池岸与家具：原创程序模型。<br>部分草木：Quaternius Stylized Nature MegaKit · CC0。')
 html=html.replace('<script src="session-clock.js"></script>','<script>'+ (root/'session-clock.js').read_text()+'</script>')
 (root/'index.html').write_text(html)
 print('Built offline 3D HTML',round(len(html.encode())/1024/1024,2),'MB')
