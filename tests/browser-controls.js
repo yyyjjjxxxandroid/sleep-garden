@@ -10,14 +10,18 @@
   };
   const $ = id => document.getElementById(id);
   const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const waitResult = async () => {
+    for(let i=0;i<160&&$('resultOverlay').hidden;i++)await wait(50);
+    assert(!$('resultOverlay').hidden&&$('completionNotice').hidden,'growth finishes before its result appears');
+  };
   const click = id => $(id).click();
   const records = () => JSON.parse(localStorage.getItem('sleepGarden.v1') || '{}').records || [];
   const waitPlaying = async () => {
-    for (let i = 0; i < 100 && $('app').dataset.session !== 'playing'; i++) await wait(10);
-    assert($('app').dataset.session === 'playing', 'audio activation reaches playing');
+    for (let i = 0; i < 100 && $('app').dataset.session !== 'running'; i++) await wait(10);
+    assert($('app').dataset.session === 'running', 'audio activation reaches playing');
   };
   assert($('app').dataset.audio === 'running', 'trusted user click activates audio');
-  click('totalTime'); click('timerCancel'); click('finishButton'); click('returnGarden');
+  click('totalTime'); click('timerCancel'); click('finishButton'); await waitResult(); click('returnGarden');
   assert(!$('progress').hasAttribute('aria-valuemax'), 'unlimited progress has no fictitious maximum');
 
   // 延迟恢复音频，用于复现快速开始/结束时的竞态，无需真实等待。
@@ -31,12 +35,23 @@
   AudioContext.prototype.resume = async function () { await wait(80); return originalResume.call(this); };
   const initialRecords = records().length;
   click('restartButton'); click('restartButton'); click('finishButton'); click('finishButton');
+  assert($('finishButton').disabled && $('resetButton').disabled && records().length === initialRecords, 'audio activation disables ending and reset without creating a record');
+  // Also exercise an internal end during activation: a late audio promise
+  // must remain harmless even when the disabled UI cannot dispatch a click.
+  $('finishButton').onclick(); $('finishButton').onclick();
   await wait(150);
   assert(records().length === initialRecords + 1, 'rapid start/end records exactly one plant');
   assert($('app').dataset.audio === 'paused', 'late audio resume cannot restart a finished session');
-  assert($('app').dataset.session === 'completed', 'late audio resume cannot overwrite completed state');
+  assert($('app').dataset.session === 'done', 'late audio resume cannot overwrite completed state');
   AudioContext.prototype.resume = originalResume;
-  click('returnGarden'); click('restartButton'); await waitPlaying();
+  // Restart during growth: the previous plant must finish, and its delayed
+  // result must not interrupt the new listening session.
+  click('restartButton'); await waitPlaying(); await wait(4300);
+  assert($('resultOverlay').hidden&&$('completionNotice').hidden,'restarting during growth cancels the old completion overlay');
+  let world;const updateWorld=GardenWorld.prototype.update;
+  GardenWorld.prototype.update=function(now){world=this;GardenWorld.prototype.update=updateWorld;return updateWorld.call(this,now)};
+  await wait(60);
+  assert(world.state.records.every(r=>r.growth===undefined),'restarting leaves no partially grown runtime record');
 
   // 推进陪伴时钟，同时保持渲染器和 UI 事件循环真实运行。
   const realNow = performance.now.bind(performance);
@@ -49,6 +64,17 @@
     click('totalTime'); $('customMinutes').value = String(minutes);
     $('customMinutes').dispatchEvent(new Event('input')); click('customTimer');
   };
+
+  customTimer(1); await advance(15000);
+  const resetRecords=records().length,resetMix=JSON.stringify(JSON.parse(localStorage.getItem('sleepGarden.v1')).mix);
+  click('resetButton');
+  assert($('elapsed').textContent==='00:00'&&$('timerDisplay').textContent==='01:00'&&$('progressFill').style.width==='0%', 'reset clears elapsed and countdown progress while preserving the selected timer');
+  assert($('app').dataset.audio==='paused'&&$('app').dataset.session==='paused', 'reset stops sound and waits for explicit resume');
+  await advance(120000);
+  assert($('elapsed').textContent==='00:00'&&$('timerDisplay').textContent==='01:00', 'reset countdown remains frozen while paused');
+  assert(records().length===resetRecords&&JSON.stringify(JSON.parse(localStorage.getItem('sleepGarden.v1')).mix)===resetMix, 'reset preserves the sound recipe and creates no record');
+  click('resetButton');click('playButton');await waitPlaying();await advance(1000);
+  assert(Number($('progress').getAttribute('aria-valuenow'))>=1&&Number($('progress').getAttribute('aria-valuenow'))<4, 'resume after repeated reset starts counting from zero');
 
   for (const invalid of [0, 721, 1.5]) {
     customTimer(invalid);
@@ -67,7 +93,7 @@
   customTimer(2);
   assert(Number($('progress').getAttribute('aria-valuenow')) === 0, 'changing timer resets only countdown progress');
   click('totalTime'); click('timerCancel');
-  assert($('totalTime').textContent === '不限时' && !$('progress').hasAttribute('aria-valuemax'), 'cancel switches back to unlimited progress');
+  assert($('timerDisplay').textContent === '不限时' && !$('progress').hasAttribute('aria-valuemax'), 'cancel switches back to unlimited progress');
 
   click('soundButton');
   const rainButton = $('mute-rain');
@@ -103,8 +129,10 @@
   click('finishButton'); click('finishButton');
   assert(records().length === beforeFinish + 1, 'timer expiry and repeated manual ending create one plant');
   assert($('progressFill').style.width === '100%', 'timer completion is clamped to 100 percent');
-  assert($('totalTime').textContent === '00:00', 'timer completion has no negative remaining time');
-  assert(!$('resultOverlay').hidden && $('app').dataset.session === 'completed', 'timer expiry displays one completed result');
+  assert($('timerDisplay').textContent === '00:00', 'timer completion has no negative remaining time');
+  assert(!$('completionNotice').hidden&&$('resultOverlay').hidden,'timer expiry first shows the plant growing');
+  await waitResult();
+  assert(!$('resultOverlay').hidden && $('app').dataset.session === 'done', 'timer expiry displays one completed result');
   assert(records().at(-1).duration < 100, 'paused wall time does not enter the saved duration');
   assert(JSON.parse(localStorage.getItem('sleepGarden.v1')).timerSeconds === 60, 'timer preference is persisted for the next fresh session');
   performance.now = realNow; SessionClock.prototype.tick = realTick;window.setTimeout = originalTimeout;AudioParam.prototype.setValueAtTime = originalSetValue;

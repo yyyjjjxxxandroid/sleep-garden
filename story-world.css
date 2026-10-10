@@ -24,3 +24,10 @@
 /* 定时器是可选的紧凑底部面板，不是开始陪伴的必经步骤。 */
 .timer-button{border:0;background:transparent;color:inherit;font:inherit;font-variant-numeric:tabular-nums;min-height:44px;padding:0 8px;cursor:pointer}.timer-sheet{height:50svh;max-height:50svh;box-sizing:border-box;border-radius:28px 28px 0 0}.timer-options{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin:20px 0}.timer-options button,.timer-custom button,.timer-cancel{min-height:48px;border:1px solid var(--line);border-radius:23px;background:transparent;color:inherit;font:inherit}.timer-options button[aria-pressed=true]{background:var(--ink);color:var(--paper)}.timer-custom{display:grid;grid-template-columns:1fr 92px;gap:8px;align-items:center;font-size:13px}.timer-custom input{grid-column:1;border:1px solid var(--line);border-radius:12px;background:transparent;color:inherit;font:inherit;padding:12px;min-height:48px;font-size:16px}.timer-custom button{grid-column:2;grid-row:1 / span 2}.timer-cancel{width:100%;margin-top:24px;color:var(--muted)}
 .app:has(#controls:not([hidden])) .region-nav{display:none!important}
+.timer-custom{grid-template-columns:minmax(0,1fr) 92px;align-items:stretch}
+.timer-custom label{grid-column:1 / -1}
+.timer-custom input{grid-column:1;grid-row:2;width:100%;min-width:0;box-sizing:border-box;font-size:16px;min-height:48px}
+.timer-custom button{grid-column:2;grid-row:2;min-height:48px}
+.timer-help{font-size:12px;line-height:1.6;color:var(--muted);margin:10px 0}
+.timer-options{margin:14px 0}
+.timer-cancel{margin-top:18px}

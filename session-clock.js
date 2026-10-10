@@ -26,6 +26,14 @@ class SessionClock {
     if (this.duration > 0) this.elapsed = Math.min(this.elapsed, this.duration);
   }
 
+  reset(now) {
+    this.elapsed = 0;
+    this.timerStartedAt = 0;
+    this.duration = this.timerSeconds;
+    this.status = 'paused';
+    this.lastTime = now;
+  }
+
   pause(now) {
     this.tick(now);
     if (this.status === 'playing') this.status = 'paused';

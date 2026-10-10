@@ -66,3 +66,23 @@ test('fresh page state is idle with zero progress, including a saved timer prefe
   assert.equal(clock.progress, 0);
   assert.equal(clock.remaining, 900);
 });
+
+test('reset clears listening progress, keeps the timer and waits for an explicit resume', () => {
+  const clock = new SessionClock(120);
+  clock.start(0);
+  clock.tick(30000);
+  clock.setTimer(60, 30000);
+  clock.reset(45000);
+  assert.equal(clock.elapsed, 0);
+  assert.equal(clock.duration, 60);
+  assert.equal(clock.timerSeconds, 60);
+  assert.equal(clock.progress, 0);
+  assert.equal(clock.remaining, 60);
+  assert.equal(clock.status, 'paused');
+  clock.tick(90000);
+  assert.equal(clock.elapsed, 0);
+  clock.resume(90000);
+  clock.tick(100000);
+  assert.equal(clock.elapsed, 10);
+  assert.equal(clock.remaining, 50);
+});

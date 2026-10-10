@@ -15,6 +15,11 @@ else:
     raise SystemExit('Run npm install first, or set GARDEN_ESBUILD to an esbuild executable.')
 assets=json.loads((root/'assets3d-v2/embedded.json').read_text())
 html=(root/'source.html').read_text()
+# Opening the template should display the current 3D product.
+# Remove the template redirect from the generated HTML.
+entry_start=html.index('<!-- source-entry-start -->')
+entry_end=html.index('<!-- source-entry-end -->')+len('<!-- source-entry-end -->')
+html=html[:entry_start]+html[entry_end:]
 css=(root/'world.css').read_text()+(root/'world3d.css').read_text()+(root/'story-world.css').read_text()
 script='window.STORY_ASSETS='+json.dumps(assets)+';\n'+(root/'world3d.bundle.js').read_text()
 html=html.replace('<link rel="stylesheet" href="world.css">','<style>'+css+'</style>')
