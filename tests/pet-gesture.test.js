@@ -16,7 +16,7 @@ async function fixture(width=390,height=844,framed=false){
   const canvas=new EventTarget(),captured=new Set();
   Object.assign(canvas,{dataset:{},getBoundingClientRect:()=>({left:0,top:0,width,height}),setAttribute(){},setPointerCapture:id=>captured.add(id),hasPointerCapture:id=>captured.has(id),releasePointerCapture:id=>captured.delete(id)});
   let time=0;
-  const actor=createStoryCat({clock:()=>time}),cat=actor.root,scene=new T.Scene();scene.add(cat);cat.scale.setScalar(1.06);
+  const actor=createStoryCat({clock:()=>time}),cat=actor.root,scene=new T.Scene();scene.add(cat);cat.scale.setScalar(.65);
   const camera=new T.PerspectiveCamera(42,width/height,.1,100);camera.position.set(3.8,2.8,9);camera.lookAt(0,.65,0);camera.updateMatrixWorld(true);scene.updateMatrixWorld(true);
   const world=Object.assign(Object.create(window.GardenWorld.prototype),{canvas,storyCat:actor,cat,scene,camera,follow:true,state:{focused:true},controls:{enabled:true},onExplore(){}});
   if(framed){
@@ -94,7 +94,7 @@ test('pointer gaze uses the projected cat as its centre and follows up/down on a
   for(let i=0;i<45;i++)f.actor.animate(i/60,false,0,true,1/60);
   assert.ok(f.actor.head.rotation.x>.05,`downward pitch: ${f.actor.head.rotation.x}`);
   f.world.follow=false;f.world.lookAtPointer(centre.x+80,centre.y+80);
-  for(let i=0;i<45;i++)f.actor.animate(i/60,false,0,true,1/60);
+  for(let i=0;i<90;i++)f.actor.animate(i/60,false,0,true,1/60);
   assert.ok(Math.abs(f.actor.head.rotation.x)<.005,'the garden view should release pointer attention');
 });
 

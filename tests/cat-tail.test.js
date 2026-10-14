@@ -23,12 +23,13 @@ test('tail stays attached, round and outward-facing through sitting, lying and g
   for(let ring=0;ring<41;ring++){
    centre[ring].set(0,0,0);for(let j=0;j<12;j++)centre[ring].add(v.fromBufferAttribute(p,ring*13+j));centre[ring].multiplyScalar(1/12);
    let min=Infinity,max=0;for(let j=0;j<12;j++){const radius=v.fromBufferAttribute(p,ring*13+j).distanceTo(centre[ring]);min=Math.min(min,radius);max=Math.max(max,radius)}
-   assert.ok(min>.10&&max<.16&&max/min<1.001,'morphing must not flatten or twist a cross-section');
+   const expected=.17*(.7+.45*Math.sin(Math.PI*ring/40));
+   assert.ok(Math.abs(min-expected)<1e-6&&Math.abs(max-expected)<1e-6&&max/min<1.001,'each round section retains the original tail thickness');
   }
   for(let i=0;i<40*12*6;i+=3){
    const ids=[index.getX(i),index.getX(i+1),index.getX(i+2)];a.fromBufferAttribute(p,ids[0]);b.fromBufferAttribute(p,ids[1]);c.fromBufferAttribute(p,ids[2]);normal.subVectors(b,a).cross(v.subVectors(c,a)).normalize();radial.set(0,0,0);
    for(const id of ids)radial.add(v.fromBufferAttribute(p,id).sub(centre[Math.floor(id/13)]));
-   assert.ok(normal.dot(radial.normalize())>.1,'the inner curl must not fold faces inward');
+   assert.ok(normal.dot(radial.normalize())>.1,'the original tail bend must not fold faces inward');
   }
   for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(mesh.matrixWorld);assert.ok(v.y>-.015,'tail must not intersect the ground')}
  }

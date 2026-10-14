@@ -18,8 +18,8 @@ test('touch and reduced motion take priority over autonomous environmental respo
 });
 
 test('production world triggers music and water responses, but silence and night take precedence',async()=>{
- globalThis.window??={};await import('../story-world.js');const T=await import('../vendor/three/build/three.module.js'),{actor,advance}=await fixture(),state={playing:true,mix:{water:0,rain:0},night:false,weather:'clear',wind:35},radio=new T.Group();radio.position.set(3,0,1);radio.updateMatrixWorld(true);
- const world=Object.assign(Object.create(window.GardenWorld.prototype),{state,storyCat:actor,cat:actor.root,craft:{radio},water:{position:new T.Vector3(0,0,2)}});
+ globalThis.window??={};await import('../story-world.js');const T=await import('../vendor/three/build/three.module.js'),{actor,advance}=await fixture(),state={playing:true,mix:{water:0,rain:0},night:false,weather:'clear',wind:35};
+ const world=Object.assign(Object.create(window.GardenWorld.prototype),{state,storyCat:actor,cat:actor.root,water:{position:new T.Vector3(0,0,2)}});
  world.updateCatContext();assert.equal(actor.root.userData.environmentReaction,undefined,'a silent session must not make the cat listen to imaginary music');state.mix.water=20;world.updateCatContext();assert.equal(actor.root.userData.environmentReaction,'music');advance(5);assert.equal(world.catNotice('water',new T.Vector3(-2,0,1)),true);assert.equal(actor.root.userData.environmentReaction,'water');advance(5);assert.equal(world.catNotice('water',new T.Vector3(30,0,1)),false,'distant events should not attract the cat');state.night=true;world.updateCatContext();assert.equal(world.catNotice('water',new T.Vector3(1,0,1)),false);assert.deepEqual(state.mix,{water:20,rain:0});
 });
 

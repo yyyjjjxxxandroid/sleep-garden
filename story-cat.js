@@ -10,8 +10,8 @@ export function createStoryCat({random=Math.random,clock=()=>performance.now()/1
   const ink=new T.MeshStandardMaterial({color:'#3b3530',roughness:.3}),noseMat=velvet('#ba8d88');
   const unitSphere=new T.SphereGeometry(1,32,24);
   function ball(parent,mat,x,y,z,sx,sy,sz){const mesh=new T.Mesh(unitSphere,mat);mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh}
-  const torso=ball(bodyRig,fur,0,.59,-.14,.405,.38,.60);torso.name='companion-torso';
-  const chest=ball(bodyRig,white,0,.60,.31,.34,.35,.28);chest.name='companion-chest';
+  const torso=ball(bodyRig,fur,0,.63,-.20,.46,.43,.69);torso.name='companion-torso';
+  const chest=ball(bodyRig,white,0,.62,.32,.37,.38,.30);chest.name='companion-chest';
   const head=new T.Group();head.name='companion-head';head.position.set(0,1.07,.49);bodyRig.add(head);
   ball(head,fur,0,0,0,.58,.49,.48);
   ball(head,white,0,-.12,.12,.51,.31,.41);
@@ -22,7 +22,7 @@ export function createStoryCat({random=Math.random,clock=()=>performance.now()/1
   }
   for(let i=0;i<7;i++){dummy.position.set((i-3)*.09,.40+Math.sin(i)*.014,-.025);dummy.scale.set(.072,.12,.11);dummy.rotation.set(0,0,(i-3)*-.12);dummy.updateMatrix();tufts.push(new T.SphereGeometry(1,10,8).applyMatrix4(dummy.matrix))}
   const tuftMesh=new T.Mesh(mergeGeometries(tufts),fur);tuftMesh.castShadow=true;head.add(tuftMesh);tufts.forEach(g=>g.dispose());
-  function earGeometry(){const s=new T.Shape();s.moveTo(-.19,0);s.quadraticCurveTo(-.12,.27,-.01,.42);s.quadraticCurveTo(.045,.47,.08,.36);s.quadraticCurveTo(.17,.17,.20,0);s.quadraticCurveTo(0,-.05,-.19,0);return new T.ExtrudeGeometry(s,{depth:.11,bevelEnabled:true,bevelSegments:8,steps:1,bevelSize:.055,bevelThickness:.055,curveSegments:20})}
+  function earGeometry(){const s=new T.Shape();s.moveTo(-.19,0);s.quadraticCurveTo(-.12,.27,-.01,.42);s.quadraticCurveTo(.045,.47,.08,.36);s.quadraticCurveTo(.17,.17,.20,0);s.quadraticCurveTo(0,-.05,-.19,0);return new T.ExtrudeGeometry(s,{depth:.11,bevelEnabled:true,bevelSegments:5,steps:1,bevelSize:.055,bevelThickness:.055,curveSegments:14})}
   const ears=[];for(const side of [-1,1]){const g=new T.Group();g.name=`ear-${side}`;g.position.set(side*.34,.32,-.035);g.rotation.z=side*-.22;const outer=new T.Mesh(earGeometry(),patch);outer.castShadow=true;g.add(outer);const inner=new T.Mesh(earGeometry(),pink);inner.scale.set(.58,.62,.3);inner.position.set(0,.055,.12);g.add(inner);head.add(g);ears.push(g)}
   const eyes=[],cheeks=[];for(const side of [-1,1]){const g=new T.Group();g.name=`eye-${side}`;g.position.set(side*.205,.025,.443);const pupilInk=ink.clone();pupilInk.transparent=true;pupilInk.depthWrite=false;ball(g,pupilInk,0,0,0,.061,.079,.035);ball(g,new T.MeshBasicMaterial({color:'#fff6df',transparent:true,depthWrite:false}),-.016,.025,.028,.016,.02,.008);head.add(g);eyes.push(g);const cheek=ball(head,pink,side*.35,-.115,.387,.075,.022,.017);cheek.name=`cheek-${side}`;cheeks.push(cheek)}
   for(const side of [-1,1])ball(head,white,side*.104,-.158,.441,.13,.09,.072);
@@ -31,10 +31,9 @@ export function createStoryCat({random=Math.random,clock=()=>performance.now()/1
   curve([[0,-.151,.509],[0,-.19,.512],[-.038,-.205,.503]],.005,noseMat,head);curve([[0,-.19,.512],[.038,-.205,.503]],.005,noseMat,head);
   const whisker=new T.MeshBasicMaterial({color:'#a99684',transparent:true,opacity:.7});
   for(const side of [-1,1])for(let i=0;i<3;i++)curve([[side*.22,-.16+i*.025,.455],[side*.40,-.14+i*.04,.47],[side*.63,-.15+i*.065,.42]],.003,whisker,head);
-  const legs=[];for(const side of [-1,1])for(const front of [true,false]){const hip=new T.Group();hip.name=`hip-${front?'front':'back'}-${side}`;hip.position.set(side*.26,.46,front?.31:-.49);bodyRig.add(hip);const upper=ball(hip,fur,0,-.10,0,.135,.23,.145);upper.name=`upper-${front?'front':'back'}-${side}`;const foot=ball(hip,white,0,-.31,.045,.15,.12,.185);foot.name=`paw-${front?'front':'back'}-${side}`;legs.push({hip,side,front,foot,upper})}
+  const legs=[];for(const side of [-1,1])for(const front of [true,false]){const hip=new T.Group();hip.name=`hip-${front?'front':'back'}-${side}`;hip.position.set(side*.29,.48,front?.32:-.56);bodyRig.add(hip);const upper=ball(hip,fur,0,-.10,0,.16,.25,.17);upper.name=`upper-${front?'front':'back'}-${side}`;const foot=ball(hip,white,0,-.33,.045,.17,.13,.21);foot.name=`paw-${front?'front':'back'}-${side}`;legs.push({hip,side,front,foot,upper})}
   const tail=new T.Group();tail.name='companion-tail';tail.position.set(0,.64,-.75);bodyRig.add(tail);
   const path=new T.CatmullRomCurve3([new T.Vector3(0,0,0),new T.Vector3(.10,.05,-.25),new T.Vector3(.24,.35,-.43),new T.Vector3(.22,.68,-.45),new T.Vector3(.02,.86,-.40)]);
-  const curledPath=new T.CatmullRomCurve3([new T.Vector3(0,0,0),new T.Vector3(.22,-.04,-.20),new T.Vector3(.51,-.08,-.19),new T.Vector3(.69,-.11,.02),new T.Vector3(.66,-.12,.28),new T.Vector3(.46,-.10,.42)]);
   const segments=40,sides=12,ringSize=sides+1,ringVertices=(segments+1)*ringSize;
   const tg=new T.BufferGeometry(),pos=new T.Float32BufferAttribute(new Float32Array((ringVertices+2)*3),3),indices=[];
   tg.setAttribute('position',pos);tg.userData.tailSegments=segments;tg.userData.tailSides=sides;
@@ -44,28 +43,28 @@ export function createStoryCat({random=Math.random,clock=()=>performance.now()/1
   // Both ends are sealed, including the root hidden inside the rump.
   for(let j=0;j<sides;j++)indices.push(ringVertices,j,j+1,ringVertices+1,segments*ringSize+j+1,segments*ringSize+j);
   tg.setIndex(indices);const tm=new T.Mesh(tg,patch);tm.name='companion-tail-surface';tm.castShadow=true;tail.add(tm);
-  const tailTip=ball(tail,white,0,0,0,.115,.115,.115);tailTip.name='companion-tail-tip';
-  const samples=Array.from({length:segments+1},(_,i)=>({standing:path.getPointAt(i/segments),curled:curledPath.getPointAt(i/segments),centre:new T.Vector3(),tangent:new T.Vector3()}));
-  const normal=new T.Vector3(),binormal=new T.Vector3(),transport=new T.Quaternion(),socket=new T.Vector3();let tailShape=-1;
-  function shapeTail(blend){
-    // Transport one frame along the blended centreline. Interpolating two
-    // independently oriented Frenet rings can collapse or invert the tube.
-    for(const s of samples)s.centre.copy(s.standing).lerp(s.curled,blend);
+  const tailTip=ball(tail,white,0,0,0,.12,.12,.12);tailTip.name='companion-tail-tip';
+  const samples=Array.from({length:segments+1},(_,i)=>({standing:path.getPointAt(i/segments),centre:new T.Vector3(),tangent:new T.Vector3()}));
+  const normal=new T.Vector3(),binormal=new T.Vector3(),transport=new T.Quaternion(),socket=new T.Vector3();
+  function shapeTail(){
+    // Keep the original standing curve and thickness; sealed ends and a
+    // transported frame prevent holes and inverted rings during body motion.
+    for(const s of samples)s.centre.copy(s.standing);
     samples.forEach((s,i)=>s.tangent.subVectors(samples[Math.min(segments,i+1)].centre,samples[Math.max(0,i-1)].centre).normalize());
     normal.set(0,1,0).addScaledVector(samples[0].tangent,-samples[0].tangent.y).normalize();
     for(let i=0;i<=segments;i++){
       const s=samples[i];if(i){transport.setFromUnitVectors(samples[i-1].tangent,s.tangent);normal.applyQuaternion(transport)}
       normal.addScaledVector(s.tangent,-normal.dot(s.tangent)).normalize();binormal.crossVectors(s.tangent,normal).normalize();
-      const radius=.14*(.80+.28*Math.sin(Math.PI*i/segments));
+      const radius=.17*(.7+.45*Math.sin(Math.PI*i/segments));
       for(let j=0;j<=sides;j++){
         const angle=j/sides*Math.PI*2,n=-Math.cos(angle)*radius,b=Math.sin(angle)*radius;
         pos.setXYZ(i*ringSize+j,s.centre.x+n*normal.x+b*binormal.x,s.centre.y+n*normal.y+b*binormal.y,s.centre.z+n*normal.z+b*binormal.z);
       }
     }
     const start=samples[0].centre,end=samples[segments].centre;pos.setXYZ(ringVertices,start.x,start.y,start.z);pos.setXYZ(ringVertices+1,end.x,end.y,end.z);
-    pos.needsUpdate=true;tg.computeVertexNormals();tg.computeBoundingSphere();tailTip.position.copy(samples[segments].centre);tailShape=blend;
+    pos.needsUpdate=true;tg.computeVertexNormals();tg.computeBoundingSphere();tailTip.position.copy(samples[segments].centre);
   }
-  shapeTail(0);
+  shapeTail();
   const sleepEyes=[];
   for(const side of [-1,1]){
     const lidInk=ink.clone();lidInk.transparent=true;lidInk.depthWrite=false;
@@ -235,7 +234,7 @@ export function createStoryCat({random=Math.random,clock=()=>performance.now()/1
     const gait=turn>.05?t*5.1:stride,walk=walkBlend,breath=reduced?0:Math.sin(t*1.4)*.008;
     const back=zone==='back';
     bodyRig.position.set(back?response*hand.x*.014:0,walk*Math.sin(gait*2)*.017+breath+arch*.045-stretch*.025+bodyStroke*.035-lying*.26,response*(back?.025:0)+bodyStroke*.025);bodyRig.rotation.z=walk*Math.sin(gait)*.018;
-    torso.rotation.x=-seated*.85;torso.scale.y=.38-lying*.10;chest.scale.y=.35-lying*.08;
+    torso.rotation.x=-seated*.85;torso.scale.y=.43-lying*.10;chest.scale.y=.38-lying*.08;
     // The planted half of each step stays level; the other half lifts and
     // travels forward. Counter-rotate the paw so it never tips onto its toe.
     for(const l of legs){
@@ -243,10 +242,10 @@ export function createStoryCat({random=Math.random,clock=()=>performance.now()/1
       const washing=l.front&&l.side===1?groomPaw:0;
       const angle=walk*Math.sin(step)*.30-washing*.8+(l.front?-lying*1.05:-seated*.90-lying*1.30),lift=walk*Math.max(0,Math.sin(step))*.09;
       const reaching=l.front?(stretch+backStretch):0;
-      l.hip.rotation.x=angle;l.hip.position.x=l.side*(.26+(l.front?0:seated*.09))-washing*.06;l.hip.position.y=.46+washing*.16-reaching*.06+(l.front?lying*.04:-seated*.18+lying*.06);l.hip.position.z=(l.front?.31:-.49)+washing*.10+(l.front?0:seated*.14);
+      l.hip.rotation.x=angle;l.hip.position.x=l.side*(.29+(l.front?0:seated*.09))-washing*.06;l.hip.position.y=.48+washing*.16-reaching*.06+(l.front?lying*.04:-seated*.18+lying*.06);l.hip.position.z=(l.front?.32:-.56)+washing*.10+(l.front?0:seated*.14);
       const cycle=((step%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
       const travel=cycle<Math.PI?-Math.cos(cycle)*Math.PI/16:(1-2*(cycle-Math.PI)/Math.PI)*Math.PI/16;
-      const y=.13+lift-bodyRig.position.y-l.hip.position.y,z=.045+walk*travel+reaching*.14-bodyRig.position.z+(l.front?lying*.22:-seated*.04+lying*.10);
+      const y=.15+lift-bodyRig.position.y-l.hip.position.y,z=.045+walk*travel+reaching*.14-bodyRig.position.z+(l.front?lying*.22:-seated*.04+lying*.10);
       l.foot.position.set(-bodyRig.position.x,y*Math.cos(angle)+z*Math.sin(angle),-y*Math.sin(angle)+z*Math.cos(angle));
       if(washing>.001)l.foot.position.lerp(washingPaw,washing);
       l.foot.rotation.x=-angle;
@@ -284,10 +283,9 @@ export function createStoryCat({random=Math.random,clock=()=>performance.now()/1
     });
     mouth.visible=yawn>.10||groomLick>.12;mouth.scale.y=.007+yawn*.049+groomLick*.014;
     tongue.visible=!reduced&&groomLick>.12;tongue.position.set(0,-.225-groomLick*.025,.528+groomLick*.020);tongue.scale.y=.015+groomLick*.018;
-    if(Math.abs(tailShape-lying)>.00005)shapeTail(lying);
     // Attach the root inside the torso in every posture, including its seated
     // rotation and lying squash; do not leave it at a fixed standing height.
-    tail.position.copy(socket.set(0,.08,-.72).multiply(torso.scale).applyEuler(torso.rotation).add(torso.position));
+    tail.position.copy(socket.set(0,(.64-.63)/.43,(-.75+.20)/.69).multiply(torso.scale).applyEuler(torso.rotation).add(torso.position));
     tail.rotation.y=((reduced?0:Math.sin(t*.8)*.13)+tailResponse*.18+poseSide*(tailCurl*.22+tailStroke*.18))*(1-lying*.75);
     tail.rotation.z=reduced?0:Math.sin(t*.56)*.045*(1-lying*.8);tail.rotation.x=(-walk*.10+tailResponse*(back?-.08:0)-arch*.10-stretch*.10-bliss*.045-tailStroke*.15)*(1-lying*.8);
     ears.forEach((e,i)=>{const earSide=i?1:-1;e.rotation.z=-earSide*.22+(reduced?0:Math.sin(t*(i?1.2:1.07)+i)*(.012+wind*.015))+earSide*earResponse*.04+earSide*(bliss*.035-faceAlert*.05-faceDrowsy*.07)-earSide*notice*.035-earSide*noticeWeight*.05+earSide*context.wind*.025;e.rotation.x=-earResponse*.045-chinLift*.065-faceAlert*.08+faceDrowsy*.065-notice*.09-watching*gaze.y*.025});

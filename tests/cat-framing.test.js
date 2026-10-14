@@ -6,7 +6,7 @@ const assert=require('node:assert/strict');
 for(const [width,height]of [[320,740],[390,844],[1280,800],[844,620]])for(const yaw of [0,Math.PI/2,-2.3])test(`close-up keeps the whole cat above the dock at ${width}×${height}, heading ${yaw.toFixed(2)}`,async()=>{
   globalThis.window??={};
   const T=await import('../vendor/three/build/three.module.js'),{createStoryCat}=await import('../story-cat.js');await import('../story-world.js');
-  let time=0;const actor=createStoryCat({clock:()=>time,random:()=>.5}),cat=actor.root;cat.scale.setScalar(1.06);cat.rotation.y=yaw;cat.position.set(-1.4,.2,2.5);
+  let time=0;const actor=createStoryCat({clock:()=>time,random:()=>.5}),cat=actor.root;cat.scale.setScalar(.65);cat.rotation.y=yaw;cat.position.set(-1.4,.2,2.5);
   const element=(left,top,w,h)=>({getBoundingClientRect:()=>({left,top,width:w,height:h,right:left+w,bottom:top+h})});
   const canvas=element(40,30,width,height),bar=element(60,52,width-40,48),back=element(60,124,104,44),dock=element(60,30+height-210,width-40,194);
   globalThis.document={getElementById:id=>id==='controls'?dock:id==='backFocus'?back:null};

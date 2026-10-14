@@ -20,7 +20,7 @@
   $('focusButton').click();await wait(1500);
   assert(world.cat.position.distanceTo(position)<.001&&world.cat.rotation.y===heading,'approaching moves the camera without sliding or turning the cat');
   world.cat.updateMatrixWorld(true);const paws=[];world.cat.traverse(o=>{if(o.name.startsWith('paw-'))paws.push(o)});
-  assert(paws.length===4&&paws.filter(o=>o.name.includes('front')).every(o=>Math.abs(o.getWorldPosition(position.clone()).y-world.cat.position.y-.13*world.cat.scale.x)<.015),'front paws keep ground contact');
+  assert(paws.length===4&&paws.filter(o=>o.name.includes('front')).every(o=>Math.abs(o.getWorldPosition(position.clone()).y-world.cat.position.y-.15*world.cat.scale.x)<.015),'front paws keep ground contact');
   $('backFocus').click();await wait(300);
   assert(world.cat.position.distanceTo(position)<.001&&world.cat.rotation.y===heading,'returning to the garden keeps the actor in place during the transition');
   assert(app.dataset.audio==='paused'&&$('elapsed').textContent===elapsed&&recipe()===beforeRecipe&&records()===beforeRecords,'camera commands neither resume audio nor change the recipe or records');

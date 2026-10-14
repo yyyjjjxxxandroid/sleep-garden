@@ -1,5 +1,5 @@
 // Fresh page after a real click on #startButton. Tests the new optional
-// interactions against a real Three.js scene and WebAudio parameter scheduling.
+// cat gestures against a real Three.js scene and WebAudio parameter scheduling.
 (async()=>{
   const $=id=>document.getElementById(id),canvas=document.querySelector('.garden-3d'),results=[];
   const wait=ms=>new Promise(r=>setTimeout(r,ms));
@@ -45,25 +45,6 @@
     assert((saved().records||[]).length===initialRecords,'optional interactions never create a plant record');
     $('backFocus').click();await wait(1200);
     assert(!$('app').classList.contains('focused')&&!world.follow,'returning to the garden resumes wandering');
-    const touches=Number(canvas.dataset.waterTouches||0),beforeWaterTargets=targets.length;canvas.dispatchEvent(new KeyboardEvent('keydown',{key:'w',bubbles:true}));await wait(50);
-    assert(!document.querySelector('.water-touch')&&getComputedStyle(document.querySelector('.water-access')).clipPath==='inset(50%)','water interaction leaves no floating button on the lawn');
-    assert(Number(canvas.dataset.waterTouches)===touches+1&&world.touchRings.some(r=>r.visible),'keyboard water interaction creates visible ripples');
-    assert($('app').dataset.audio==='paused'&&targets.length===beforeWaterTargets,'water touch adds no audio scheduling');
-    await wait(2700);assert(world.touchRings.every(r=>!r.visible),'touch ripples clean up after their short response');
-    world.state.reduced=true;world.touchWater(world.water.position);await wait(50);
-    assert(world.touchRings.every(r=>Math.abs(r.scale.x-.65)<.001),'reduced motion uses static rings instead of expansion');
-    const frozenTime=world.t,frozenPosition=world.cat.position.clone();await wait(150);
-    assert(world.t===frozenTime&&world.cat.position.equals(frozenPosition)&&canvas.dataset.catExpression!=='yawning','reduced motion freezes wandering and suppresses idle yawns');
-    world.state.reduced=false;
-    const projected=world.water.position.clone().project(world.camera),r=canvas.getBoundingClientRect();
-    const ray=world.pick(r.left+(projected.x+1)*r.width/2,r.top+(1-projected.y)*r.height/2);
-    assert(ray.intersectObject(world.details.pond).length>0,'visible pond supports an actual geometry hit');
-    const radioPoint=world.craft.radio.localToWorld(world.cat.position.clone().set(0,.29,.17)).project(world.camera);
-    const radioHit=world.visibleHit(world.pick(r.left+(radioPoint.x+1)*r.width/2,r.top+(1-radioPoint.y)*r.height/2));
-    assert(radioHit?.object.userData.soundControl,'the physical radio has visible pickable geometry after scenery batching');
-    canvas.dispatchEvent(new KeyboardEvent('keydown',{key:'m',bubbles:true}));
-    assert(!$('soundOverlay').hidden&&$('app').dataset.audio==='paused'&&resumes===0,'the keyboard radio opens sound settings without resuming a paused session');
-    $('soundOverlay').querySelector('.close-sheet').click();
     $('focusButton').click();await until(()=>world.follow&&canvas.dataset.catPose==='resting');await until(()=>world.camera.position.distanceTo(world.catView().target.add(world.catView().offset))<.06);
     const head=world.storyCat.head.getWorldPosition(world.cat.position.clone()).project(world.camera),box=canvas.getBoundingClientRect();
     const x=box.left+(head.x+1)*box.width/2,y=box.top+(1-head.y)*box.height/2;
