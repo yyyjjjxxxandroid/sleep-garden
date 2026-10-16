@@ -10,7 +10,7 @@ export function installDetails(w){
   const grass=new T.InstancedMesh(blade,mat,cap),d=new T.Object3D();let count=0;
   for(let i=0;i<cap*1.35&&count<cap;i++){
     const x=(rnd()-.5)*55,z=(rnd()-.5)*52;
-    if(w.inPond(x,z)||Math.abs(x-w.pathX(z))<.9||Math.abs(x-(-2.5+Math.sin(z*.18)*1.2))<.85&&z< -6)continue;
+    if(!w.clearForScenery(x,z,.18)||Math.abs(x-w.pathX(z))<.9)continue;
     const patch=.5+.5*Math.sin(x*.65+Math.cos(z*.5));if(rnd()> .45+patch*.5)continue;
     d.position.set(x,w.groundHeight(x,z)+.005,z);d.rotation.set(0,rnd()*6.28,(rnd()-.5)*.18);const h=.07+rnd()*.15;d.scale.set(.3+rnd()*.45,h,.45);d.updateMatrix();grass.setMatrixAt(count,d.matrix);grass.setColorAt(count,new T.Color().setHSL(.205+rnd()*.035,.24+rnd()*.16,.40+rnd()*.16));count++;
   }grass.count=count;grass.receiveShadow=false;grass.castShadow=false;grass.frustumCulled=false;grass.userData.skipReflection=true;w.scene.add(grass);
@@ -23,7 +23,7 @@ export function installDetails(w){
   const clusters=[[-7,2],[-6,4],[-8,7],[7,6],[5,10],[14,-10]];let flower=0;
   for(let i=0;i<flowerBudget;i++){
     const [cx,cz]=clusters[i%clusters.length],a=rnd()*6.28,r=Math.sqrt(rnd())*2,x=cx+Math.cos(a)*r,z=cz+Math.sin(a)*r;
-    if(w.inPond(x,z))continue;const ground=w.groundHeight(x,z),h=.25+rnd()*.35,y=ground+h,tilt=(rnd()-.5)*.3;
+    if(!w.clearForScenery(x,z,.18))continue;const ground=w.groundHeight(x,z),h=.25+rnd()*.35,y=ground+h,tilt=(rnd()-.5)*.3;
     d.position.set(x,ground+h*.5,z);d.rotation.set(0,0,tilt);d.scale.set(1,h,1);d.updateMatrix();stems.setMatrixAt(flower,d.matrix);
     const col=new T.Color(['#eee7cf','#d7b7c2','#c5bed3','#e3c799'][i%4]);
     for(let k=0;k<8;k++){const angle=k*Math.PI/4;d.position.set(x+Math.cos(angle)*.078,y,z+Math.sin(angle)*.078);d.rotation.set(0,-angle,tilt);d.scale.set(.083,.016,.033);d.updateMatrix();petals.setMatrixAt(flower*8+k,d.matrix);petals.setColorAt(flower*8+k,col)}

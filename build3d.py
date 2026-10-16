@@ -9,7 +9,7 @@ if not bundler and Path('/private/tmp/garden-esbuild/bin/esbuild').exists():
     bundler='/private/tmp/garden-esbuild/bin/esbuild'
 if bundler:
     subprocess.run([bundler,str(root/'story-world.js'),'--bundle','--format=iife','--minify','--alias:three='+str(root/'vendor/three/build/three.module.js'),'--outfile='+str(root/'world3d.bundle.js')],check=True)
-elif (root/'world3d.bundle.js').exists() and all((root/'world3d.bundle.js').stat().st_mtime >= (root/name).stat().st_mtime for name in ['story-world.js','world-base.js','story-cat.js','story-detail.js','story-atmosphere.js']):
+elif (root/'world3d.bundle.js').exists() and all((root/'world3d.bundle.js').stat().st_mtime >= (root/name).stat().st_mtime for name in ['story-world.js','world-base.js','world-sky.js','story-cat.js','story-cat-coat.js','story-detail.js','story-atmosphere.js']):
     print('Using bundled 3D JavaScript; npm install to rebuild changed JavaScript.')
 else:
     raise SystemExit('Run npm install first, or set GARDEN_ESBUILD to an esbuild executable.')
@@ -23,13 +23,17 @@ entry_start=html.index('<!-- source-entry-start -->')
 entry_end=html.index('<!-- source-entry-end -->')+len('<!-- source-entry-end -->')
 html=html[:entry_start]+html[entry_end:]
 css=(root/'world.css').read_text()+(root/'world3d.css').read_text()+(root/'story-world.css').read_text()+(root/'garden-polish.css').read_text()
+# Sprite sheets remain in the asset library as visual references. Production
+# renders the bone-skinned mesh; don't embed unused 108-frame bitmap atlases.
 script='window.GARDEN_AUDIO_ASSETS='+json.dumps(audio_assets,separators=(',',':'))+';\nwindow.STORY_ASSETS='+json.dumps(assets)+';\n'+(root/'world3d.bundle.js').read_text()
 html=html.replace('<link rel="stylesheet" href="world.css">','<style>'+css+'</style>')
 html=html.replace('<script src="world.js"></script>','<script>'+script+'</script>')
 html=html.replace('拖动探索 · 双指缩放','拖动环绕花园 · 双指缩放与移动')
 html=html.replace('手绘花园：垂柳、池塘、花簇和小猫','三维花园：垂柳、池塘、花簇和散步的小猫')
+html=html.replace("weather:'rain',wind:35,light:40","weather:'clear',wind:35,light:65")
 html=html.replace('细雨 · 轻风 · 一点点呼噜','微风 · 流水 · 一点点呼噜')
 html=html.replace('今晚的声音，已经准备好了','花园的声音，已经准备好了')
+html=html.replace('sun:10,wind:35,rain:60,bugs:16,cat:22,water:22','sun:10,wind:35,rain:0,bugs:16,cat:22,water:35')
 html=html.replace('已经恢复为细雨、轻风和一点点呼噜。','已经恢复为微风、流水和一点点呼噜。')
 html=html.replace("function setWeather(kind){state.weather=kind;","function setWeather(kind){state.focused=false;state.weather=kind;")
 html=html.replace("worldEngine.weatherChanged();worldEngine.home()}updateTitle()","worldEngine.weatherChanged();worldEngine.home()}showMode();updateTitle()")

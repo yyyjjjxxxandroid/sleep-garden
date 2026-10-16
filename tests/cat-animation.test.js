@@ -159,7 +159,7 @@ test('after petting the cat lingers, sits, lies down and gets up with planted fr
     if(frame%15===0){
       actor.root.updateMatrixWorld(true);
       for(const name of ['paw-front--1','paw-front-1'])assert.ok(Math.abs(actor.root.getObjectByName(name).getWorldPosition(lastHead.clone()).y-.15)<.001,'the front paws stay on the same ground');
-      actor.root.traverseVisible(o=>{if(o.isMesh){const p=o.geometry.attributes.position;for(let i=0;i<p.count;i++)lowest=Math.min(lowest,lastHead.clone().fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld).y)}});
+      actor.root.traverseVisible(o=>{if(o.isMesh){const p=o.geometry.attributes.position;for(let i=0;i<p.count;i++)lowest=Math.min(lowest,o.getVertexPosition(i,lastHead.clone()).applyMatrix4(o.matrixWorld).y)}});
     }
   }
   assert.ok(lowest>-.015,'the folded legs, chest and original tail must not sink through the ground');

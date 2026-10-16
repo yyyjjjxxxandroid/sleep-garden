@@ -5,6 +5,7 @@ import { RoomEnvironment } from './vendor/three/examples/jsm/environments/RoomEn
 import { createStoryCat } from './story-cat.js';
 import { installDetails } from './story-detail.js';
 import { installAtmosphere } from './story-atmosphere.js';
+import { configureSkyBackground } from './world-sky.js';
 
 const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z),clamp=T.MathUtils.clamp;
 let seed=973;const rand=()=>((seed=seed*16807%2147483647)-1)/2147483646;
@@ -29,6 +30,15 @@ class StoryWorld extends BaseWorld{
   }
   inPond(x,z){return ((x+3.5)/6.4)**2+((z+3.5)/4.35)**2<1}
   pathX(z){return 2.6+Math.sin(z*.16)*2.2+(z<-5?(-z-5)*.24:0)}
+  streamX(z){return -2.5+Math.sin(z*.18)*1.2}
+  streamSlope(z){return Math.cos(z*.18)*.216}
+  onStream(x,z,margin=0){return z<=-6&&z>=-34&&Math.abs(x-this.streamX(z))<.65+margin}
+  bridgeCentre(){const z=-12;return {x:this.streamX(z),z}}
+  clearForScenery(x,z,margin=0){
+    const pond=((x+3.5)/(6.4+margin))**2+((z+3.5)/(4.35+margin))**2>1;
+    const bridge=this.bridgeCentre();
+    return pond&&!this.onStream(x,z,margin)&&Math.hypot(x-bridge.x,z-bridge.z)>1.9+margin;
+  }
   buildTerrain(){
     const seg=this.quality==='high'?120:this.quality==='mid'?80:56;
     const geo=new T.PlaneGeometry(170,170,seg,seg);geo.rotateX(-Math.PI/2);const p=geo.attributes.position,colors=[];
@@ -54,11 +64,12 @@ class StoryWorld extends BaseWorld{
     void main(){vec2 p=vWorld.xz;vec3 view=normalize(cameraPosition-vWorld);float fresnel=pow(1.-max(0.,view.y),3.);float ripple=fbm(p*.95+vec2(time*.07,-time*.05));float r=length(vP.xz/vec2(5.5,3.7));vec3 deep=mix(vec3(.24,.47,.46),vec3(.10,.25,.29),night);vec3 sky=mix(vec3(.62,.79,.77),vec3(.21,.37,.44),night);vec3 col=mix(deep,sky,.22+fresnel*.5);col+=ripple*.045;col=mix(col,mix(vec3(.49,.64,.50),vec3(.22,.35,.31),night),smoothstep(.65,1.03,r)*.55);float wave=sin(p.x*4.+p.y*6.+ripple*8.-time*.4);float glint=pow(max(0.,wave),26.)*.05*(.3+wind);col+=glint;float shore=(1.-smoothstep(.009,.028,abs(r-.985-ripple*.013)))*.08;col+=shore;for(int i=0;i<8;i++){float j=float(i);vec2 c=vec2(hash(vec2(j,2.)),hash(vec2(j,7.)))*8.-4.;float age=fract(time*.3+j*.137);float ring=1.-smoothstep(.012,.040,abs(length(vP.xz-c)-age*1.4));col+=rain*ring*(1.-age)*.12;}gl_FragColor=vec4(col,1.);}`});
     this.water=this.mesh(geo,this.waterMat,-3.5,-.13,-3.5);
     // 一条窄溪从池塘后方延伸至林间。
-    const vertices=[],uv=[],idx=[];for(let i=0;i<=65;i++){const z=-6-i*.43,x=-2.5+Math.sin(z*.18)*1.2;const y=this.groundHeight(x,z)+.025;vertices.push(x-.65,y,z,x+.65,y,z);uv.push(0,i/65,1,i/65);if(i<65){const a=i*2;idx.push(a,a+1,a+2,a+1,a+3,a+2)}}const streamGeo=new T.BufferGeometry();streamGeo.setAttribute('position',new T.Float32BufferAttribute(vertices,3));streamGeo.setAttribute('uv',new T.Float32BufferAttribute(uv,2));streamGeo.setIndex(idx);streamGeo.computeVertexNormals();this.mesh(streamGeo,this.waterMat);
+    const vertices=[],uv=[],idx=[];for(let i=0;i<=65;i++){const z=-6-i*.43,x=this.streamX(z);const y=this.groundHeight(x,z)+.025;vertices.push(x-.65,y,z,x+.65,y,z);uv.push(0,i/65,1,i/65);if(i<65){const a=i*2;idx.push(a,a+1,a+2,a+1,a+3,a+2)}}const streamGeo=new T.BufferGeometry();streamGeo.setAttribute('position',new T.Float32BufferAttribute(vertices,3));streamGeo.setAttribute('uv',new T.Float32BufferAttribute(uv,2));streamGeo.setIndex(idx);streamGeo.computeVertexNormals();this.mesh(streamGeo,this.waterMat);
     this.rippleRings=[];for(let i=0;i<6;i++){const ring=this.mesh(new T.RingGeometry(.37,.385,48),new T.MeshBasicMaterial({color:'#d9e6cb',transparent:true,opacity:.1,side:T.DoubleSide,depthWrite:false}),-5+rand()*5,-.11,-5+rand()*3);ring.rotation.x=-Math.PI/2;this.rippleRings.push(ring)}
   }
   buildSky(){
     super.buildSky();
+    configureSkyBackground(this.sky);
     this.skyMat.fragmentShader=`varying vec3 d;uniform float night,time,rain,light;${nGLSL}void main(){vec3 v=normalize(d);float y=max(0.,v.y);vec3 day=mix(vec3(.79,.87,.81),vec3(.42,.66,.76),pow(y,.6));vec3 dusk=mix(vec3(.17,.25,.34),vec3(.025,.045,.105),pow(y,.5));vec3 c=mix(day,dusk,night);c=mix(c,mix(vec3(.59,.67,.67),vec3(.10,.16,.21),night),rain*.42);float cl=fbm(v.xz/max(.18,v.y)*1.2+vec2(time*.003,0.));cl=smoothstep(.56,.77,cl)*smoothstep(0.,.12,v.y);c=mix(c,mix(vec3(.96,.97,.90),vec3(.16,.23,.29),night),cl*.55);gl_FragColor=vec4(c,1.);}`;this.skyMat.needsUpdate=true;
   }
   addClouds(){
@@ -71,7 +82,7 @@ class StoryWorld extends BaseWorld{
     // 这些地块固定在平坦草坪上，避开池塘岸边、桥梁和蜿蜒小径，
     // 以确保生长中的植物模型不会与场景相交。
     const pondClearance=Math.hypot((x+3.5)/5.6,(z+3.5)/3.8)>1.28;
-    const bridgeClearance=Math.hypot(x+2.5,z+12)>4;
+    const bridge=this.bridgeCentre(),bridgeClearance=Math.hypot(x-bridge.x,z-bridge.z)>4;
     const pathClearance=Math.abs(x-this.pathX(z))>1.5;
     if(!pondClearance||!bridgeClearance||!pathClearance)throw Error('Unsafe plant plot');
     return {x,z,y:this.groundHeight(x,z)};
@@ -95,14 +106,14 @@ class StoryWorld extends BaseWorld{
     tree('CommonTree_1',9,-4,9,1.12);tree('CommonTree_2',-11,-6,8,1.12);tree('CommonTree_3',-7,-17,9);tree('CommonTree_5',15,-14,9);tree('CommonTree_2',9,-22,10);
     // 小型植物组为小桥、花坡和树林方向留出视线开口。
     const groups=[[-22,-4],[-20,-19],[-13,-31],[0,-36],[19,-30],[29,-14],[27,9],[-22,13]];
-    for(let j=0;j<groups.length;j++){const [gx,gz]=groups[j];for(let i=0;i<groupSize;i++){const x=gx+(rand()-.5)*10,z=gz+(rand()-.5)*10;tree(['CommonTree_1','CommonTree_2','CommonTree_3','CommonTree_5'][(j+i)%4],x,z,7+rand()*7)}}
+    for(let j=0;j<groups.length;j++){const [gx,gz]=groups[j];for(let i=0;i<groupSize;i++){const x=gx+(rand()-.5)*10,z=gz+(rand()-.5)*10;if(!this.clearForScenery(x,z,1.6))continue;tree(['CommonTree_1','CommonTree_2','CommonTree_3','CommonTree_5'][(j+i)%4],x,z,7+rand()*7)}}
     const flowerBeds=[[-8,2,2.3],[-5,3,2],[-8,-8,2.3],[7,0,2.2],[9,5,2.8],[-5,10,2.4],[5,11,2.5],[15,-12,4.3],[18,-7,3.3],[-9,-21,3]];
     flowerBeds.push([-7,7,2.5],[7,8,2.4],[-10,-2,2],[2,-8,2]);
-    for(let bi=0;bi<flowerBeds.length;bi++){const [x,z,r]=flowerBeds[bi];for(let i=0;i<flowersPerBed;i++){const a=rand()*6.28,rr=Math.sqrt(rand())*r;const px=x+Math.cos(a)*rr,pz=z+Math.sin(a)*rr;if(this.inPond(px,pz))continue;this.place(i%3?'Flower_4_Group':'Flower_3_Group',px,pz,.48+rand()*.52)}}
+    for(let bi=0;bi<flowerBeds.length;bi++){const [x,z,r]=flowerBeds[bi];for(let i=0;i<flowersPerBed;i++){const a=rand()*6.28,rr=Math.sqrt(rand())*r;const px=x+Math.cos(a)*rr,pz=z+Math.sin(a)*rr;if(!this.clearForScenery(px,pz,.4))continue;this.place(i%3?'Flower_4_Group':'Flower_3_Group',px,pz,.48+rand()*.52)}}
     for(let i=0;i<lineTrees;i++){const x=-38+(lineTrees>1?i*(75/(lineTrees-1)):0),z=-43+Math.sin(i*.8)*5;tree('CommonTree_2',x,z,9+rand()*4,1.2)}
-    for(let i=0;i<bushes;i++){const a=rand()*6.28,r=12+rand()*21,x=Math.cos(a)*r,z=Math.sin(a)*r;if(z>14&&Math.abs(x)<13)continue;this.place('Bush_Common_Flowers',x,z,.6+rand()*.65)}
+    for(let i=0;i<bushes;i++){const a=rand()*6.28,r=12+rand()*21,x=Math.cos(a)*r,z=Math.sin(a)*r;if((z>14&&Math.abs(x)<13)||!this.clearForScenery(x,z,.8))continue;this.place('Bush_Common_Flowers',x,z,.6+rand()*.65)}
     // 以密集植被丰富边缘，并刻意保留草坪与小径的留白。
-    for(let i=0;i<glbGrass;i++){let x=(rand()-.5)*62,z=(rand()-.5)*62;if(this.inPond(x,z)||Math.abs(x-this.pathX(z))<1.2)continue;const centre=Math.hypot(x-1,z-3);if(centre<5.8&&rand()<.9)continue;if(z>14&&Math.abs(x)<9)continue;this.place(i%3?'Grass_Common_Tall':'Grass_Wispy_Tall',x,z,.18+rand()*.43)}
+    for(let i=0;i<glbGrass;i++){let x=(rand()-.5)*62,z=(rand()-.5)*62;if(!this.clearForScenery(x,z,.3)||Math.abs(x-this.pathX(z))<1.2)continue;const centre=Math.hypot(x-1,z-3);if(centre<5.8&&rand()<.9)continue;if(z>14&&Math.abs(x)<9)continue;this.place(i%3?'Grass_Common_Tall':'Grass_Wispy_Tall',x,z,.18+rand()*.43)}
     [[-8,-5,.6],[-7,0,.4],[-1,-.2,.32],[1,-4,.5],[-5,-7,.5],[-3,-7,.35],[6,-7,.7],[11,6,.55],[-10,6,.9],[14,-13,1.1]].forEach(([x,z,h],i)=>this.place(i%2?'Rock_Medium_1':'Rock_Medium_3',x,z,h));
     // 单独摆放的磨损踏石嵌在土路中。
     for(let i=0;i<19;i++){const z=12-i*1.15,x=this.pathX(z);const stone=this.place('Rock_Medium_1',x,z,.13,Math.sin(i)*.2,{width:1.45});stone.scale.y=.7}
@@ -113,7 +124,7 @@ class StoryWorld extends BaseWorld{
     for(let i=0;i<count;i++){const x=(rand()-.5)*30,z=(rand()-.5)*30;d.position.set(x,this.groundHeight(x,z)+.025,z);d.scale.set(.027+rand()*.035,.007,.02+rand()*.04);d.rotation.y=rand()*6.28;d.updateMatrix();mesh.setMatrixAt(i,d.matrix);mesh.setColorAt(i,new T.Color(['#d9d7b3','#d9bcc7','#c4c9d2'][i%3]))}mesh.receiveShadow=false;mesh.frustumCulled=false;this.scene.add(mesh);
   }
   buildBridge(){
-    const root=new T.Group();root.position.set(-2.5,this.groundHeight(-2.5,-12)+.15,-12);root.rotation.y=-.15;this.scene.add(root);const wood=this.mat('#baa783'),dark=this.mat('#a39377');
+    const {x,z}=this.bridgeCentre(),root=new T.Group();root.position.set(x,this.groundHeight(x,z)+.15,z);root.rotation.y=Math.atan(this.streamSlope(z));root.name='garden-bridge';this.scene.add(root);const wood=this.mat('#baa783'),dark=this.mat('#a39377');
     for(let i=0;i<12;i++){const b=new T.Mesh(new T.BoxGeometry(.22,.09,1.5),wood);b.position.set((i-5.5)*.23,Math.sin(i/11*Math.PI)*.19,0);b.rotation.z=Math.cos(i/11*Math.PI)*.1;b.castShadow=this.quality!=='low';b.receiveShadow=this.quality!=='low';root.add(b)}
     for(const side of [-1,1]){for(const x of [-1.3,0,1.3]){const p=new T.Mesh(new T.CylinderGeometry(.045,.05,.65,8),dark);p.position.set(x,.37,side*.72);p.castShadow=true;root.add(p)}const c=new T.CatmullRomCurve3([V(-1.4,.65,side*.72),V(0,.77,side*.72),V(1.4,.65,side*.72)]);const rail=new T.Mesh(new T.TubeGeometry(c,18,.03,6,false),dark);root.add(rail)}
   }
@@ -122,7 +133,7 @@ class StoryWorld extends BaseWorld{
     for(const[x,z,s]of [[-6,-4,.32],[-5,-4.5,.24],[-2,-5,.35],[-1,-3,.26]]){const o=this.mesh(new T.CircleGeometry(s,32,0,Math.PI*1.84),leafMat,x,-.104,z);o.rotation.x=-Math.PI/2;o.rotation.z=rand()*6;const stem=this.mesh(new T.SphereGeometry(1,12,8),petal,x,-.07,z);stem.scale.set(.12,.08,.12)}
   }
   makeCat(){
-    this.storyCat=createStoryCat();this.cat=this.storyCat.root;this.cat.scale.setScalar(.65);this.scene.add(this.cat);this.catMixer={update(){}};this.catAction=null;
+    this.storyCat=createStoryCat();this.cat=this.storyCat.root;this.cat.scale.setScalar(.609375);this.scene.add(this.cat);this.catMixer={update(){}};this.catAction=null;
     this.catPath=new T.CatmullRomCurve3([V(1.7,0,4.4),V(4,0,3.2),V(5.3,0,1.5),V(7,0,3),V(6,0,6.6),V(3,0,8),V(-1.3,0,7.6),V(-2,0,5.2)],true,'catmullrom',.28);this.catDistance=0;this.pathLength=this.catPath.getLength();this.cat.position.copy(this.catPath.getPointAt(0));this.cat.position.y=this.groundHeight(this.cat.position.x,this.cat.position.z);const heading=this.catPath.getTangentAt(0);this.cat.rotation.y=Math.atan2(heading.x,heading.z);const c=document.createElement('canvas');c.width=c.height=128;const ctx=c.getContext('2d'),grad=ctx.createRadialGradient(64,64,8,64,64,64);grad.addColorStop(0,'rgba(20,35,17,.45)');grad.addColorStop(.5,'rgba(20,35,17,.17)');grad.addColorStop(1,'rgba(20,35,17,0)');ctx.fillStyle=grad;ctx.fillRect(0,0,128,128);this.catContact=new T.Mesh(new T.PlaneGeometry(2.3,2.5),new T.MeshBasicMaterial({map:new T.CanvasTexture(c),transparent:true,depthWrite:false,opacity:.62}));this.catContact.rotation.x=-Math.PI/2;this.scene.add(this.catContact);this.canvas.dataset.catSource='Original storybook cat';this.canvas.dataset.catAnimation='articulated walk, breathing, blinking, ears and tail';
   }
   updateGrowth(force=false){
@@ -134,14 +145,36 @@ class StoryWorld extends BaseWorld{
   }
   buildNavigation(){
     const nav=document.createElement('nav');nav.className='region-nav';nav.setAttribute('aria-label','漫游花园');const regions=[['pond','池畔'],['meadow','花坡'],['woods','林间']];
-    regions.forEach(([key,label])=>{const b=document.createElement('button');b.textContent=label;b.dataset.region=key;b.setAttribute('aria-pressed',key==='pond'?'true':'false');b.onclick=()=>{this.stopCatForCamera();this.follow=false;this.onExplore();if(key==='pond')this.home();else this.transition=key==='meadow'?{pos:V(25,12,7),target:V(15,3,-10)}:{pos:V(7,10,-7),target:V(-3,2,-21)};this.selectRegion(key)};nav.append(b)});this.host.parentElement.append(nav);this.selectRegion=key=>{nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.region===key)));this.canvas.dataset.region=key};
+    regions.forEach(([key,label])=>{const b=document.createElement('button');b.textContent=label;b.dataset.region=key;b.setAttribute('aria-pressed',key==='pond'?'true':'false');b.onclick=()=>{this.stopCatForCamera();this.follow=false;this.onExplore();if(key==='pond')this.home();else this.transition=key==='meadow'?{pos:V(17,12,12),target:V(15,3,-10)}:{pos:V(7,10,-7),target:V(-3,2,-21)};this.selectRegion(key)};nav.append(b)});this.host.parentElement.append(nav);this.selectRegion=key=>{nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.region===key)));this.canvas.dataset.region=key};
   }
   handleExploreStart(){return false}
   // Camera commands never change the actor's path distance or world heading.
   stopCatForCamera(){this.catSpeed=0;this.cameraHoldUntil=(this.t||0)+.8}
   catCameraHeld(t){return this.follow||!!this.transition||t<(this.cameraHoldUntil||0)||!!this.gesture?.moved}
   zoomBy(f){this.stopCatForCamera();super.zoomBy(f)}
-  focus(){this.stopCatForCamera();this.controls.minDistance=3.6*(this.cat?.scale.x||.65)/1.06;this.follow=true;this.transition=null}
+  focus(){this.stopCatForCamera();this.controls.minDistance=3.6*(this.cat?.scale.x||.609375)/1.06;this.follow=true;this.transition=null;if(this.scene&&this.renderer)this.chooseCatFocusView()}
+  chooseCatFocusView(){
+    this.scene.updateMatrixWorld(true);
+    let best=null,bestScore=-Infinity;
+    // Look through several possible close-up sight lines. Keep the existing
+    // garden geometry and path; pick a clear camera instead of drawing through
+    // flowers that happen to be in front of the actor at this stop.
+    for(const [angle,elevation]of [[0,1.3],[0,3.8],[-.5,3.8],[.5,3.8],[0,6],[-.8,5],[.8,5]]){
+      const direction=V(1.6,elevation,6.5).applyAxisAngle(V(0,1,0),angle);this.catFocusDirection=direction;
+      const view=this.catView(),origin=view.target.clone().add(view.offset);let score=0;
+      for(const [height,weight]of [[1.35,3],[.9,2],[.35,1]]){
+        const target=this.cat.position.clone().add(V(0,height*this.cat.scale.x,0)),distance=origin.distanceTo(target),ray=new T.Raycaster(origin,target.sub(origin).normalize(),.05,distance-.02);ray.camera=this.camera;
+        const blocked=ray.intersectObjects(this.scene.children,true).some(hit=>{
+          let o=hit.object;if(!o.isMesh||o===this.sky||o.material.transparent||o.material.visible===false)return false;
+          while(o){if(o===this.cat||!o.visible)return false;o=o.parent}return true;
+        });
+        if(!blocked)score+=weight;
+      }
+      if(score>bestScore){bestScore=score;best=direction.clone()}
+      if(score===6)break;
+    }
+    this.catFocusDirection=best;
+  }
   catView(){
     const box=this.canvas.getBoundingClientRect(),width=Math.max(1,box.width),height=Math.max(1,box.height),parent=this.host?.parentElement;
     const rect=element=>{if(!element||element.hidden)return null;const r=element.getBoundingClientRect?.();return r?.width>1&&r.height>1?r:null};
@@ -150,7 +183,7 @@ class StoryWorld extends BaseWorld{
     for(const element of ['controls','homeDock','gardenBottom'].map(id=>document.getElementById(id))){const r=rect(element);if(r)bottom=Math.min(bottom,r.top-box.top-24)}
     top=clamp(top,20,height*.4);bottom=clamp(bottom,top+height*.18,height-20);
     const high=1-2*top/height,low=1-2*bottom/height,middle=(high+low)/2,tan=Math.tan(this.camera.fov*Math.PI/360),aspect=width/height;
-    const direction=V(1.6,1.3,6.5).normalize(),right=V(0,1,0).cross(direction).normalize(),up=direction.clone().cross(right),scale=this.cat.scale.x;
+    const direction=(this.catFocusDirection||V(1.6,1.3,6.5)).clone().normalize(),right=V(0,1,0).cross(direction).normalize(),up=direction.clone().cross(right),scale=this.cat.scale.x;
     // A fixed envelope includes raised ears, chin poses and the curled tail.
     // Breathing and posture changes must not make the close-up zoom in/out.
     const centre=V(0,1.16,-.125).multiplyScalar(scale),corners=[];
@@ -181,12 +214,13 @@ class StoryWorld extends BaseWorld{
     const r=this.canvas.getBoundingClientRect(),ray=new T.Raycaster();
     ray.setFromCamera(new T.Vector2((clientX-r.left)/r.width*2-1,-(clientY-r.top)/r.height*2+1),this.camera);return ray;
   }
-  visibleHit(ray){return ray.intersectObjects(this.scene.children,true).find(h=>{let o=h.object;if(!o.isMesh||o===this.sky||o.material.transparent)return false;while(o){if(!o.visible)return false;o=o.parent}return true})}
+  visibleHit(ray){return ray.intersectObjects(this.scene.children,true).find(h=>{let o=h.object;if(!o.isMesh||o===this.sky||o.material.transparent||o.material.visible===false)return false;while(o){if(!o.visible)return false;o=o.parent}return true})}
   petHit(ray,checkOcclusion=true){
     const hit=this.cat&&ray.intersectObject(this.cat,true).find(h=>{let o=h.object;while(o){if(!o.visible)return false;o=o.parent}return true});
     if(!hit)return null;if(!checkOcclusion)return hit;const visible=this.visibleHit(ray);return !visible||visible.distance>=hit.distance-.02?hit:null;
   }
   contactAt(hit,frame){
+    if(hit.catContact)return hit.catContact;
     let zone=hit.object.userData.petZone||'back';
     const point=frame?hit.point.clone().applyMatrix4(zone==='head'?frame.head:frame.body):(zone==='head'?this.storyCat.head:this.cat).worldToLocal(hit.point.clone());
     if(zone==='head'&&point.y<-.14&&point.z>.28)zone='chin';
@@ -213,9 +247,12 @@ class StoryWorld extends BaseWorld{
       }
       // Pick against the pose at pointer-down. The cat's response must not
       // move its hit regions beneath a held finger or repeatedly restart them.
-      for(const p of g.pickPose){p.live.copy(p.object.matrixWorld);p.object.matrixWorld.copy(p.matrix)}
+      for(const p of g.pickPose){
+        p.live.copy(p.object.matrixWorld);p.object.matrixWorld.copy(p.matrix);
+        if(p.inverse){p.liveInverse.copy(p.object.bindMatrixInverse);p.object.bindMatrixInverse.copy(p.inverse);p.object.boundingSphere=null;p.object.boundingBox=null}
+      }
       try{const hit=this.petHit(this.pick(x,y),false);return hit?this.contactAt(hit,g.pickFrame):null}
-      finally{for(const p of g.pickPose)p.object.matrixWorld.copy(p.live)}
+      finally{for(const p of g.pickPose){p.object.matrixWorld.copy(p.live);if(p.inverse){p.object.bindMatrixInverse.copy(p.liveInverse);p.object.boundingSphere=null;p.object.boundingBox=null}}}
     };
     const explore=()=>{this.stopCatForCamera();this.storyCat?.release();this.follow=false;this.transition=null;this.onExplore()};
     this.canvas.addEventListener('pointerdown',e=>{
@@ -235,7 +272,7 @@ class StoryWorld extends BaseWorld{
         this.lookAtPointer(e.clientX,e.clientY);
         const contact=this.contactAt(hit),g=this.gesture;
         this.cat.updateWorldMatrix(true,true);g.pickPose=[];
-        this.cat.traverse(object=>g.pickPose.push({object,matrix:object.matrixWorld.clone(),live:object.matrixWorld.clone()}));
+        this.cat.traverse(object=>g.pickPose.push({object,matrix:object.matrixWorld.clone(),live:object.matrixWorld.clone(),inverse:object.isSkinnedMesh?object.bindMatrixInverse.clone():null,liveInverse:object.isSkinnedMesh?object.bindMatrixInverse.clone():null}));
         g.pickFrame={head:this.storyCat.head.matrixWorld.clone().invert(),body:this.cat.matrixWorld.clone().invert()};
         const bounds=new T.Box3().setFromObject(this.storyCat.head.parent),box=this.canvas.getBoundingClientRect();
         g.contactBounds=new T.Box2();
@@ -323,7 +360,10 @@ class StoryWorld extends BaseWorld{
     const planting=this.state.records.find(r=>r.growth!==undefined&&r.growth<1);
     this.plotRings?.forEach((ring,i)=>{const active=planting&&this.grown[i]?.scale.x===planting.growth;ring.material.opacity=active?(.22+.18*Math.sin(t*8)):0;ring.scale.setScalar(active?1+Math.sin(t*8)*.08:1)});
     // 表层控制保持轻盈；渲染世界的诊断信息可由 DOM 读取。
-    this.canvas.dataset.catStyle='storybook';this.canvas.dataset.artVersion='storybook-v2';
+    this.canvas.dataset.catStyle='rigged-fluffy-kitten';this.canvas.dataset.artVersion='groomed-coat-v2';
+    this.canvas.dataset.skyMode='infinite-background';
+    this.canvas.dataset.catSource='3D skinned kitten';this.canvas.dataset.catAnimation='continuous skeletal poses';
+    if(this.catContact){this.catContact.scale.set(this.cat.scale.x*.92,this.cat.scale.x*.98,1);this.catContact.material.opacity=.52}
   }
 }
 window.GardenWorld=StoryWorld;
