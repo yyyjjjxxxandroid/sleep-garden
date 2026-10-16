@@ -1,0 +1,32 @@
+/* Tonight's journey: a small choice, then permission to put the screen down. */
+.tonight-choices .timer-kicker{font-size:11px;margin:0 0 9px;text-align:center;color:var(--muted);letter-spacing:1px}
+.choice-grid{display:flex;gap:6px}.choice-grid button{flex:1;min-height:44px;padding:6px 7px;border:1px solid var(--line);border-radius:15px;background:color-mix(in srgb,var(--paper) 80%,transparent);font-size:12px}
+.choice-grid button[aria-pressed=true]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.plan-summary{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted);gap:8px;margin-top:3px}.plan-summary button{min-height:40px;text-decoration:underline;text-underline-offset:4px}
+.home-dock{gap:5px!important}.home-timer .timer-kicker{display:none}.home-dock .timer-chips{gap:5px}.home-dock .timer-chip{min-height:38px}
+.app:has(#home:not([hidden])) .region-nav{display:none!important}.home-copy .theme-line{margin-bottom:0}.home-copy .home-note{display:none}
+.choice-field{border:0;padding:0;margin:18px 0}.choice-field legend{font-size:13px;margin-bottom:10px}.choice-field legend small{margin-left:8px;font-size:11px;color:var(--muted)}
+.music-choice{display:flex;align-items:center;gap:8px;min-height:44px;font-size:13px}.music-choice input{width:19px;height:19px;accent-color:var(--accent)}
+.plan-explanation{border:1px solid var(--line);padding:16px;border-radius:18px;margin:18px 0;font-size:13px;line-height:1.8}.plan-explanation p{font-size:12px;margin:8px 0}.plan-explanation small{color:var(--muted);font-size:11px}#confirmPlan{width:100%;font-size:14px;min-height:50px}
+.rating-options{display:flex;flex-wrap:wrap;gap:7px}.rating-options button{flex:1;min-height:44px;border:1px solid var(--line);border-radius:13px;font-size:14px}.rating-options button[aria-pressed=true]{background:var(--ink);color:var(--paper)}.rating-legend{width:100%;font-size:10px!important;text-align:left;color:var(--muted);margin:2px 0 0!important}
+.text-action{min-height:44px;font-size:12px;text-decoration:underline;text-underline-offset:4px;color:var(--muted)}#pendingFeedback{width:100%;min-height:32px;font-size:10px}
+.rest-actions{display:flex;gap:8px;justify-content:space-between;border-top:1px solid var(--line);padding-top:2px}.rest-actions button{min-height:40px;font-size:11px;padding:0 7px}.rest-actions button:first-child{font-weight:500}
+.rest-screen{z-index:40!important;background:#101d23!important;backdrop-filter:none!important;align-items:center!important;padding:26px!important;color:#a7b8b7;position:absolute;inset:0;overflow:auto}
+.rest-screen section{max-width:360px;width:100%;text-align:center;margin:auto}.rest-eyebrow{font-size:10px;letter-spacing:2px;color:#829b9b;margin-bottom:38px}.rest-screen h2{font-family:"Songti SC",serif;font-weight:400;font-size:25px;letter-spacing:2px;line-height:1.6}.rest-screen p{font-size:12px;line-height:1.9}.rest-screen .rest-help{font-size:11px;color:#829b9b;margin:30px auto 20px;max-width:290px}.rest-buttons{display:flex;justify-content:center;gap:9px;flex-wrap:wrap}.rest-buttons button{border:1px solid #3f555a;border-radius:22px;padding:10px 16px;min-height:44px;font-size:12px}.rest-screen .text-action{color:#a7b8b7}
+.breath-orb{width:100px;height:100px;margin:35px auto 20px;border:1px solid #789a95;border-radius:50%;background:radial-gradient(circle,#789a9526,transparent 70%);box-shadow:0 0 32px #789a9512}
+.resting .scene,.resting .garden-3d{visibility:hidden}.resting .toast{display:none}
+#experienceFeedback{border-top:1px solid var(--line);padding-top:8px;margin:14px 0}#experienceFeedback .feedback{margin-bottom:12px}.result .plant-art{max-height:85px}.result h2{font-size:23px}
+@media(max-height:740px){.home-copy{top:14%!important}.home-copy h1{font-size:27px!important;line-height:1.4}.home-copy .description{font-size:11px;line-height:1.7}.home-copy .eyebrow{font-size:9px;margin-bottom:8px}.home-copy .theme-line{display:none}.rest-eyebrow{margin-bottom:16px}.breath-orb{margin:15px auto;width:76px;height:76px}.rest-screen .rest-help{margin-top:14px}}
+@media(max-width:359px){.home-copy{left:16px;right:16px}.choice-grid button{font-size:11px;padding:4px}.home-copy h1{font-size:27px!important}.rest-actions button{font-size:10px}}
+/* Short phones and landscape must use the actual viewport, not a 620px floor. */
+html body .app{min-height:100svh}
+.home-dock .timer-chip,.plan-summary button,.rest-actions button{min-height:44px}
+
+/* The completion actions share one flow, so text wrapping and zoom cannot overlap them. */
+#gardenBottom{display:flex;flex-direction:column;align-items:center;gap:14px;padding:16px;border-radius:26px;background:color-mix(in srgb,var(--paper) 94%,transparent);border:1px solid var(--line);backdrop-filter:blur(12px);max-height:calc(100svh - 110px);overflow:auto}
+#gardenBottom #gardenSummary{margin:0;font-size:12px;line-height:1.8;letter-spacing:.5px;color:var(--muted);text-shadow:none}
+#gardenBottom .region-nav{position:static;inset:auto;transform:none;margin:0;flex-shrink:0;max-width:100%;display:flex;flex-wrap:wrap;justify-content:center;background:color-mix(in srgb,var(--ink) 6%,var(--paper));backdrop-filter:none}
+#gardenBottom .region-nav button{min-height:44px;color:var(--muted)}
+#gardenBottom .region-nav button[aria-pressed=true]{background:var(--ink);color:var(--paper)}
+#gardenBottom #restartButton{position:static;transform:none;width:100%;min-height:52px;flex-shrink:0;background:var(--ink);color:var(--paper);font-size:15px}
+@media(max-height:500px){#gardenBottom{gap:8px;padding:12px}#gardenBottom #gardenSummary{font-size:11px}}

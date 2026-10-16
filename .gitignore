@@ -16,3 +16,7 @@ __pycache__/
 .wheels/
 docs/ui-diff/.chrome-*/
 docs/.DS_Store
+
+# Local QA output and tool state
+build/product-qa/
+build/jugg/

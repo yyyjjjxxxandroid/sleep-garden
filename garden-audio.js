@@ -1,0 +1,111 @@
+// Linear envelopes retain their actual value when interrupted, including on
+// browsers without cancelAndHoldAtTime. No reliance on AudioParam.value timing.
+class GardenEnvelope {
+  constructor(param, value) { this.param=param; this.points=[{time:0,value}]; param.value=value; }
+  valueAt(time) {
+    let previous=this.points[0];
+    for(const point of this.points.slice(1)) {
+      if(time<point.time) return previous.value+(point.value-previous.value)*Math.max(0,(time-previous.time)/(point.time-previous.time));
+      previous=point;
+    }
+    return previous.value;
+  }
+  hold(time) {
+    const value=this.valueAt(time);
+    this.param.cancelScheduledValues(time); this.param.setValueAtTime(value,time);
+    this.points=[{time,value}];
+    return this;
+  }
+  to(value,time) { this.param.linearRampToValueAtTime(value,time); this.points.push({time,value}); return this; }
+  ramp(value,now,seconds) { return this.hold(now).to(value,now+seconds); }
+}
+
+// Repair codec edge samples with a short circular overlap after decoding.
+// The longer, 2–3 second field-recording transitions are baked into the assets.
+function gardenLoopBuffer(ctx,buffer) {
+  const overlap=Math.min(Math.round(buffer.sampleRate*.06),Math.floor(buffer.length/4));
+  const length=buffer.length-overlap,loop=ctx.createBuffer(buffer.numberOfChannels,length,buffer.sampleRate);
+  for(let channel=0;channel<buffer.numberOfChannels;channel++) {
+    const input=buffer.getChannelData(channel),output=loop.getChannelData(channel);
+    for(let i=0;i<overlap;i++) { const weight=i/overlap; output[i]=input[length+i]*(1-weight)+input[i]*weight; }
+    output.set(input.subarray(overlap,length),overlap);
+  }
+  return loop;
+}
+
+class GardenAudio {
+  constructor({sources,readMix,onInterruption=()=>{},Context=window.AudioContext||window.webkitAudioContext}) {
+    if(!Context) throw Error('Audio unavailable');
+    this.ctx=new Context(); this.sources=sources; this.readMix=readMix; this.closed=false; this.tracks={};
+    this.master=this.ctx.createGain(); this.masterEnvelope=new GardenEnvelope(this.master.gain,0);
+    this.endGain=this.ctx.createGain(); this.endEnvelope=new GardenEnvelope(this.endGain.gain,1);
+    const limiter=this.ctx.createDynamicsCompressor();
+    limiter.threshold.value=-18; limiter.knee.value=12; limiter.ratio.value=8; limiter.attack.value=.005; limiter.release.value=.25;
+    this.master.connect(this.endGain).connect(limiter).connect(this.ctx.destination);
+    this.ctx.onstatechange=()=>{if(!this.closed&&this.ctx.state!=='running')onInterruption(this.ctx.state)};
+    this.ready=this.load(); this.ready.catch(()=>{});
+  }
+  async load() {
+    const entries=await Promise.all(Object.entries(this.sources).map(async([key,url])=>{
+      const response=await fetch(url); if(!response.ok)throw Error('Audio asset unavailable: '+key);
+      const bytes=await response.arrayBuffer();
+      if(this.closed)throw Error('Audio closed');
+      const buffer=await new Promise((resolve,reject)=>this.ctx.decodeAudioData(bytes,resolve,reject));
+      return [key,buffer];
+    }));
+    if(this.closed)return;
+    for(const[key,buffer]of entries) {
+      const source=this.ctx.createBufferSource(),gain=this.ctx.createGain();
+      source.buffer=gardenLoopBuffer(this.ctx,buffer); source.loop=true;
+      const envelope=new GardenEnvelope(gain.gain,0);
+      source.connect(gain).connect(this.master); source.start();
+      this.tracks[key]={source,gain,envelope};
+    }
+  }
+  async play(shouldPlay=()=>true) {
+    clearTimeout(this.suspendTimer);
+    // Called synchronously from the user's click, before fetching/decoding.
+    const resumed=this.ctx.resume();
+    await resumed; await this.ready;
+    if(this.closed||!shouldPlay())return false;
+    if(this.ctx.state!=='running')throw Error('Audio unavailable');
+    this.mix(); this.masterEnvelope.ramp(.68,this.ctx.currentTime,.8);
+    return true;
+  }
+  pause() {
+    if(this.closed)return;
+    const now=this.ctx.currentTime;
+    this.endEnvelope.hold(now); this.masterEnvelope.ramp(0,now,.3);
+    clearTimeout(this.suspendTimer);
+    this.suspendTimer=setTimeout(()=>{if(!this.closed)this.ctx.suspend().catch(()=>{})},350);
+  }
+  scheduleStop(seconds) {
+    const now=this.ctx.currentTime,envelope=this.endEnvelope.hold(now);
+    if(seconds>0&&seconds<=3)envelope.to(0,now+seconds);
+    else {
+      envelope.to(1,now+.3);
+      if(seconds>0)envelope.to(1,now+seconds-3).to(0,now+seconds);
+    }
+  }
+  mix() {
+    const {mix,focused}=this.readMix(),now=this.ctx.currentTime;
+    for(const[key,track]of Object.entries(this.tracks)) {
+      let value=Math.max(0,Math.min(100,Number(mix[key])||0))/100;
+      if(key==='cat')value*=focused?1.2:.8;
+      track.envelope.ramp(value,now,.8);
+    }
+  }
+  pet() {
+    const {mix,focused,playing}=this.readMix();
+    if(!playing||!mix.cat||this.ctx.state!=='running'||!this.tracks.cat)return;
+    const now=this.ctx.currentTime,base=mix.cat/100*(focused?1.2:.8);
+    this.tracks.cat.envelope.hold(now).to(Math.min(.85,base*1.15),now+.3).to(base,now+2.4);
+  }
+  close() {
+    this.closed=true; clearTimeout(this.suspendTimer); this.ctx.onstatechange=null;
+    for(const{source}of Object.values(this.tracks))try{source.stop()}catch{}
+    return this.ctx.close().catch(()=>{});
+  }
+}
+if(typeof window!=='undefined')Object.assign(window,{GardenAudio,GardenEnvelope,gardenLoopBuffer});
+if(typeof module!=='undefined')module.exports={GardenAudio,GardenEnvelope,gardenLoopBuffer};
