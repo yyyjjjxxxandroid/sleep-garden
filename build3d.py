@@ -9,14 +9,16 @@ if not bundler and Path('/private/tmp/garden-esbuild/bin/esbuild').exists():
     bundler='/private/tmp/garden-esbuild/bin/esbuild'
 if bundler:
     subprocess.run([bundler,str(root/'story-world.js'),'--bundle','--format=iife','--minify','--alias:three='+str(root/'vendor/three/build/three.module.js'),'--outfile='+str(root/'world3d.bundle.js')],check=True)
-elif (root/'world3d.bundle.js').exists() and all((root/'world3d.bundle.js').stat().st_mtime >= (root/name).stat().st_mtime for name in ['story-world.js','world-base.js','world-sky.js','story-cat.js','story-cat-coat.js','story-detail.js','story-atmosphere.js']):
-    print('Using bundled 3D JavaScript; npm install to rebuild changed JavaScript.')
 else:
-    raise SystemExit('Run npm install first, or set GARDEN_ESBUILD to an esbuild executable.')
+    from offline_modules import bundle_modules
+    (root/'world3d.bundle.js').write_text(bundle_modules(root))
+    print('Built with browser-native offline modules (esbuild unavailable).')
 assets=json.loads((root/'assets3d-v2/embedded.json').read_text())
 audio_manifest=json.loads((root/'audio/sources.json').read_text())
 audio_assets={key:'data:audio/mpeg;base64,'+base64.b64encode((root/'audio'/item['file']).read_bytes()).decode() for key,item in audio_manifest.items()}
 html=(root/'source.html').read_text()
+html=html.replace("(()=>{'use strict';", "Promise.resolve(window.GARDEN_READY).then(()=>{'use strict';")
+html=html.replace('})();\n</script>', '});\n</script>')
 # source.html is the editable template; opening it should show the 3D product.
 # Remove its redirect from the generated product to prevent a reload loop.
 entry_start=html.index('<!-- source-entry-start -->')

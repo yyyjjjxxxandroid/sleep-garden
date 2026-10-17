@@ -16,8 +16,8 @@ export function detectQuality(reduced=false){
 }
 
 export class GardenWorld {
-  constructor({svg,scene,state,onExplore}){
-    this.state=state;this.host=scene;this.onExplore=onExplore;this.t=0;this.last=0;this.follow=false;this.wind={time:{value:0},strength:{value:.35}};this.materials=[];this.models={};this.templates={};this.animals=[];this.grown=[];this.quality=detectQuality(state.reduced);
+  constructor({svg,scene,state,onExplore,onCatInteraction}){
+    this.onCatInteraction=onCatInteraction;this.walkObstacles=[];this.flowerTargets=[];this.state=state;this.host=scene;this.onExplore=onExplore;this.t=0;this.last=0;this.follow=false;this.wind={time:{value:0},strength:{value:.35}};this.materials=[];this.models={};this.templates={};this.animals=[];this.grown=[];this.quality=detectQuality(state.reduced);
     svg.classList.add('legacy-world');
     this.scene=new T.Scene();this.scene.fog=new T.FogExp2('#c9dcd8',.009);
     this.camera=new T.PerspectiveCamera(44,1,.1,220);
@@ -100,7 +100,7 @@ export class GardenWorld {
       const first=meshes[0],batch=new T.InstancedMesh(first.geometry,first.material,meshes.length);
       batch.castShadow=!!first.castShadow;batch.receiveShadow=!!first.receiveShadow;batch.customDepthMaterial=first.customDepthMaterial;batch.frustumCulled=false;
       const matName=first.material?.name||'';if(/Leaves|Grass|Flowers|leaf|grass|color/i.test(matName))batch.userData.skipReflection=true;
-      meshes.forEach((m,i)=>batch.setMatrixAt(i,m.matrixWorld));batch.instanceMatrix.needsUpdate=true;this.scene.add(batch);this.batches.push(batch);
+      meshes.forEach((m,i)=>{batch.setMatrixAt(i,m.matrixWorld);m.userData.flowerTarget?.userData.instances.push({mesh:batch,index:i,base:m.matrixWorld.clone()})});batch.instanceMatrix.needsUpdate=true;this.scene.add(batch);this.batches.push(batch);
     }
     for(const root of this.staticRoots)this.scene.remove(root);this.staticRoots.length=0;
     this.canvas.dataset.batches=String(this.batches.length);

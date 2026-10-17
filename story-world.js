@@ -5,8 +5,10 @@ import { RoomEnvironment } from './vendor/three/examples/jsm/environments/RoomEn
 import { createStoryCat } from './story-cat.js';
 import { installDetails } from './story-detail.js';
 import { installAtmosphere } from './story-atmosphere.js';
+import { GardenCompanion } from './garden-companion.js';
 import { configureSkyBackground } from './world-sky.js';
 
+const seedModels={fern:'Grass_Common_Tall',bellflower:'Flower_4_Group',waterleaf:'Bush_Common_Flowers'};
 const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z),clamp=T.MathUtils.clamp;
 let seed=973;const rand=()=>((seed=seed*16807%2147483647)-1)/2147483646;
 const nGLSL=`float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+1.),f.x),f.y);}float fbm(vec2 p){return noise(p)*.56+noise(p*2.03)*.27+noise(p*4.01)*.12+noise(p*8.1)*.05;}\n`;
@@ -78,7 +80,7 @@ class StoryWorld extends BaseWorld{
     const tex=new T.CanvasTexture(texCanvas);this.clouds=[];for(let i=0;i<8;i++){const mat=new T.SpriteMaterial({map:tex,color:'#fff8e5',transparent:true,opacity:.75,depthWrite:false,fog:true});const cloud=new T.Sprite(mat);cloud.position.set(-45+i*15,23+rand()*9,-65-rand()*12);cloud.scale.set(28+rand()*18,15+rand()*8,1);this.scene.add(cloud);this.clouds.push(cloud)}
   }
   plantPlot(i){
-    const x=-.5+i*1.15,z=6.7;
+    const x=-.5+(i%3)*1.15,z=6.7+Math.floor(i/3)*1.7;
     // 这些地块固定在平坦草坪上，避开池塘岸边、桥梁和蜿蜒小径，
     // 以确保生长中的植物模型不会与场景相交。
     const pondClearance=Math.hypot((x+3.5)/5.6,(z+3.5)/3.8)>1.28;
@@ -87,7 +89,46 @@ class StoryWorld extends BaseWorld{
     if(!pondClearance||!bridgeClearance||!pathClearance)throw Error('Unsafe plant plot');
     return {x,z,y:this.groundHeight(x,z)};
   }
-  buildPlots(){this.plots=[];this.grown=[];this.plotRings=[];for(let i=0;i<3;i++){const {x,z,y}=this.plantPlot(i),soil=this.mesh(new T.CylinderGeometry(.41,.46,.045,40),this.mat('#a29072'),x,y+.015,z);soil.userData.plot=i;this.plots.push(soil);const ring=this.mesh(new T.RingGeometry(.49,.57,40),new T.MeshBasicMaterial({color:'#ffe6a1',transparent:true,opacity:0,side:T.DoubleSide,depthWrite:false}),x,y+.05,z);ring.rotation.x=-Math.PI/2;this.plotRings.push(ring)}}
+  buildPlots(){this.plots=[];this.grown=[];this.plotRings=[];for(let i=0;i<6;i++){const {x,z,y}=this.plantPlot(i),soil=this.mesh(new T.CylinderGeometry(.41,.46,.045,40),this.mat('#a29072'),x,y+.015,z);soil.userData.plot=i;this.plots.push(soil);const ring=this.mesh(new T.RingGeometry(.49,.57,40),new T.MeshBasicMaterial({color:'#ffe6a1',transparent:true,opacity:0,side:T.DoubleSide,depthWrite:false}),x,y+.05,z);ring.rotation.x=-Math.PI/2;this.plotRings.push(ring);this.walkObstacles.push({x,z,radius:.48})}this.canvas.dataset.plotCount=String(this.plots.length)}
+  plantSeed(seed='fern',plotIndex=this.plots.length-1){
+    if(!this.plots.length)return false;
+    const i=Math.max(0,Math.min(this.plots.length-1,plotIndex));
+    this.state.sessionSeed=seed;this.state.seedPlanted=true;this.state.seedPlotIndex=i;
+    this.updateGrowth(true);this.showSeedFeedback(this.plots[i]);
+    this.follow=false;this.transition={pos:V(5,9,22),target:V(.6,.4,7.5)};this.selectRegion?.('garden');
+    this.canvas.dataset.seed=`${seed}:${i}`;return true;
+  }
+  clearSeedFeedback(){
+    if(!this.seedFeedback)return;
+    this.seedFeedback.removeFromParent();
+    this.seedFeedback.traverse(o=>{o.geometry?.dispose();o.material?.dispose();});
+    this.seedFeedback=null;
+  }
+  showSeedFeedback(plot){
+    this.clearSeedFeedback();
+    const root=new T.Group(),y=plot.position.y+.12;
+    const seed=new T.Mesh(new T.SphereGeometry(.11,12,8),this.mat('#e6c778'));seed.position.y=.08;root.add(seed);
+    const ring=new T.Mesh(new T.RingGeometry(.28,.34,32),new T.MeshBasicMaterial({color:'#f8e8a8',transparent:true,opacity:.8,side:T.DoubleSide,depthWrite:false}));ring.rotation.x=-Math.PI/2;root.add(ring);
+    const glow=new T.Mesh(new T.SphereGeometry(.24,16,8),new T.MeshBasicMaterial({color:'#fff0b5',transparent:true,opacity:.12,depthWrite:false}));root.add(glow);
+    root.position.set(plot.position.x,y,plot.position.z);root.userData.age=0;this.scene.add(root);this.seedFeedback=root;
+  }
+  registerFlower(x,z,height=.65,radius=.4){
+    // Picking proxies stay outside the scene, so they add no rendering or shadow cost.
+    this.flowerHitGeometry??=new T.CylinderGeometry(1,1,1,10);
+    this.flowerHitMaterial??=new T.MeshBasicMaterial();
+    const hit=new T.Mesh(this.flowerHitGeometry,this.flowerHitMaterial);
+    hit.position.set(x,this.groundHeight(x,z),z);
+    hit.geometry=this.flowerHitGeometry;hit.scale.set(radius,height,radius);
+    // Lift the geometry, while retaining ground-level position for approach planning.
+    if(!this.flowerHitGeometry.userData.lifted){this.flowerHitGeometry.translate(0,.5,0);this.flowerHitGeometry.userData.lifted=true;}
+    hit.userData={flower:true,approachRadius:radius+.45,instances:[]};hit.updateMatrixWorld(true);
+    const transform=new T.Matrix4(),matrix=new T.Matrix4(),rotation=new T.Matrix4();
+    hit.userData.sway=angle=>{
+      transform.makeTranslation(x,hit.position.y,z).multiply(rotation.makeRotationZ(angle)).multiply(matrix.makeTranslation(-x,-hit.position.y,-z));
+      for(const instance of hit.userData.instances){matrix.multiplyMatrices(transform,instance.base);instance.mesh.setMatrixAt(instance.index,matrix);instance.mesh.instanceMatrix.needsUpdate=true;}
+    };
+    this.flowerTargets.push(hit);return hit;
+  }
   async loadAssets(){
     T.Cache.enabled=true;const bundle=window.STORY_ASSETS,loader=new GLTFLoader();
     const entries=Object.entries(bundle.models);
@@ -95,7 +136,7 @@ class StoryWorld extends BaseWorld{
     const q=this.quality;
     for(const[name,gltf]of Object.entries(this.models)){gltf.scene.traverse(o=>{if(!o.isMesh)return;const m=o.material.clone();m.roughness=.88;m.metalness=0;m.envMapIntensity=.25;if(m.normalScale)m.normalScale.set(.28,.28);if(m.map){m.map.anisotropy=q==='high'?4:1;m.map.colorSpace=T.SRGBColorSpace}m.alphaTest=Math.max(m.alphaTest||0,.32);const foliage=/Leaves|Grass|Flowers/i.test(m.name);o.castShadow=!foliage&&q!=='low';o.receiveShadow=!foliage&&q!=='low';if(foliage){m.side=T.DoubleSide;m.emissive.set('#78955f');m.emissiveIntensity=.045;o.geometry.computeBoundingBox();const b=o.geometry.boundingBox;o.material=this.windMaterial(m,b.max.y-b.min.y,b.min.y,name.startsWith('CommonTree')?.22:.10);if(q==='high'){o.customDepthMaterial=new T.MeshDepthMaterial({depthPacking:T.RGBADepthPacking,map:m.map,alphaTest:m.alphaTest,side:T.DoubleSide});o.customDepthMaterial.onBeforeCompile=o.material.userData.windPatch;o.customDepthMaterial.customProgramCacheKey=o.material.customProgramCacheKey;}}else o.material=m;});this.rememberTemplate(name,gltf.scene)}
     this.staticRoots=[];this.place=(name,x,z,height,angle=rand()*6.28,options={})=>{
-      const o=this.cloneShared(name),t=this.templates[name],s=height/t.height,group=new T.Group();o.scale.setScalar(s);o.position.y=-t.minY*s;group.add(o);group.position.set(x,this.groundHeight(x,z)+(options.lift||0),z);group.rotation.y=angle;if(options.width){group.scale.x=options.width;group.scale.z=options.width}this.scene.add(group);if(!options.dynamic)this.staticRoots.push(group);return group;
+      const o=this.cloneShared(name),t=this.templates[name],s=height/t.height,group=new T.Group();o.scale.setScalar(s);o.position.y=-t.minY*s;group.add(o);group.position.set(x,this.groundHeight(x,z)+(options.lift||0),z);group.rotation.y=angle;if(options.width){group.scale.x=options.width;group.scale.z=options.width}this.scene.add(group);if(/^CommonTree/.test(name))this.walkObstacles.push({x,z,radius:Math.max(.38,height*.06)});else if(/^Rock/.test(name)&&height>.22)this.walkObstacles.push({x,z,radius:Math.max(.22,height*.65)});else if(/^Bush/.test(name)&&!options.dynamic)this.walkObstacles.push({x,z,radius:height*.4});if(!options.dynamic)this.staticRoots.push(group);return group;
     };
     this.populateGarden();this.details=installDetails(this);this.atmosphere=installAtmosphere(this,T);this.batchScenery();this.makeCat();this.updateGrowth(true);this.buildBridge();this.addLilyPads();
     this.canvas.dataset.artVersion='storybook-v2';this.canvas.dataset.assets='Quaternius textured nature · CC0';
@@ -109,7 +150,7 @@ class StoryWorld extends BaseWorld{
     for(let j=0;j<groups.length;j++){const [gx,gz]=groups[j];for(let i=0;i<groupSize;i++){const x=gx+(rand()-.5)*10,z=gz+(rand()-.5)*10;if(!this.clearForScenery(x,z,1.6))continue;tree(['CommonTree_1','CommonTree_2','CommonTree_3','CommonTree_5'][(j+i)%4],x,z,7+rand()*7)}}
     const flowerBeds=[[-8,2,2.3],[-5,3,2],[-8,-8,2.3],[7,0,2.2],[9,5,2.8],[-5,10,2.4],[5,11,2.5],[15,-12,4.3],[18,-7,3.3],[-9,-21,3]];
     flowerBeds.push([-7,7,2.5],[7,8,2.4],[-10,-2,2],[2,-8,2]);
-    for(let bi=0;bi<flowerBeds.length;bi++){const [x,z,r]=flowerBeds[bi];for(let i=0;i<flowersPerBed;i++){const a=rand()*6.28,rr=Math.sqrt(rand())*r;const px=x+Math.cos(a)*rr,pz=z+Math.sin(a)*rr;if(!this.clearForScenery(px,pz,.4))continue;this.place(i%3?'Flower_4_Group':'Flower_3_Group',px,pz,.48+rand()*.52)}}
+    for(let bi=0;bi<flowerBeds.length;bi++){const [x,z,r]=flowerBeds[bi];for(let i=0;i<flowersPerBed;i++){const a=rand()*6.28,rr=Math.sqrt(rand())*r;const px=x+Math.cos(a)*rr,pz=z+Math.sin(a)*rr;if(!this.clearForScenery(px,pz,.4))continue;const height=.48+rand()*.52,flower=this.place(i%3?'Flower_4_Group':'Flower_3_Group',px,pz,height),hit=this.registerFlower(px,pz,height,.36);flower.traverse(o=>{if(o.isMesh)o.userData.flowerTarget=hit})}}
     for(let i=0;i<lineTrees;i++){const x=-38+(lineTrees>1?i*(75/(lineTrees-1)):0),z=-43+Math.sin(i*.8)*5;tree('CommonTree_2',x,z,9+rand()*4,1.2)}
     for(let i=0;i<bushes;i++){const a=rand()*6.28,r=12+rand()*21,x=Math.cos(a)*r,z=Math.sin(a)*r;if((z>14&&Math.abs(x)<13)||!this.clearForScenery(x,z,.8))continue;this.place('Bush_Common_Flowers',x,z,.6+rand()*.65)}
     // 以密集植被丰富边缘，并刻意保留草坪与小径的留白。
@@ -134,25 +175,37 @@ class StoryWorld extends BaseWorld{
   }
   makeCat(){
     this.storyCat=createStoryCat();this.cat=this.storyCat.root;this.cat.scale.setScalar(.609375);this.scene.add(this.cat);this.catMixer={update(){}};this.catAction=null;
-    this.catPath=new T.CatmullRomCurve3([V(1.7,0,4.4),V(4,0,3.2),V(5.3,0,1.5),V(7,0,3),V(6,0,6.6),V(3,0,8),V(-1.3,0,7.6),V(-2,0,5.2)],true,'catmullrom',.28);this.catDistance=0;this.pathLength=this.catPath.getLength();this.cat.position.copy(this.catPath.getPointAt(0));this.cat.position.y=this.groundHeight(this.cat.position.x,this.cat.position.z);const heading=this.catPath.getTangentAt(0);this.cat.rotation.y=Math.atan2(heading.x,heading.z);const c=document.createElement('canvas');c.width=c.height=128;const ctx=c.getContext('2d'),grad=ctx.createRadialGradient(64,64,8,64,64,64);grad.addColorStop(0,'rgba(20,35,17,.45)');grad.addColorStop(.5,'rgba(20,35,17,.17)');grad.addColorStop(1,'rgba(20,35,17,0)');ctx.fillStyle=grad;ctx.fillRect(0,0,128,128);this.catContact=new T.Mesh(new T.PlaneGeometry(2.3,2.5),new T.MeshBasicMaterial({map:new T.CanvasTexture(c),transparent:true,depthWrite:false,opacity:.62}));this.catContact.rotation.x=-Math.PI/2;this.scene.add(this.catContact);this.canvas.dataset.catSource='Original storybook cat';this.canvas.dataset.catAnimation='articulated walk, breathing, blinking, ears and tail';
+    this.catPath=new T.CatmullRomCurve3([V(1.7,0,4.4),V(4,0,3.2),V(5.3,0,1.5),V(7,0,3),V(6,0,6.6),V(3,0,8),V(-1.3,0,7.6),V(-2,0,5.2)],true,'catmullrom',.28);this.catDistance=0;this.pathLength=this.catPath.getLength();this.cat.position.copy(this.catPath.getPointAt(0));this.cat.position.y=this.groundHeight(this.cat.position.x,this.cat.position.z);const heading=this.catPath.getTangentAt(0);this.cat.rotation.y=Math.atan2(heading.x,heading.z);const c=document.createElement('canvas');c.width=c.height=128;const ctx=c.getContext('2d'),grad=ctx.createRadialGradient(64,64,8,64,64,64);grad.addColorStop(0,'rgba(20,35,17,.45)');grad.addColorStop(.5,'rgba(20,35,17,.17)');grad.addColorStop(1,'rgba(20,35,17,0)');ctx.fillStyle=grad;ctx.fillRect(0,0,128,128);this.catContact=new T.Mesh(new T.PlaneGeometry(2.3,2.5),new T.MeshBasicMaterial({map:new T.CanvasTexture(c),transparent:true,depthWrite:false,opacity:.62}));this.catContact.rotation.x=-Math.PI/2;this.scene.add(this.catContact);this.companion=new GardenCompanion(this);this.companion.stop();this.canvas.dataset.catSource='Original storybook cat';this.canvas.dataset.catAnimation='articulated walk, breathing, blinking, ears and tail';
   }
   updateGrowth(force=false){
-    if(!this.place)return;const records=this.state.records.slice(this.state.mode==='session'?-2:-3),signature=this.state.mode+':'+records.map(r=>r.id||r.date).join(',');
-    if(force||signature!==this.recordSignature){this.recordSignature=signature;this.grown.forEach(x=>this.scene.remove(x));this.grown=[];for(let i=0;i<3;i++){const r=records[i],name=r?.type==='wind'?'Flower_4_Group':r?.type==='water'?'Bush_Common_Flowers':'Grass_Common_Tall',plot=this.plantPlot(i);const plant=this.place(name,plot.x,plot.z,.63,0,{dynamic:true});this.grown.push(plant)}}for(let i=0;i<3;i++){const r=records[i];const s=r?(r.growth??(r.complete?1:.72)):i===records.length&&this.state.mode==='session'?.1+Math.min(1,this.state.elapsed/90)*.7:.02;this.grown[i].scale.setScalar(s)}
+    if(!this.place)return;
+    const count=this.plots.length,records=this.state.records.slice(this.state.mode==='session'?-(count-1):-count),liveIndex=this.state.mode==='session'&&this.state.seedPlanted?(this.state.seedPlotIndex??count-1):-1;
+    const signature=[this.state.mode,liveIndex,this.state.sessionSeed,records.map(r=>r.id||r.date).join(',')].join(':');
+    if(force||signature!==this.recordSignature){
+      if(this.companion?.flower&&this.grown.includes(this.companion.flower))this.companion.stop();
+      this.recordSignature=signature;this.grown.forEach(x=>this.scene.remove(x));this.grown=[];
+      this.plots.forEach((plot,i)=>{
+        const r=records[i],live=i===liveIndex,seed=this.state.sessionSeed, name=live?(seedModels[seed]||seedModels.fern):seedModels[r?.type]|| (r?.type==='wind'?'Flower_4_Group':r?.type==='water'?'Bush_Common_Flowers':'Grass_Common_Tall');
+        const plant=this.place(name,plot.position.x,plot.position.z,.75,0,{dynamic:true});
+        plant.userData={plot:i,record:r,seed:live?seed:null,flower:true,approachRadius:.88,sway:angle=>{plant.rotation.z=angle;}};this.grown.push(plant);
+      });
+    }
+    this.grown.forEach((plant,i)=>{const r=records[i],live=i===liveIndex,size=r?(r.plantSize??(r.complete?1:.72)):live?.12+Math.min(1,this.state.elapsed/90)*.88:0;plant.visible=!!r||live;plant.scale.setScalar(size);});
   }
+  inviteToRecord(record){const plant=this.grown.find(p=>p.userData.record===record);return plant?this.companion.visit(plant):false;}
   home(immediate=false){
     this.stopCatForCamera();this.storyCat?.release();this.controls.minDistance=3.6;this.follow=false;const weatherSky=['rainbow','aurora','meteor'].includes(this.state.weather),target=weatherSky?V(-1,4,-3):V(-1,2,-1.5),pos=weatherSky?V(6,9.5,27):V(6,12,29);if(immediate){this.camera.position.copy(pos);this.controls.target.copy(target);this.controls.update()}else this.transition={pos,target};this.selectRegion?.('pond');
   }
   buildNavigation(){
-    const nav=document.createElement('nav');nav.className='region-nav';nav.setAttribute('aria-label','漫游花园');const regions=[['pond','池畔'],['meadow','花坡'],['woods','林间']];
-    regions.forEach(([key,label])=>{const b=document.createElement('button');b.textContent=label;b.dataset.region=key;b.setAttribute('aria-pressed',key==='pond'?'true':'false');b.onclick=()=>{this.stopCatForCamera();this.follow=false;this.onExplore();if(key==='pond')this.home();else this.transition=key==='meadow'?{pos:V(17,12,12),target:V(15,3,-10)}:{pos:V(7,10,-7),target:V(-3,2,-21)};this.selectRegion(key)};nav.append(b)});this.host.parentElement.append(nav);this.selectRegion=key=>{nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.region===key)));this.canvas.dataset.region=key};
+    const nav=document.createElement('nav');nav.className='region-nav';nav.setAttribute('aria-label','漫游花园');const regions=[['pond','池畔'],['meadow','花坡'],['woods','林间'],['garden','小花园']];
+    regions.forEach(([key,label])=>{const b=document.createElement('button');b.textContent=label;b.dataset.region=key;b.setAttribute('aria-pressed',key==='pond'?'true':'false');b.onclick=()=>{this.stopCatForCamera();this.follow=false;this.onExplore();if(key==='pond')this.home();else this.transition=key==='garden'?{pos:V(5,9,22),target:V(.6,.4,7.5)}:key==='meadow'?{pos:V(17,12,12),target:V(15,3,-10)}:{pos:V(7,10,-7),target:V(-3,2,-21)};this.selectRegion(key)};nav.append(b)});this.host.parentElement.append(nav);this.selectRegion=key=>{nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.region===key)));this.canvas.dataset.region=key};
   }
   handleExploreStart(){return false}
   // Camera commands never change the actor's path distance or world heading.
   stopCatForCamera(){this.catSpeed=0;this.cameraHoldUntil=(this.t||0)+.8}
   catCameraHeld(t){return this.follow||!!this.transition||t<(this.cameraHoldUntil||0)||!!this.gesture?.moved}
   zoomBy(f){this.stopCatForCamera();super.zoomBy(f)}
-  focus(){this.stopCatForCamera();this.controls.minDistance=3.6*(this.cat?.scale.x||.609375)/1.06;this.follow=true;this.transition=null;if(this.scene&&this.renderer)this.chooseCatFocusView()}
+  focus(){this.companion?.stop();this.stopCatForCamera();this.controls.minDistance=3.6*(this.cat?.scale.x||.609375)/1.06;this.follow=true;this.transition=null;if(this.scene&&this.renderer)this.chooseCatFocusView()}
   chooseCatFocusView(){
     this.scene.updateMatrixWorld(true);
     let best=null,bestScore=-Infinity;
@@ -199,7 +252,7 @@ class StoryWorld extends BaseWorld{
     const yaw=this.cat.rotation.y,axis=V(0,1,0);
     return {target:this.cat.position.clone().add(centre.addScaledVector(up,-shift).applyAxisAngle(axis,yaw)),offset:direction.multiplyScalar(distance).applyAxisAngle(axis,yaw)};
   }
-  pet(zone='head'){return this.storyCat?.pet(zone)||false}
+  pet(zone='head'){this.companion?.stop();return this.storyCat?.pet(zone)||false}
   lookAtPointer(clientX,clientY){
     if(!this.storyCat)return;
     if(!this.follow){this.storyCat.look(0,0);return}
@@ -227,6 +280,7 @@ class StoryWorld extends BaseWorld{
     return {zone,x:point.x/.58,y:zone==='back'?(point.z+.2)/.7:point.y/.49};
   }
   stroke(hit,contact=this.contactAt(hit)){
+    this.companion?.stop();
     const g=this.gesture,acknowledge=contact.zone==='chin'&&!g?.chinAcknowledged;
     if(contact.zone==='chin'&&g&&!g.chin)g.chin={contact,bounds:g.contactBounds,active:true};
     this.petZone=contact.zone;this.storyCat.touch(contact.zone,contact,acknowledge);this.canvas.dataset.contactZone=contact.zone;
@@ -300,18 +354,18 @@ class StoryWorld extends BaseWorld{
         if(contact)this.stroke(null,contact);else this.storyCat.release();return;
       }
       if(moved&&!g.moved){g.moved=true;explore()}
+      if(!g.moved)e.stopImmediatePropagation();
     },true);
     const release=e=>{this.storyCat?.release();this.activePointers.delete(e.pointerId);if(this.canvas.hasPointerCapture(e.pointerId))this.canvas.releasePointerCapture(e.pointerId);this.controls.enabled=true;this.canvas.dataset.interaction='garden'};
     this.canvas.addEventListener('pointerup',e=>{
       const g=this.gesture;this.gesture=null;release(e);
       if(g?.stroke&&!g.wasFocused&&!g.moved&&performance.now()-g.at<650)document.getElementById('focusButton').click();
       if(!g||g.id!==e.pointerId||g.stroke||g.moved||Math.hypot(e.clientX-g.x,e.clientY-g.y)>8||performance.now()-g.at>650)return;
-      const ray=this.pick(e.clientX,e.clientY),hit=this.visibleHit(ray);
-      if(this.plots.includes(hit?.object))document.querySelectorAll('#plots > g')[hit.object.userData.plot]?.dispatchEvent(new MouseEvent('click'));
+      this.pickDestination(e.clientX,e.clientY);
     },true);
     this.canvas.addEventListener('pointercancel',e=>{this.gesture=null;release(e)},true);
     this.canvas.addEventListener('lostpointercapture',e=>{if(this.gesture?.id===e.pointerId){this.gesture=null;release(e)}},true);
-    this.canvas.addEventListener('wheel',explore,{passive:true,capture:true});
+    this.canvas.addEventListener('wheel',()=>{this.gesture=null;explore()},{passive:true,capture:true});
     this.canvas.addEventListener('pointerleave',()=>{if(!this.gesture)this.storyCat?.look(0,0)});
     this.canvas.addEventListener('keydown',e=>{
       if(e.key.toLowerCase()==='c'&&this.state.focused){e.preventDefault();document.getElementById('chinButton').click();return}
@@ -320,7 +374,37 @@ class StoryWorld extends BaseWorld{
       e.preventDefault();explore();if(e.key==='0')this.home();else if(e.key==='+'||e.key==='-')this.zoomBy(e.key==='+'?1.15:1/1.15);
       else{const d=this.camera.position.clone().sub(this.controls.target);if(e.key==='ArrowLeft'||e.key==='ArrowRight')d.applyAxisAngle(V(0,1,0),e.key==='ArrowLeft'?.15:-.15);else d.y+=e.key==='ArrowUp'?1:-1;this.camera.position.copy(this.controls.target).add(d)}
     });
-    this.canvas.setAttribute('aria-label','三维花园：拖动环绕，双指缩放；按住小猫并轻轻滑动，抚摸头顶、下巴或背部。回车抚摸头顶，C轻挠下巴。');
+    this.canvas.setAttribute('aria-label','三维花园：点击草地点选目的地，点击花朵让小猫咬一咬或蹭一蹭；拖动环绕，双指缩放；按住小猫并轻轻滑动，抚摸头顶、下巴或背部。回车抚摸头顶，C轻挠下巴。');
+  }
+  pickDestination(x,y){
+    if(!this.companion||document.querySelector('.overlay:not([hidden])'))return;
+    this.scene.updateMatrixWorld(true);
+    const ray=this.pick(x,y),visible=this.visibleHit(ray);
+    const roots=[...this.plots,...this.grown.filter(p=>p.visible),...this.flowerTargets];
+    for(const hit of ray.intersectObjects(roots,true)){
+      let root=hit.object;while(root.parent&&!roots.includes(root))root=root.parent;
+      // Flower proxies include a little air around petals; reject scenery in front.
+      if(visible&&visible.distance<hit.distance-.45&&!this.plots.includes(visible.object)&&!this.grown.some(p=>p===visible.object||p.getObjectById(visible.object.id))&&visible.object!==this.terrain)continue;
+      if(root.userData.plot!==undefined){
+        const index=root.userData.plot,plant=this.grown[index];
+        if(plant?.userData.record)document.querySelectorAll('#plots > g')[index]?.dispatchEvent(new MouseEvent('click'));
+        else if(plant?.visible)this.companion.visit(plant);
+        else this.companion.goTo({x:root.position.x,z:root.position.z-.95});
+        return;
+      }
+      if(root.userData.flower){this.companion.visit(root);return;}
+    }
+    if(visible?.object===this.terrain)this.companion.goTo(visible.point);
+  }
+  updateCatMovement(dt,motion,t){
+    if(!this.companion)return super.updateCatMovement(dt,motion,t);
+    const before=this.cat.position.clone(),c=this.companion;
+    const travelling=c.phase==='walking'||c.phase==='roaming';
+    // Wait for paws to return to the ground before translating a seated cat.
+    const recovering=travelling&&((this.cat.userData.sitWeight||0)>.02||(this.cat.userData.lieWeight||0)>.02);
+    c.update(dt,!!this.cat.userData.contact||!!this.gesture||!!this.transition||t<(this.cameraHoldUntil||0)||recovering);
+    const distance=before.distanceTo(this.cat.position);this.catSpeed=dt?distance/dt:0;this.catDistance+=distance;
+    this.canvas.dataset.catPosition=`${this.cat.position.x.toFixed(2)},${this.cat.position.z.toFixed(2)}`;
   }
   updateCatContext(){
     if(!this.storyCat||!this.state)return;
@@ -348,11 +432,12 @@ class StoryWorld extends BaseWorld{
     const n=this.skyMat.uniforms.night.value,light=this.state.light/100,rain=this.state.weather==='rain',t=this.t;
     this.hemi.intensity=T.MathUtils.lerp(1.1+light*.35,.68,n);this.hemi.color.set(n>.5?'#aac1d0':'#e9f2ed');this.hemi.groundColor.set(n>.5?'#435856':'#a1b282');
     this.sun.intensity=T.MathUtils.lerp((.22+light*2.7)*(rain?.52:1),.55,n);this.sun.color.set(n>.5?'#b3cee8':'#fff0d0');this.renderer.toneMappingExposure=T.MathUtils.lerp(1.02,1.0,n);this.scene.fog.color.copy(new T.Color('#c5dcd3').lerp(new T.Color('#283f50'),n));
-    if(this.cat)this.cat.userData.turning=0;if(this.catContact){this.catContact.position.copy(this.cat.position);this.catContact.position.y+=.013;this.catContact.rotation.z=-this.cat.rotation.y}if(this.storyCat){this.updateCatContext();const moving=this.catSpeed>.025&&!this.cat.userData.contact;this.storyCat.animate(t,moving,this.state.wind/100,!moving,dt,this.state.reduced,this.catDistance*8);this.canvas.dataset.catPose=this.cat.userData.pose;this.canvas.dataset.catExpression=this.cat.userData.expression;this.canvas.dataset.petCount=String(this.cat.userData.petCount||0);this.canvas.dataset.petting=String(this.cat.userData.petting);this.canvas.dataset.catReaction=this.cat.userData.reactionName||'';this.canvas.dataset.catAction=this.cat.userData.idleAction||'rest';this.canvas.dataset.catRest=this.cat.userData.nightRest?'sleeping':this.cat.userData.companionPhase;this.canvas.dataset.catEnvironment=this.cat.userData.environmentReaction||''}
+    if(this.cat)this.cat.userData.turning=0;if(this.catContact){this.catContact.position.copy(this.cat.position);this.catContact.position.y+=.013;this.catContact.rotation.z=-this.cat.rotation.y}if(this.storyCat){this.updateCatContext();const moving=this.catSpeed>.025&&!this.cat.userData.contact;this.storyCat.animate(t,moving,this.state.wind/100,!moving,dt,this.state.reduced,this.catDistance*8,this.companion?.pose||(['walking','roaming'].includes(this.companion?.phase)?{action:'walk',time:0}:null));this.canvas.dataset.catPose=this.cat.userData.pose;this.canvas.dataset.catExpression=this.cat.userData.expression;this.canvas.dataset.petCount=String(this.cat.userData.petCount||0);this.canvas.dataset.petting=String(this.cat.userData.petting);this.canvas.dataset.catReaction=this.cat.userData.reactionName||'';this.canvas.dataset.catAction=this.cat.userData.idleAction||'rest';this.canvas.dataset.catRest=this.cat.userData.nightRest?'sleeping':this.cat.userData.companionPhase;this.canvas.dataset.catEnvironment=this.cat.userData.environmentReaction||''}
     if(this.cat&&!this.state.night&&t-(this.lastCatNatureNotice||0)>16){
       const butterfly=this.butterflies?.find(b=>b.group.visible&&b.group.position.distanceTo(this.cat.position)<4);
       if(butterfly&&this.catNotice('butterfly',butterfly.group.position))this.lastCatNatureNotice=t;
     }
+    if(this.seedFeedback){const f=this.seedFeedback;f.userData.age+=dt;const age=f.userData.age;if(!this.state.reduced){f.scale.setScalar(1+Math.sin(age*5)*.12+Math.min(age,.8)*.4);f.children[1].rotation.z+=dt*1.8;}f.children[1].material.opacity=Math.max(0,.8-age*.22);f.children[2].material.opacity=Math.max(0,.12-age*.035);if(age>4)this.clearSeedFeedback();}
     this.details?.update(t,n);
     this.atmosphere?.update(dt,t,n);
     this.clouds?.forEach((c,i)=>{c.material.opacity=(1-n*.7)*.6;c.material.color.set(n>.5?'#718c9f':'#fff8e8');c.position.x+=dt*.045*(.2+this.state.wind/100)});
@@ -366,4 +451,5 @@ class StoryWorld extends BaseWorld{
     if(this.catContact){this.catContact.scale.set(this.cat.scale.x*.92,this.cat.scale.x*.98,1);this.catContact.material.opacity=.52}
   }
 }
+window.GARDEN_PLOT_COUNT=6;
 window.GardenWorld=StoryWorld;

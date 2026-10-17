@@ -212,8 +212,9 @@ export function createStoryCat({random=Math.random,clock=()=>performance.now()/1
   // Locomotion yields when an action is due and until its recovery finishes.
   // Walking must not reset the schedule or cut off a raised paw mid-action.
   function wantsRest(t){return !motionReduced&&(context.night||clock()-noticeAt<3.6||response>.15||clock()-backStrokeAt<1.5||companionAt!==null||restSit>.01||restLie>.01||!held&&(!!idleKind||t<restUntil||nextIdle!==null&&t>=nextIdle))}
-  function animate(t,moving,wind=0,settled=false,dt=.016,reduced=false,stride=t*5.1){
+  function animate(t,moving,wind=0,settled=false,dt=.016,reduced=false,stride=t*5.1,interaction=null){
     const now=clock(),age=now-petAt;motionReduced=reduced;
+    const exploring=!!interaction&&!held;
     const actionAge=now-actionAt,releaseAge=now-releasedAt;
     const wanted=held?.9:releasedAt>=actionAt?releasedResponse*(1-ease(releaseAge,.18,1.05)):age<2.8?Math.exp(-Math.max(0,age-1.1)*1.9):0;
     response=reduced?wanted:T.MathUtils.lerp(response,wanted,1-Math.exp(-dt*(wanted>response?20:5)));
@@ -235,12 +236,13 @@ export function createStoryCat({random=Math.random,clock=()=>performance.now()/1
     const direction=touchSide||side;
     poseSide=reduced?direction:T.MathUtils.damp(poseSide,direction,9,dt);
     const {nuzzle,tilt,bow,stretch:backStretch,arch,tail:tailCurl}=responseWeights,cheek=responseWeights.cheek*chinBlend,bliss=responseWeights.bliss*chinBlend;
-    if(!reduced&&!held&&companionAt===null){
+    if(!reduced&&!held&&!exploring&&companionAt===null){
       if(context.night&&nightSince!==null&&now-nightSince>=5){companionAt=now;restBaseSit=restSit;restBaseLie=restLie;idleKind=''}
       else if(context.listening&&!listeningSettled&&listeningSince!==null&&now-listeningSince>14&&!moving){companionAt=now;restBaseSit=restSit;restBaseLie=restLie;listeningSettled=true}
     }
     const companionAge=companionAt===null?0:now-companionAt;
-    if(reduced){companionAt=null;restSit=restLie=restBaseSit=restBaseLie=0}
+    if(exploring){companionAt=null;restSit=T.MathUtils.damp(restSit,0,8,dt);restLie=T.MathUtils.damp(restLie,0,8,dt);restBaseSit=restSit;restBaseLie=restLie;idleKind='';nextIdle=t+3;}
+    else if(reduced){companionAt=null;restSit=restLie=restBaseSit=restBaseLie=0}
     else if(held){
       // Petting a seated or resting cat keeps that posture. A new release
       // starts from this pose, rather than making it stand and sit repeatedly.
@@ -255,7 +257,7 @@ export function createStoryCat({random=Math.random,clock=()=>performance.now()/1
     const seated=restSit*(1-restLie),lying=restLie;
     const glance=(context.night?0:lying)*envelope((companionAge-12)%11,1,1.7,2.5,3.3);
     if(nextIdle===null)nextIdle=t+3;
-    const interrupted=context.night||now-noticeAt<3.6||held||response>.15||reduced||companionAt!==null||restSit>.01||restLie>.01||moving&&!!idleKind;
+    const interrupted=exploring||context.night||now-noticeAt<3.6||held||response>.15||reduced||companionAt!==null||restSit>.01||restLie>.01||moving&&!!idleKind;
     if(interrupted){idleKind='';nextIdle=t+3;restUntil=0}
     else{
       if(idleKind&&t-idleStart>=idleDuration){idleKind='';restUntil=t+.35;nextIdle=t+6+random()*4}
@@ -356,6 +358,13 @@ export function createStoryCat({random=Math.random,clock=()=>performance.now()/1
     // Rendering can use the same gesture/schedule state with a sprite skin.
     // Timings remain owned by this actor, including release and recovery.
     root.userData.spriteState={actionAge,companionAge,idleAge,idleDuration,noticeAge:now-noticeAt,wind,looking:eyeGaze.length()>.12,waking:wakingFromNight&&restLie>.01&&companionAge>=27.5};
+    const action=interaction?.action,ageOfAction=interaction?.time||0;
+    const weight=action==='bite'||action==='rub'?Math.min(1,ageOfAction/.5,Math.max(0,(3.6-ageOfAction)/.5)):0;
+    if(weight){
+      if(action==='bite'){head.rotation.x+=weight*(.36+Math.sin(ageOfAction*9)*.07);head.position.z+=weight*.07;mouth.visible=true;mouth.scale.y=.012+Math.max(0,Math.sin(ageOfAction*12))*.025;}
+      else{head.position.x+=Math.sin(ageOfAction*4)*.09*weight;head.rotation.z+=Math.sin(ageOfAction*4)*.20*weight;head.rotation.y+=.26*weight;}
+    }
+    root.userData.flowerAction=weight?action:null;
     coat.update();
   }
   return {root,head,reaction,animate,pet,touch,release,look,wantsRest,setContext,notice};

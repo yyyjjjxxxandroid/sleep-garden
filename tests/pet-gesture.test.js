@@ -128,3 +128,17 @@ for(const [width,height]of [[320,740],[390,844],[1440,900]])test(`the visible ba
   assert.equal(f.actor.root.userData.backStrokeCount,1);assert.equal(f.actor.root.userData.reactionName,name);
   assert.deepEqual(f.counts(),{contacts:1,acknowledgments:0});f.send('pointerup',points.at(-1));
 });
+
+
+test('ground taps are separate from drags, multitouch, cancellation and wheel input',async()=>{
+  const f=await fixture(),commands=[];f.world.pickDestination=(x,y)=>commands.push([x,y]);
+  const send=(type,x=5,y=5,id=1)=>{
+    const event=new Event(type);Object.assign(event,{pointerId:id,pointerType:'touch',button:0,clientX:x,clientY:y});f.world.canvas.dispatchEvent(event);
+  };
+  send('pointerdown');send('pointermove',8,8);send('pointerup',8,8);assert.equal(commands.length,1);
+  send('pointerdown');send('pointermove',50,50);send('pointermove');send('pointerup');assert.equal(commands.length,1,'returning to the start after a drag must not become a tap');
+  send('pointerdown');send('pointerdown',15,15,2);send('pointerup',15,15,2);send('pointerup');assert.equal(commands.length,1,'pinch must not send a destination');
+  send('pointerdown');send('pointercancel');send('pointerup');assert.equal(commands.length,1);
+  send('pointerdown');send('wheel');send('pointerup');assert.equal(commands.length,1);
+  assert.equal(f.world.controls.enabled,true);assert.equal(f.world.activePointers.size,0);
+});
