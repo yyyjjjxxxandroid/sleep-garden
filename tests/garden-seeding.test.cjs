@@ -23,7 +23,8 @@ function fixture({records=[],timer=0,quiet=false}={}){
   const persist=html.slice(html.indexOf('function save(){'),html.indexOf('\nif(recoveredPlant)save();'));
   const persistGrowing=html.slice(html.indexOf('function persistGrowingPlant('),html.indexOf('\nfunction toast('));
   const recovery=html.slice(html.indexOf('function restorePendingPlant('),html.indexOf('\nconst recovered='));
-  vm.runInContext(persist+'\n'+persistGrowing+'\n'+recovery,context);
+  const stats=html.slice(html.indexOf('function gardenStats('),html.indexOf('\nfunction updateGardenStats()'));
+  vm.runInContext(persist+'\n'+persistGrowing+'\n'+recovery+'\n'+stats,context);
   // Execute the production session handlers, replacing only rendering boundaries.
   let flow=html.slice(html.indexOf('async function start(mix)'),html.indexOf('function returnGarden()'));
   flow=flow.slice(0,flow.indexOf('function showPlantResult('))+flow.slice(flow.indexOf('function finish(){'));
@@ -31,8 +32,14 @@ function fixture({records=[],timer=0,quiet=false}={}){
   const progress=html.slice(html.indexOf('function updateProgress(){'),html.indexOf('function setTimer('));
   const select=html.slice(html.indexOf('function selectSeed(type)'),html.indexOf("document.querySelectorAll('[data-seed]').forEach(b=>b.onclick"));
   vm.runInContext(helpers+'\n'+flow+'\n'+progress+'\n'+select,context);
-  return {state,clock,plants,results,beginnings,cues,storage,restore:snapshot=>context.restorePendingPlant(snapshot),recover:(records,snapshot)=>context.recoverPendingPlant(records,snapshot),select:type=>context.selectSeed(type),start:()=>context.start(),pause:()=>context.pause(),reset:()=>context.resetSession(),finish:()=>context.finish(),progress:()=>context.updateProgress(),tick:()=>{clock.tick(now);context.syncClock()},time:ms=>{now=ms},rest:value=>{resting=value},hide:value=>{context.document.hidden=value}};
+  return {state,clock,plants,results,beginnings,cues,storage,stats:(records,seedPlanted)=>context.gardenStats(records,seedPlanted),restore:snapshot=>context.restorePendingPlant(snapshot),recover:(records,snapshot)=>context.recoverPendingPlant(records,snapshot),select:type=>context.selectSeed(type),start:()=>context.start(),pause:()=>context.pause(),reset:()=>context.resetSession(),finish:()=>context.finish(),progress:()=>context.updateProgress(),tick:()=>{clock.tick(now);context.syncClock()},time:ms=>{now=ms},rest:value=>{resting=value},hide:value=>{context.document.hidden=value}};
 }
+test('garden stats show planted seeds and completed healing sessions separately',()=>{
+  const f=fixture({records:[{id:1,complete:true},{id:2,complete:false},{id:3}]});
+  assert.deepEqual({...f.stats(f.state.records,false)},{planted:3,completed:1});
+  assert.deepEqual({...f.stats(f.state.records,true)},{planted:4,completed:1});
+  assert.deepEqual({...f.stats(null,true)},{planted:1,completed:0});
+});
 test('choosing a flower previews it; repeated start, pause, resume and reset plant once',async()=>{
   const f=fixture();f.select('bellflower');assert.equal(f.state.seedChoice,'bellflower');assert.equal(f.plants.length,0);
   await Promise.all([f.start(),f.start()]);assert.equal(f.plants.length,1);assert.deepEqual(f.plants[0],['bellflower',0]);
