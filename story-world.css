@@ -31,3 +31,18 @@
 .timer-help{font-size:12px;line-height:1.6;color:var(--muted);margin:10px 0}
 .timer-options{margin:14px 0}
 .timer-cancel{margin-top:18px}
+
+.seed-picker{pointer-events:auto;text-align:center;color:#3d5544}
+.seed-picker .timer-kicker{margin:0 0 6px;font-size:11px;letter-spacing:1px;color:inherit}
+.seed-options{display:flex;gap:6px}
+.seed-option{flex:1;min-width:0;min-height:44px;display:flex;align-items:center;justify-content:center;gap:5px;border:1px solid #526d4938;border-radius:18px;background:#f6f5e9b8;color:inherit;font:inherit;font-size:12px;cursor:pointer}
+.seed-option svg{width:26px;height:34px;flex:none}
+.seed-option[aria-pressed=true]{border-color:#3d5746;background:#dce8cb;box-shadow:inset 0 0 0 1px #3d5746}
+.seed-option:focus-visible{outline:2px solid #3d5746;outline-offset:2px}
+.garden-bottom .seed-picker{background:#f4f6e8e8;border-radius:22px;padding:10px;margin-bottom:10px;backdrop-filter:blur(14px)}
+
+.home-dock{max-height:calc(100svh - 112px);overflow-y:auto;overscroll-behavior:contain}
+.seed-picker{width:100%;flex-shrink:0;color:var(--ink)}
+.seed-option{min-height:44px}
+#gardenBottom .seed-picker{margin:0;padding:0;background:none;backdrop-filter:none}
+.night .seed-option{background:var(--paper);color:var(--ink)}

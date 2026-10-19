@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 
 // Real Three.js geometry and production pointer handlers, without a renderer.
 // These tests do not replace browser or physical-device verification.
-async function fixture(width=390,height=844,framed=false){
+async function fixture(width=390,height=844,framed=false,random){
   globalThis.window??={};
   const T=await import('../vendor/three/build/three.module.js');
   const {createStoryCat}=await import('../story-cat.js');
@@ -16,7 +16,8 @@ async function fixture(width=390,height=844,framed=false){
   const canvas=new EventTarget(),captured=new Set();
   Object.assign(canvas,{dataset:{},getBoundingClientRect:()=>({left:0,top:0,width,height}),setAttribute(){},setPointerCapture:id=>captured.add(id),hasPointerCapture:id=>captured.has(id),releasePointerCapture:id=>captured.delete(id)});
   let time=0;
-  const actor=createStoryCat({clock:()=>time}),cat=actor.root,scene=new T.Scene();scene.add(cat);cat.scale.setScalar(.65);
+  let seed=width*height;
+  const actor=createStoryCat({clock:()=>time,random:random||(()=>((seed=Math.imul(seed,1664525)+1013904223>>>0)/4294967296))}),cat=actor.root,scene=new T.Scene();scene.add(cat);cat.scale.setScalar(.609375);
   const camera=new T.PerspectiveCamera(42,width/height,.1,100);camera.position.set(3.8,2.8,9);camera.lookAt(0,.65,0);camera.updateMatrixWorld(true);scene.updateMatrixWorld(true);
   const world=Object.assign(Object.create(window.GardenWorld.prototype),{canvas,storyCat:actor,cat,scene,camera,follow:true,state:{focused:true},controls:{enabled:true},onExplore(){}});
   if(framed){
@@ -81,6 +82,17 @@ test('entering the chin from the head also starts one continuous scratch',async(
   assert.deepEqual(f.counts(),{contacts:1,acknowledgments:1});f.send('pointerup',f.paw);
 });
 
+for(const random of [.01,.45,.95])test(`skinned chin hit stays anchored while head response ${random} deforms the face`,async()=>{
+  const f=await fixture(390,844,true,()=>random);
+  f.send('pointerdown',f.face);f.send('pointermove',f.chin);
+  assert.equal(f.world.cat.userData.petZone,'chin');
+  for(let i=0;i<4;i++){
+    f.send('pointermove',f.face);f.send('pointermove',f.chin);
+    assert.equal(f.world.cat.userData.petZone,'chin');assert.equal(f.counts().contacts,1);
+  }
+  f.send('pointerup',f.chin);
+});
+
 test('pointer gaze uses the projected cat as its centre and follows up/down on a narrow screen',async()=>{
   const f=await fixture();f.world.follow=true;
   const centre=f.point(f.actor.head,0,0,0);
@@ -115,4 +127,18 @@ for(const [width,height]of [[320,740],[390,844],[1440,900]])test(`the visible ba
   for(const p of points.slice(1)){f.send('pointermove',p);assert.equal(f.actor.root.userData.petZone,'back')}
   assert.equal(f.actor.root.userData.backStrokeCount,1);assert.equal(f.actor.root.userData.reactionName,name);
   assert.deepEqual(f.counts(),{contacts:1,acknowledgments:0});f.send('pointerup',points.at(-1));
+});
+
+
+test('ground taps are separate from drags, multitouch, cancellation and wheel input',async()=>{
+  const f=await fixture(),commands=[];f.world.pickDestination=(x,y)=>commands.push([x,y]);
+  const send=(type,x=5,y=5,id=1)=>{
+    const event=new Event(type);Object.assign(event,{pointerId:id,pointerType:'touch',button:0,clientX:x,clientY:y});f.world.canvas.dispatchEvent(event);
+  };
+  send('pointerdown');send('pointermove',8,8);send('pointerup',8,8);assert.equal(commands.length,1);
+  send('pointerdown');send('pointermove',50,50);send('pointermove');send('pointerup');assert.equal(commands.length,1,'returning to the start after a drag must not become a tap');
+  send('pointerdown');send('pointerdown',15,15,2);send('pointerup',15,15,2);send('pointerup');assert.equal(commands.length,1,'pinch must not send a destination');
+  send('pointerdown');send('pointercancel');send('pointerup');assert.equal(commands.length,1);
+  send('pointerdown');send('wheel');send('pointerup');assert.equal(commands.length,1);
+  assert.equal(f.world.controls.enabled,true);assert.equal(f.world.activePointers.size,0);
 });

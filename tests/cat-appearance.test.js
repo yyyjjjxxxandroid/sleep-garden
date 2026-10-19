@@ -25,7 +25,7 @@ test('cat body, legs and ears retain the original proportions',async()=>{
   }
 });
 
-test('production scene retains original cat size and route',async()=>{
+test('production scene enlarges the current cat by 125% without changing its route',async()=>{
   globalThis.window??={};
   const T=await import('../vendor/three/build/three.module.js');
   await import('../story-world.js');
@@ -34,7 +34,7 @@ test('production scene retains original cat size and route',async()=>{
   try{
     const world=Object.assign(Object.create(window.GardenWorld.prototype),{scene:new T.Scene(),canvas:{dataset:{}}});
     world.makeCat();
-    assert.deepEqual(world.cat.scale.toArray(),[.65,.65,.65]);
+    assert.deepEqual(world.cat.scale.toArray(),[.609375,.609375,.609375]);
     assert.deepEqual(world.catPath.points.map(p=>p.toArray()),[[1.7,0,4.4],[4,0,3.2],[5.3,0,1.5],[7,0,3],[6,0,6.6],[3,0,8],[-1.3,0,7.6],[-2,0,5.2]]);
   }finally{globalThis.document=previous}
 });
