@@ -293,6 +293,18 @@ const flowerCatalog={fern:{name:'雨蕨',symbol:'fern'},bellflower:{name:'铃花
 const normalizeMix=mix=>Object.fromEntries(Object.entries(defaults).map(([key,value])=>[key,Number.isFinite(mix?.[key])?Math.max(0,Math.min(100,mix[key])):value]));
 saved.mix=normalizeMix(saved.mix);
 saved.records=(Array.isArray(saved.records)?saved.records:[]).filter(r=>r&&['rain','wind','water','fern','bellflower','waterleaf'].includes(r.type)&&typeof r.name==='string'&&Number.isFinite(r.duration)&&r.duration>=0&&Number.isFinite(Date.parse(r.date))).map(r=>({...r,mix:normalizeMix(r.mix),experience:GardenPersonalization.normalizeExperience(r.experience)}));
+function restorePendingPlant(pending){
+ if(!pending||typeof pending!=='object'||!Number.isSafeInteger(pending.id)||!flowerCatalog[pending.seed]||!Number.isFinite(pending.elapsed)||pending.elapsed<0||pending.elapsed>86400||!Number.isFinite(Date.parse(pending.startedAt)))return null;
+ const type=pending.seed;
+ return {id:pending.id,type,soundType:['rain','wind','water'].includes(pending.soundType)?pending.soundType:'rain',name:flowerCatalog[type].name,date:new Date(pending.startedAt).toISOString(),duration:Math.round(pending.elapsed),complete:false,mix:normalizeMix(pending.mix),feedback:null,plantSize:.12+Math.min(1,pending.elapsed/90)*.88,interrupted:true};
+}
+function recoverPendingPlant(records,pending){
+ const plant=restorePendingPlant(pending);
+ if(!plant)return {records,plant:null};
+ return {records:records.some(r=>r.id===plant.id)?records:[...records,plant],plant};
+}
+const recovered=recoverPendingPlant(saved.records,saved.pendingPlant),recoveredPlant=recovered.plant;
+saved.records=recovered.records;
 const savedTimer=Number.isInteger(saved.timerSeconds)&&saved.timerSeconds>=0&&saved.timerSeconds<=43200?saved.timerSeconds:0;
 const state={mode:'home',playing:false,focused:false,elapsed:0,duration:0,timerSeconds:savedTimer,night:false,weather:'clear',wind:35,light:65,windLink:true,fireflies:true,reduced:matchMedia('(prefers-reduced-motion:reduce)').matches,mix:{...defaults,...saved.mix},records:Array.isArray(saved.records)?saved.records:[],selected:null,seedChoice:flowerCatalog[saved.seedChoice]?saved.seedChoice:'fern',seedPlanted:false,seedPlotIndex:null,sessionSeed:null,replayPending:false,growthCuePending:false,growthCueStage:0};
 $('sceneTab').textContent='天气与风';
@@ -315,7 +327,9 @@ function scheduleSessionEnd(){
 }
 function syncClock(){state.elapsed=clock.elapsed;state.duration=clock.duration;state.timerSeconds=clock.timerSeconds}
 function updateSessionStatus(){updateSessionChrome()}
-function save(){try{localStorage.setItem('sleepGarden.v1',JSON.stringify({mix:state.mix,records:state.records.map(({growth,...record})=>record),timerSeconds:state.timerSeconds,seedChoice:state.seedChoice}))}catch{}}
+function save(){try{const pendingPlant=state.seedPlanted?{id:state.sessionPlantId,seed:state.sessionSeed,elapsed:state.elapsed,startedAt:state.sessionStartedAt,soundType:dominant(),mix:{...state.mix}}:null;localStorage.setItem('sleepGarden.v1',JSON.stringify({mix:state.mix,records:state.records.map(({growth,...record})=>record),timerSeconds:state.timerSeconds,seedChoice:state.seedChoice,pendingPlant}))}catch{}}
+if(recoveredPlant)save();
+function persistGrowingPlant(force=false){if(!state.seedPlanted||state.mode!=='session')return;const elapsed=state.elapsed;if(!force&&elapsed-(state.lastPlantSaveElapsed??0)<5)return;state.lastPlantSaveElapsed=elapsed;save()}
 function toast(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,3200)}
 function el(tag,attrs,parent){const n=document.createElementNS(NS,tag);Object.entries(attrs||{}).forEach(([k,v])=>n.setAttribute(k,v));if(parent)parent.append(n);return n}
 let seed=67;function rand(){seed=(seed*16807)%2147483647;return(seed-1)/2147483646}const between=(a,b)=>a+rand()*(b-a);
@@ -405,20 +419,22 @@ async function start(mix){
  state.mode='session';state.playing=false;state.starting=true;state.focused=false;sessionEnded=false;lastStage='';
  state.growthCuePending=true;state.growthCueStage=0;
  state.sessionSeed=state.seedChoice;state.seedPlanted=true;state.seedPlotIndex=Math.min(state.records.length,(window.GARDEN_PLOT_COUNT||6)-1);
- worldEngine?.plantSeed?.(state.sessionSeed,state.seedPlotIndex);renderPlots();showMode();updateSliders();updateProgress();toast(`${flowerCatalog[state.sessionSeed].name}的种子已种下，陪伴时会慢慢长大。`);
+ state.sessionPlantId=Date.now();while(state.records.some(record=>record.id===state.sessionPlantId))state.sessionPlantId++;
+ state.sessionStartedAt=new Date().toISOString();state.lastPlantSaveElapsed=0;
+ worldEngine?.plantSeed?.(state.sessionSeed,state.seedPlotIndex);persistGrowingPlant(true);renderPlots();showMode();updateSliders();updateProgress();toast(`${flowerCatalog[state.sessionSeed].name}的种子已种下，陪伴时会慢慢长大。`);
  try{if(!audio)audio=createAudio();const started=await audio.play(()=>version===playbackVersion&&state.mode==='session');if(!started)return;clock.resume(performance.now());state.playing=true;app.dataset.audio='running';playPendingPlantCue()}
  catch{if(version!==playbackVersion)return;const failed=audio;audio=null;failed?.close();app.dataset.audio='unavailable';toast('声音未能开启，请点击继续重试。')}
  finally{if(version===playbackVersion){state.starting=false;showMode();updateProgress();scheduleSessionEnd()}}
 }
 async function pause(){
  if(state.mode!=='session'||state.starting)return;
- if(state.playing){clock.pause(performance.now());syncClock();state.playing=false;++playbackVersion;clearTimeout(sessionEndTimer);if(audio)audio.pause();app.dataset.audio='paused';showMode();updateProgress();if(clock.expired){finish();return}$('stageText').textContent='声音和计时已暂停，花园仍在自然活动。';return}
+ if(state.playing){clock.pause(performance.now());syncClock();state.playing=false;++playbackVersion;clearTimeout(sessionEndTimer);if(audio)audio.pause();persistGrowingPlant(true);app.dataset.audio='paused';showMode();updateProgress();if(clock.expired){finish();return}$('stageText').textContent='声音和计时已暂停，花园仍在自然活动。';return}
  const version=++playbackVersion;state.starting=true;showMode();
  try{if(!audio)audio=createAudio();const started=await audio.play(()=>version===playbackVersion&&state.mode==='session');if(!started)return;clock.resume(performance.now());state.playing=true;app.dataset.audio='running';playPendingPlantCue();$('stageText').textContent='回来了，我们继续慢慢听。'}
  catch{if(version===playbackVersion){const failed=audio;audio=null;failed?.close();app.dataset.audio='unavailable';toast('声音未能开启，请点击继续重试。')}}
  finally{if(version===playbackVersion){state.starting=false;showMode();updateProgress();scheduleSessionEnd()}}
 }
-function resetSession(){if(state.mode!=='session'||state.starting)return;const now=performance.now();++playbackVersion;clearTimeout(sessionEndTimer);if(audio)audio.pause();clock.reset(now);syncClock();state.playing=false;state.starting=false;state.growthCuePending=true;state.growthCueStage=0;sessionEnded=false;lastStage='';app.dataset.audio='paused';updateProgress();showMode();toast('进度已重置。')}
+function resetSession(){if(state.mode!=='session'||state.starting)return;const now=performance.now();++playbackVersion;clearTimeout(sessionEndTimer);if(audio)audio.pause();clock.reset(now);syncClock();state.playing=false;state.starting=false;state.growthCuePending=true;state.growthCueStage=0;state.lastPlantSaveElapsed=0;sessionEnded=false;lastStage='';app.dataset.audio='paused';persistGrowingPlant(true);updateProgress();showMode();toast('进度已重置。')}
 function showPlantResult(record){state.selected=record;$('resultPlant').setAttribute('href','#'+plantSymbol(record.type));$('resultTitle').textContent=record.complete?`花园里，多了一株${record.name}`:`一株小${record.name}，留下来了`;$('resultDescription').textContent=`来自刚刚的${(themes[record.soundType||record.type]?.sound||'自然声')} · 陪伴 ${format(record.duration)}`;$('feedback').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.textContent===record.feedback)));experience?.renderFeedback(record);modal('resultOverlay')}
 function finish(){
  if(state.mode!=='session'||sessionEnded||!clock.finish(performance.now()))return;
@@ -441,6 +457,7 @@ function updateProgress(){
  $('progressFill').style.width=progress+'%';bar.setAttribute('role',timed?'progressbar':'img');bar.setAttribute('aria-label',timed?'定时进度':`不限时陪伴，已进行 ${format(state.elapsed)}`);
  if(timed){bar.setAttribute('aria-valuemin','0');bar.setAttribute('aria-valuemax','100');bar.setAttribute('aria-valuenow',String(Math.floor(progress)));bar.setAttribute('aria-valuetext',`剩余 ${format(Math.ceil(clock.remaining))}`)}else{['aria-valuemin','aria-valuemax','aria-valuenow','aria-valuetext'].forEach(name=>bar.removeAttribute(name))}
  updateSessionChrome();const g=$('livePlant');if(g)g.setAttribute('transform',`scale(${.12+.88*growth})`);
+ persistGrowingPlant();
  if(state.mode==='session'&&state.playing){playGrowthCues(growth);const stage=growth<.2?'先安顿下来，剩下的交给声音。':growth<.65?'叶子慢慢舒展，小猫也放松了。':'什么都不用做，让声音继续陪你。';if(stage!==lastStage){$('stageText').textContent=stage;lastStage=stage;if(audio)audio.mix()}}
 }
 function setTimer(minutes){
