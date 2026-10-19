@@ -76,6 +76,8 @@ class GardenAudio {
     if(this.closed)return;
     const now=this.ctx.currentTime;
     this.endEnvelope.hold(now); this.masterEnvelope.ramp(0,now,.3);
+    // 在挂起前结束短音效，继续播放时不恢复旧的尾音。
+    if(this.plantCue)this.plantCue.stop(this.ctx.state==='running'?now+.3:now);
     clearTimeout(this.suspendTimer);
     this.suspendTimer=setTimeout(()=>{if(!this.closed)this.ctx.suspend().catch(()=>{})},350);
   }
@@ -101,8 +103,26 @@ class GardenAudio {
     const now=this.ctx.currentTime,base=mix.cat/100*(focused?1.2:.8);
     this.tracks.cat.envelope.hold(now).to(Math.min(.85,base*1.15),now+.3).to(base,now+2.4);
   }
+  plantGrowthCue(stage=0) {
+    const {mix,playing}=this.readMix();
+    if(this.closed||!playing||this.ctx.state!=='running')return false;
+    const volume=Object.values(mix||{}).reduce((maximum,value)=>Math.max(maximum,Math.max(0,Math.min(100,Number(value)||0))/100),0);
+    if(!volume)return false;
+    const now=this.ctx.currentTime;
+    if(now-(this.lastPlantCueAt??-Infinity)<5)return false;
+    this.lastPlantCueAt=now;
+    const frequencies=[523.25,587.33,659.25,783.99],frequency=frequencies[Math.max(0,Math.min(frequencies.length-1,Math.floor(stage)))];
+    const tone=this.ctx.createOscillator(),gain=this.ctx.createGain();
+    tone.type='sine';tone.frequency.setValueAtTime(frequency*1.18,now);tone.frequency.exponentialRampToValueAtTime(frequency,now+.28);
+    const peak=.018*Math.sqrt(volume);
+    gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(peak,now+.045);gain.gain.exponentialRampToValueAtTime(.0001,now+.72);
+    this.plantCue=tone;
+    tone.connect(gain).connect(this.master);tone.onended=()=>{tone.disconnect();gain.disconnect();if(this.plantCue===tone)this.plantCue=null};tone.start(now);tone.stop(now+.74);
+    return true;
+  }
   close() {
     this.closed=true; clearTimeout(this.suspendTimer); this.ctx.onstatechange=null;
+    if(this.plantCue)this.plantCue.stop();
     for(const{source}of Object.values(this.tracks))try{source.stop()}catch{}
     return this.ctx.close().catch(()=>{});
   }

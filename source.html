@@ -294,7 +294,7 @@ const normalizeMix=mix=>Object.fromEntries(Object.entries(defaults).map(([key,va
 saved.mix=normalizeMix(saved.mix);
 saved.records=(Array.isArray(saved.records)?saved.records:[]).filter(r=>r&&['rain','wind','water','fern','bellflower','waterleaf'].includes(r.type)&&typeof r.name==='string'&&Number.isFinite(r.duration)&&r.duration>=0&&Number.isFinite(Date.parse(r.date))).map(r=>({...r,mix:normalizeMix(r.mix),experience:GardenPersonalization.normalizeExperience(r.experience)}));
 const savedTimer=Number.isInteger(saved.timerSeconds)&&saved.timerSeconds>=0&&saved.timerSeconds<=43200?saved.timerSeconds:0;
-const state={mode:'home',playing:false,focused:false,elapsed:0,duration:0,timerSeconds:savedTimer,night:false,weather:'clear',wind:35,light:65,windLink:true,fireflies:true,reduced:matchMedia('(prefers-reduced-motion:reduce)').matches,mix:{...defaults,...saved.mix},records:Array.isArray(saved.records)?saved.records:[],selected:null,seedChoice:flowerCatalog[saved.seedChoice]?saved.seedChoice:'fern',seedPlanted:false,seedPlotIndex:null,sessionSeed:null,replayPending:false};
+const state={mode:'home',playing:false,focused:false,elapsed:0,duration:0,timerSeconds:savedTimer,night:false,weather:'clear',wind:35,light:65,windLink:true,fireflies:true,reduced:matchMedia('(prefers-reduced-motion:reduce)').matches,mix:{...defaults,...saved.mix},records:Array.isArray(saved.records)?saved.records:[],selected:null,seedChoice:flowerCatalog[saved.seedChoice]?saved.seedChoice:'fern',seedPlanted:false,seedPlotIndex:null,sessionSeed:null,replayPending:false,growthCuePending:false,growthCueStage:0};
 $('sceneTab').textContent='天气与风';
 $('scenePanel').innerHTML=`<div class="weather-options" role="group" aria-label="天气场景">
 <button data-weather="clear" aria-pressed="false"><span>☀</span>晴朗</button><button data-weather="rainbow" aria-pressed="false"><span class="weather-rainbow">⌒</span>彩虹</button><button data-weather="rain" aria-pressed="true"><span>☂</span>雨天</button><button data-weather="aurora" aria-pressed="false"><span>〰</span>极光</button><button data-weather="meteor" aria-pressed="false"><span>☄</span>流星</button></div>
@@ -375,6 +375,19 @@ document.addEventListener('keydown',e=>{const m=[...document.querySelectorAll('.
 // 七条经过响度与循环处理的 CC0 自然声与音乐；构建时嵌入 index.html，源码模式从 audio/ 读取。
 const audioSources={sun:'audio/01-林间晨鸟.mp3',wind:'audio/02-风拂树叶.mp3',rain:'audio/03-花园细雨.mp3',bugs:'audio/04-远处虫鸣.mp3',cat:'audio/05-猫咪呼噜.mp3',water:'audio/06-池塘流水.mp3',music:'audio/07-疗愈氛围音乐.mp3'};
 function createAudio(){return new GardenAudio({sources:window.GARDEN_AUDIO_ASSETS||audioSources,readMix:()=>state,onInterruption:()=>{if(state.playing)pauseForInterruption()}})}
+function playPendingPlantCue(){
+ if(!state.growthCuePending)return;
+ state.growthCuePending=false;state.growthCueStage=0;
+ if(!document.hidden&&!app.classList.contains('resting'))audio?.plantGrowthCue?.(0);
+}
+function playGrowthCues(growth){
+ if(!state.seedPlanted||!state.playing)return;
+ const reached=Math.min(3,Math.floor(growth*3));
+ if(reached<=state.growthCueStage)return;
+ // 跳过休息或后台期间的提示，回来后不补播。
+ state.growthCueStage=reached;
+ if(!document.hidden&&!app.classList.contains('resting'))audio?.plantGrowthCue?.(reached);
+}
 function pauseForInterruption(){
  if(state.mode!=='session')return;
  if(state.playing){pause();toast('声音已暂停，点击继续后恢复声音和计时。')}
@@ -390,9 +403,10 @@ async function start(mix){
  experience?.begin(mix);closeModal();$('completionNotice').hidden=true;if(mix)state.mix=normalizeMix(mix);
  const version=++playbackVersion,now=performance.now();clock.start(now);clock.pause(now);syncClock();
  state.mode='session';state.playing=false;state.starting=true;state.focused=false;sessionEnded=false;lastStage='';
+ state.growthCuePending=true;state.growthCueStage=0;
  state.sessionSeed=state.seedChoice;state.seedPlanted=true;state.seedPlotIndex=Math.min(state.records.length,(window.GARDEN_PLOT_COUNT||6)-1);
  worldEngine?.plantSeed?.(state.sessionSeed,state.seedPlotIndex);renderPlots();showMode();updateSliders();updateProgress();toast(`${flowerCatalog[state.sessionSeed].name}的种子已种下，陪伴时会慢慢长大。`);
- try{if(!audio)audio=createAudio();const started=await audio.play(()=>version===playbackVersion&&state.mode==='session');if(!started)return;clock.resume(performance.now());state.playing=true;app.dataset.audio='running'}
+ try{if(!audio)audio=createAudio();const started=await audio.play(()=>version===playbackVersion&&state.mode==='session');if(!started)return;clock.resume(performance.now());state.playing=true;app.dataset.audio='running';playPendingPlantCue()}
  catch{if(version!==playbackVersion)return;const failed=audio;audio=null;failed?.close();app.dataset.audio='unavailable';toast('声音未能开启，请点击继续重试。')}
  finally{if(version===playbackVersion){state.starting=false;showMode();updateProgress();scheduleSessionEnd()}}
 }
@@ -400,11 +414,11 @@ async function pause(){
  if(state.mode!=='session'||state.starting)return;
  if(state.playing){clock.pause(performance.now());syncClock();state.playing=false;++playbackVersion;clearTimeout(sessionEndTimer);if(audio)audio.pause();app.dataset.audio='paused';showMode();updateProgress();if(clock.expired){finish();return}$('stageText').textContent='声音和计时已暂停，花园仍在自然活动。';return}
  const version=++playbackVersion;state.starting=true;showMode();
- try{if(!audio)audio=createAudio();const started=await audio.play(()=>version===playbackVersion&&state.mode==='session');if(!started)return;clock.resume(performance.now());state.playing=true;app.dataset.audio='running';$('stageText').textContent='回来了，我们继续慢慢听。'}
+ try{if(!audio)audio=createAudio();const started=await audio.play(()=>version===playbackVersion&&state.mode==='session');if(!started)return;clock.resume(performance.now());state.playing=true;app.dataset.audio='running';playPendingPlantCue();$('stageText').textContent='回来了，我们继续慢慢听。'}
  catch{if(version===playbackVersion){const failed=audio;audio=null;failed?.close();app.dataset.audio='unavailable';toast('声音未能开启，请点击继续重试。')}}
  finally{if(version===playbackVersion){state.starting=false;showMode();updateProgress();scheduleSessionEnd()}}
 }
-function resetSession(){if(state.mode!=='session'||state.starting)return;const now=performance.now();++playbackVersion;clearTimeout(sessionEndTimer);if(audio)audio.pause();clock.reset(now);syncClock();state.playing=false;state.starting=false;sessionEnded=false;lastStage='';app.dataset.audio='paused';updateProgress();showMode();toast('进度已重置。')}
+function resetSession(){if(state.mode!=='session'||state.starting)return;const now=performance.now();++playbackVersion;clearTimeout(sessionEndTimer);if(audio)audio.pause();clock.reset(now);syncClock();state.playing=false;state.starting=false;state.growthCuePending=true;state.growthCueStage=0;sessionEnded=false;lastStage='';app.dataset.audio='paused';updateProgress();showMode();toast('进度已重置。')}
 function showPlantResult(record){state.selected=record;$('resultPlant').setAttribute('href','#'+plantSymbol(record.type));$('resultTitle').textContent=record.complete?`花园里，多了一株${record.name}`:`一株小${record.name}，留下来了`;$('resultDescription').textContent=`来自刚刚的${(themes[record.soundType||record.type]?.sound||'自然声')} · 陪伴 ${format(record.duration)}`;$('feedback').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.textContent===record.feedback)));experience?.renderFeedback(record);modal('resultOverlay')}
 function finish(){
  if(state.mode!=='session'||sessionEnded||!clock.finish(performance.now()))return;
@@ -427,7 +441,7 @@ function updateProgress(){
  $('progressFill').style.width=progress+'%';bar.setAttribute('role',timed?'progressbar':'img');bar.setAttribute('aria-label',timed?'定时进度':`不限时陪伴，已进行 ${format(state.elapsed)}`);
  if(timed){bar.setAttribute('aria-valuemin','0');bar.setAttribute('aria-valuemax','100');bar.setAttribute('aria-valuenow',String(Math.floor(progress)));bar.setAttribute('aria-valuetext',`剩余 ${format(Math.ceil(clock.remaining))}`)}else{['aria-valuemin','aria-valuemax','aria-valuenow','aria-valuetext'].forEach(name=>bar.removeAttribute(name))}
  updateSessionChrome();const g=$('livePlant');if(g)g.setAttribute('transform',`scale(${.12+.88*growth})`);
- if(state.mode==='session'&&state.playing){const stage=growth<.2?'先安顿下来，剩下的交给声音。':growth<.65?'叶子慢慢舒展，小猫也放松了。':'什么都不用做，让声音继续陪你。';if(stage!==lastStage){$('stageText').textContent=stage;lastStage=stage;if(audio)audio.mix()}}
+ if(state.mode==='session'&&state.playing){playGrowthCues(growth);const stage=growth<.2?'先安顿下来，剩下的交给声音。':growth<.65?'叶子慢慢舒展，小猫也放松了。':'什么都不用做，让声音继续陪你。';if(stage!==lastStage){$('stageText').textContent=stage;lastStage=stage;if(audio)audio.mix()}}
 }
 function setTimer(minutes){
  if(!Number.isInteger(minutes)||minutes<0||minutes>720)return;
