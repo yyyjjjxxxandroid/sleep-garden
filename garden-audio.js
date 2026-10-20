@@ -44,6 +44,8 @@ class GardenAudio {
     this.master.connect(this.endGain).connect(limiter).connect(this.ctx.destination);
     this.ctx.onstatechange=()=>{if(!this.closed&&this.ctx.state!=='running')onInterruption(this.ctx.state)};
     this.ready=this.load(); this.ready.catch(()=>{});
+    this.sceneVoices=new Set();this.lastStepDistance=null;this.lastChimeContact=null;
+    this.sceneTimer=setInterval(()=>this.sceneTick(),80);
   }
   async load() {
     const entries=await Promise.all(Object.entries(this.sources).map(async([key,url])=>{
@@ -101,8 +103,40 @@ class GardenAudio {
     const now=this.ctx.currentTime,base=mix.cat/100*(focused?1.2:.8);
     this.tracks.cat.envelope.hold(now).to(Math.min(.85,base*1.15),now+.3).to(base,now+2.4);
   }
+  sceneTick(){
+    const state=this.readMix();
+    if(this.closed||this.ctx.state!=='running'||!state.playing){this.lastStepDistance=state.catDistance??null;this.lastChimeContact=state.chimeContact??null;return;}
+    const distance=state.catDistance||0,contact=state.chimeContact||0;
+    if(this.lastStepDistance===null)this.lastStepDistance=distance;
+    if(state.catMoving&&distance-this.lastStepDistance>=.24){this.lastStepDistance=distance;if(state.mix.footsteps>0)this.pawStep(state.mix.footsteps/100);}
+    if(!state.catMoving)this.lastStepDistance=distance;
+    if(this.lastChimeContact!==null&&contact!==this.lastChimeContact&&state.wind>0&&state.mix.chime>0)this.chimeStrike(state.mix.chime/100);
+    this.lastChimeContact=contact;
+  }
+  voice(source,gain,seconds){
+    source.connect(gain).connect(this.master);this.sceneVoices.add(source);
+    source.onended=()=>{this.sceneVoices.delete(source);source.disconnect();gain.disconnect()};
+    source.start();source.stop(this.ctx.currentTime+seconds);
+  }
+  pawStep(level){
+    const ctx=this.ctx,now=ctx.currentTime;
+    if(!this.pawBuffer){const buffer=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*.13),ctx.sampleRate),data=buffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1);this.pawBuffer=buffer;}
+    const source=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();source.buffer=this.pawBuffer;source.playbackRate.value=.9+Math.random()*.2;
+    filter.type='lowpass';filter.frequency.value=900+Math.random()*250;filter.Q.value=.4;source.connect(filter);filter.connect(gain);gain.connect(this.master);
+    gain.gain.setValueAtTime(0,now);gain.gain.linearRampToValueAtTime(level*.10,now+.012);gain.gain.exponentialRampToValueAtTime(.00001,now+.12);
+    this.sceneVoices.add(source);source.onended=()=>{this.sceneVoices.delete(source);source.disconnect();filter.disconnect();gain.disconnect()};source.start();source.stop(now+.14);
+  }
+  chimeStrike(level){
+    const ctx=this.ctx,now=ctx.currentTime,base=[523.25,659.25,783.99,880][Math.floor(Math.random()*4)];
+    for(const [ratio,volume,decay] of [[1,1,1.6],[2.76,.22,.55],[5.4,.06,.18]]){
+      const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';osc.frequency.value=base*ratio;
+      gain.gain.setValueAtTime(.00001,now);gain.gain.linearRampToValueAtTime(level*.065*volume,now+.008);gain.gain.exponentialRampToValueAtTime(.00001,now+decay);
+      this.voice(osc,gain,decay+.05);
+    }
+  }
   close() {
-    this.closed=true; clearTimeout(this.suspendTimer); this.ctx.onstatechange=null;
+    this.closed=true; clearTimeout(this.suspendTimer);clearInterval(this.sceneTimer); this.ctx.onstatechange=null;
+    for(const source of this.sceneVoices)try{source.stop()}catch{}
     for(const{source}of Object.values(this.tracks))try{source.stop()}catch{}
     return this.ctx.close().catch(()=>{});
   }

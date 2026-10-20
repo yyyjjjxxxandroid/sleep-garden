@@ -1,4 +1,22 @@
 /* Direct scene interaction; visible controls use main's existing styles. */
+#soundOverlay.sheet-expanded .sheet{height:92svh;max-height:92svh}
+#soundOverlay .sheet{transition:height .25s ease,max-height .25s ease}
+#soundOverlay .sheet-drag-handle{width:72px;height:28px;min-height:28px;margin:-6px auto 3px;background:none;display:grid;place-items:center;cursor:ns-resize;flex:none}
+#soundOverlay .sheet-drag-handle::after{content:'';width:38px;height:4px;border-radius:6px;background:color-mix(in srgb,var(--ink) 30%,transparent)}
+@media(prefers-reduced-motion:reduce){#soundOverlay .sheet{transition:none}}
+#resetButton{display:none!important}
+.timer-actions{grid-template-columns:1.3fr 1fr!important}
+.viewing-plots .home-dock{display:none!important}
+#leaveGardenView{display:none;position:absolute;z-index:7;bottom:calc(var(--dock-pad) + 16px);left:50%;transform:translateX(-50%);min-height:44px;padding:10px 24px;border-radius:24px;background:var(--paper);color:var(--ink);font-size:13px;border:1px solid var(--line)}
+.viewing-plots #leaveGardenView{display:block}
+.viewing-plots #controls.is-collapsed{left:auto;right:16px;transform:none}
+#gardenSummary,#planTitle,.quick-actions,.asset-credits,#pendingFeedback,#recordFeedback,#feedbackSummary,#exportFeedback{display:none!important}
+#historyOverlay .sheet-sub,#historyOverlay .muted-help{display:none!important}
+.seed-picker .timer-kicker{font-weight:400!important;text-shadow:none!important;background:none!important;box-shadow:none!important}
+.dock-toggle{align-self:center;display:grid;place-items:center;min-width:64px;min-height:44px;border-radius:22px;color:var(--ink);font-size:26px;line-height:1}
+.controls.is-collapsed{width:64px!important;min-height:44px;padding:0!important;border-radius:24px!important;gap:0!important}
+.controls.is-collapsed>:not(.dock-toggle){display:none!important}
+.night .dock-toggle{color:var(--paper)}
 .garden-3d[data-interaction="cat"],.garden-3d[data-interaction="stroking"]{cursor:grab}
 .garden-3d[data-interaction="stroking"]{cursor:grabbing}
 .pet-access>span,.pet-access button{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);padding:0;border:0;white-space:nowrap}

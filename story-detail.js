@@ -10,25 +10,42 @@ export function installDetails(w){
   const grass=new T.InstancedMesh(blade,mat,cap),d=new T.Object3D();let count=0;
   for(let i=0;i<cap*1.35&&count<cap;i++){
     const x=(rnd()-.5)*55,z=(rnd()-.5)*52;
-    if(!w.clearForScenery(x,z,.18)||Math.abs(x-w.pathX(z))<.9)continue;
+    if(!w.clearForPlanting(x,z,.18))continue;
     const patch=.5+.5*Math.sin(x*.65+Math.cos(z*.5));if(rnd()> .45+patch*.5)continue;
     d.position.set(x,w.groundHeight(x,z)+.005,z);d.rotation.set(0,rnd()*6.28,(rnd()-.5)*.18);const h=.07+rnd()*.15;d.scale.set(.3+rnd()*.45,h,.45);d.updateMatrix();grass.setMatrixAt(count,d.matrix);grass.setColorAt(count,new T.Color().setHSL(.205+rnd()*.035,.24+rnd()*.16,.40+rnd()*.16));count++;
   }grass.count=count;grass.receiveShadow=false;grass.castShadow=false;grass.frustumCulled=false;grass.userData.skipReflection=true;w.scene.add(grass);
 
   // Curved, rounded petals rather than angular flower cards in the foreground.
-  const flowerBudget=w.quality==='high'?160:w.quality==='mid'?100:60;
+  const flowerBudget=w.quality==='high'?320:w.quality==='mid'?200:100;
   const pg=new T.SphereGeometry(1,w.quality==='high'?10:6,w.quality==='high'?6:4),petals=new T.InstancedMesh(pg,new T.MeshStandardMaterial({color:'#fff9e9',roughness:.82,side:T.DoubleSide}),flowerBudget*8);
   const centers=new T.InstancedMesh(new T.SphereGeometry(1,w.quality==='high'?10:6,w.quality==='high'?6:4),new T.MeshStandardMaterial({color:'#c8a35a',roughness:.9}),flowerBudget);
   const stems=new T.InstancedMesh(new T.CylinderGeometry(.011,.016,1,5),new T.MeshStandardMaterial({color:'#5e7951',roughness:1}),flowerBudget);
-  const clusters=[[-7,2],[-6,4],[-8,7],[7,6],[5,10],[14,-10]];let flower=0;
+  const clusters=[[-7,2],[-6,4],[-8,7],[7,6],[5,10],[14,-10],[-11,3],[11,5],[-5,-16],[1,-20],[-5,12],[8,12]];let flower=0;
+  const anchors=[],petalAnchors=[];
   for(let i=0;i<flowerBudget;i++){
     const [cx,cz]=clusters[i%clusters.length],a=rnd()*6.28,r=Math.sqrt(rnd())*2,x=cx+Math.cos(a)*r,z=cz+Math.sin(a)*r;
-    if(!w.clearForScenery(x,z,.18))continue;const ground=w.groundHeight(x,z),h=.25+rnd()*.35,y=ground+h,tilt=(rnd()-.5)*.3;
+    if(!w.clearForPlanting(x,z,.18))continue;const ground=w.groundHeight(x,z),h=.25+rnd()*.35,y=ground+h,tilt=(rnd()-.5)*.3;
+    anchors.push(x,ground,z,h);for(let k=0;k<8;k++)petalAnchors.push(x,ground,z,h);
     d.position.set(x,ground+h*.5,z);d.rotation.set(0,0,tilt);d.scale.set(1,h,1);d.updateMatrix();stems.setMatrixAt(flower,d.matrix);
     const col=new T.Color(['#eee7cf','#d7b7c2','#c5bed3','#e3c799'][i%4]);
     for(let k=0;k<8;k++){const angle=k*Math.PI/4;d.position.set(x+Math.cos(angle)*.078,y,z+Math.sin(angle)*.078);d.rotation.set(0,-angle,tilt);d.scale.set(.083,.016,.033);d.updateMatrix();petals.setMatrixAt(flower*8+k,d.matrix);petals.setColorAt(flower*8+k,col)}
     d.position.set(x,y+.012,z);d.rotation.set(0,0,0);d.scale.set(.045,.024,.045);d.updateMatrix();centers.setMatrixAt(flower,d.matrix);flower++;
-  }petals.count=flower*8;centers.count=stems.count=flower;[petals,centers,stems].forEach(m=>{m.receiveShadow=false;m.frustumCulled=false;m.userData.skipReflection=true;w.scene.add(m)});
+  }petals.count=flower*8;centers.count=stems.count=flower;[petals,centers,stems].forEach(m=>{
+    // All parts of a blossom bend about the same root, so petals stay on stems.
+    m.geometry.setAttribute('flowerRoot',new T.InstancedBufferAttribute(new Float32Array(m===petals?petalAnchors:anchors),4));
+    m.material.onBeforeCompile=s=>{
+      s.uniforms.gardenTime=w.wind.time;s.uniforms.gardenWind=w.wind.strength;
+      s.vertexShader='attribute vec4 flowerRoot; uniform float gardenTime,gardenWind;\n'+s.vertexShader;
+      s.vertexShader=s.vertexShader.replace('#include <project_vertex>',T.ShaderChunk.project_vertex.replace('mvPosition = modelViewMatrix * mvPosition;',`
+        float bend=clamp((mvPosition.y-flowerRoot.y)/flowerRoot.w,0.,1.);
+        float phase=gardenTime*1.18+flowerRoot.x*.19+flowerRoot.z*.28;
+        mvPosition.x+=gardenWind*.075*bend*bend*sin(phase);
+        mvPosition.z+=gardenWind*.025*bend*bend*cos(phase*.8);
+        mvPosition = modelViewMatrix * mvPosition;`));
+    };
+    m.material.customProgramCacheKey=()=> 'rooted-flower-wind-v1';
+    m.receiveShadow=false;m.frustumCulled=false;m.userData.skipReflection=true;w.scene.add(m);
+  });
 
   const rockCount=w.quality==='high'?48:w.quality==='mid'?28:16;
   for(let i=0;i<rockCount;i++){if(i%7===0)continue;const a=i/rockCount*Math.PI*2,x=-3.5+Math.cos(a)*5.72,z=-3.5+Math.sin(a)*3.94;const rock=w.place(i%2?'Rock_Medium_1':'Rock_Medium_3',x,z,.13+rnd()*.20,rnd()*6,{width:1.2});rock.position.y-=.07}

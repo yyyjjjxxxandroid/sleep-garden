@@ -10,6 +10,15 @@ const {createStoryCat}=await import('../story-cat.js');
 function world(){return {cat:new T.Group(),scene:new T.Scene(),groundHeight:()=>0,inPond:(x,z)=>(x+10)**2+(z+10)**2<4,walkObstacles:[],state:{reduced:false},canvas:{dataset:{}},onExplore(){},onCatInteraction(){}};}
 function advance(c,seconds){for(let t=0;t<seconds;t+=.05)c.update(.05);}
 
+test('activity boundary permits nearby landmarks and blocks routes into the forest',()=>{
+  const w=world(),c=new GardenCompanion(w);
+  for(const [x,z] of [[4,4],[15,-10],[1,-12],[-7,-10]])assert.equal(c.walkable(x,z),true);
+  for(const [x,z] of [[0,-25],[5,-32],[30,0],[-25,4]])assert.equal(c.walkable(x,z),false);
+  assert.equal(c.goTo({x:5,z:-27}),false);
+  w.cat.position.set(14,0,-15);c.stop();
+  for(let i=0;i<4000;i++){c.update(.1);assert.equal(c.walkable(w.cat.position.x,w.cat.position.z),true,'successive roaming routes stay in the activity area');}
+});
+
 test('destination arrival rests briefly; replacing a target continues from the current location',()=>{
   const w=world(),c=new GardenCompanion(w);assert.equal(c.goTo({x:3,z:0}),true);advance(c,1);const start=w.cat.position.clone();assert.ok(start.x>1&&start.x<3);
   c.goTo({x:0,z:2});assert.deepEqual(w.cat.position,start);advance(c,4);assert.ok(w.cat.position.distanceTo(new T.Vector3(0,0,2))<.001);advance(c,1);assert.equal(c.phase,'idle');assert.ok(w.cat.position.distanceTo(new T.Vector3(0,0,2))<.001);

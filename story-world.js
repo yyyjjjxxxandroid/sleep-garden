@@ -20,7 +20,7 @@ class StoryWorld extends BaseWorld{
     this.sun.position.set(-15,24,11);this.scene.fog.density=.007;
     if(this.quality!=='low'){Object.assign(this.sun.shadow.camera,{left:-24,right:24,top:24,bottom:-24,near:.1,far:90});this.sun.shadow.camera.updateProjectionMatrix();this.sun.shadow.normalBias=.035;this.sun.shadow.bias=-.00018;
       const pmrem=new T.PMREMGenerator(this.renderer);this.scene.environment=pmrem.fromScene(new RoomEnvironment(),.08).texture;pmrem.dispose();this.scene.environmentIntensity=.22;}
-    this.controls.maxDistance=70;this.controls.minDistance=3.6;this.controls.minPolarAngle=.34;this.controls.maxPolarAngle=Math.PI*.465;
+    this.controls.maxDistance=35/.6;this.controls.minDistance=3.6;this.controls.minPolarAngle=.34;this.controls.maxPolarAngle=Math.PI*.465;
     this.buildNavigation();
   }
   groundHeight(x,z){
@@ -32,14 +32,47 @@ class StoryWorld extends BaseWorld{
   }
   inPond(x,z){return ((x+3.5)/6.4)**2+((z+3.5)/4.35)**2<1}
   pathX(z){return 2.6+Math.sin(z*.16)*2.2+(z<-5?(-z-5)*.24:0)}
-  streamX(z){return -2.5+Math.sin(z*.18)*1.2}
-  streamSlope(z){return Math.cos(z*.18)*.216}
-  onStream(x,z,margin=0){return z<=-6&&z>=-34&&Math.abs(x-this.streamX(z))<.65+margin}
+  streamX(z){const t=Math.max(0,-z-14);return -2.5+Math.sin(z*.18)*1.2+Math.sin(t*.21)*Math.min(2.8,t*t*.045)}
+  streamSlope(z){return (this.streamX(z+.01)-this.streamX(z-.01))/.02}
+  streamHalfWidth(z){return .65+.22*(1-Math.exp(-Math.max(0,-z-15)*.13))+.15*(1+Math.sin(z*.26))*T.MathUtils.smoothstep(-z,15,25)+.5*(1-T.MathUtils.smoothstep(-z,6,10))}
+  streamEnd(){return -78}
+  terrainSurfaceY(x,z){
+    // Match the rendered terrain triangles, rather than its analytic height:
+    // a narrow water ribbon otherwise disappears under the coarse ground mesh.
+    const step=170/(this.quality==='high'?120:this.quality==='mid'?80:56);
+    const ax=Math.floor((x+85)/step)*step-85,az=Math.floor((z+85)/step)*step-85;
+    const u=(x-ax)/step,v=(z-az)/step,a=this.groundHeight(ax,az),b=this.groundHeight(ax+step,az),c=this.groundHeight(ax,az+step),d=this.groundHeight(ax+step,az+step);
+    return u+v<=1?a+(b-a)*u+(c-a)*v:d+(c-d)*(1-u)+(b-d)*(1-v);
+  }
+  onStream(x,z,margin=0){
+    // Rendering and placement share the same river centreline and varying width.
+    if(z>-6+1.3+margin||z<this.streamEnd()-1.3-margin)return false;
+    let ax=this.streamX(-6),az=-6;
+    for(let i=1;i<=180;i++){
+      const bz=-6+(this.streamEnd()+6)*i/180,bx=this.streamX(bz),dx=bx-ax,dz=bz-az;
+      const t=clamp(((x-ax)*dx+(z-az)*dz)/(dx*dx+dz*dz),0,1);
+      if(Math.hypot(x-ax-t*dx,z-az-t*dz)<this.streamHalfWidth(az+t*dz)+.22+margin)return true;
+      ax=bx;az=bz;
+    }
+    return false;
+  }
   bridgeCentre(){const z=-12;return {x:this.streamX(z),z}}
   clearForScenery(x,z,margin=0){
     const pond=((x+3.5)/(6.4+margin))**2+((z+3.5)/(4.35+margin))**2>1;
     const bridge=this.bridgeCentre();
     return pond&&!this.onStream(x,z,margin)&&Math.hypot(x-bridge.x,z-bridge.z)>1.9+margin;
+  }
+  clearForPlanting(x,z,margin=0){
+    // Keep the six planting beds, their fence and the approach from the path open.
+    return this.clearForScenery(x,z,margin)&&Math.abs(x-this.pathX(z))>1.15+margin
+      &&!(x>-2.1-margin&&x<4.7+margin&&z>5.1-margin&&z<10+margin);
+  }
+  treeFootprint(name,height,width=1){
+    const template=this.templates[name],box=new T.Box3().setFromObject(template.scene);
+    // Trees are not perfectly centred on their model origin. Measure the
+    // farthest corner from that origin, including wind and a visible dry bank.
+    const rx=Math.max(Math.abs(box.min.x),Math.abs(box.max.x)),rz=Math.max(Math.abs(box.min.z),Math.abs(box.max.z));
+    return Math.hypot(rx,rz)*height/template.height*width+.35;
   }
   buildTerrain(){
     const seg=this.quality==='high'?120:this.quality==='mid'?80:56;
@@ -65,12 +98,42 @@ class StoryWorld extends BaseWorld{
     this.waterMat=new T.ShaderMaterial({uniforms:{time:{value:0},night:{value:0},rain:{value:0},wind:{value:.35}},vertexShader:`varying vec3 vP;varying vec3 vWorld;void main(){vP=position;vWorld=(modelMatrix*vec4(position,1.)).xyz;gl_Position=projectionMatrix*viewMatrix*vec4(vWorld,1.);}`,fragmentShader:`varying vec3 vP,vWorld;uniform float time,night,rain,wind;${nGLSL}
     void main(){vec2 p=vWorld.xz;vec3 view=normalize(cameraPosition-vWorld);float fresnel=pow(1.-max(0.,view.y),3.);float ripple=fbm(p*.95+vec2(time*.07,-time*.05));float r=length(vP.xz/vec2(5.5,3.7));vec3 deep=mix(vec3(.24,.47,.46),vec3(.10,.25,.29),night);vec3 sky=mix(vec3(.62,.79,.77),vec3(.21,.37,.44),night);vec3 col=mix(deep,sky,.22+fresnel*.5);col+=ripple*.045;col=mix(col,mix(vec3(.49,.64,.50),vec3(.22,.35,.31),night),smoothstep(.65,1.03,r)*.55);float wave=sin(p.x*4.+p.y*6.+ripple*8.-time*.4);float glint=pow(max(0.,wave),26.)*.05*(.3+wind);col+=glint;float shore=(1.-smoothstep(.009,.028,abs(r-.985-ripple*.013)))*.08;col+=shore;for(int i=0;i<8;i++){float j=float(i);vec2 c=vec2(hash(vec2(j,2.)),hash(vec2(j,7.)))*8.-4.;float age=fract(time*.3+j*.137);float ring=1.-smoothstep(.012,.040,abs(length(vP.xz-c)-age*1.4));col+=rain*ring*(1.-age)*.12;}gl_FragColor=vec4(col,1.);}`});
     this.water=this.mesh(geo,this.waterMat,-3.5,-.13,-3.5);
-    // 一条窄溪从池塘后方延伸至林间。
-    const vertices=[],uv=[],idx=[];for(let i=0;i<=65;i++){const z=-6-i*.43,x=this.streamX(z);const y=this.groundHeight(x,z)+.025;vertices.push(x-.65,y,z,x+.65,y,z);uv.push(0,i/65,1,i/65);if(i<65){const a=i*2;idx.push(a,a+1,a+2,a+1,a+3,a+2)}}const streamGeo=new T.BufferGeometry();streamGeo.setAttribute('position',new T.Float32BufferAttribute(vertices,3));streamGeo.setAttribute('uv',new T.Float32BufferAttribute(uv,2));streamGeo.setIndex(idx);streamGeo.computeVertexNormals();this.mesh(streamGeo,this.waterMat);
+    // A continuous meandering creek reaches behind the distant ridge. Its mouth
+    // widens into the pond; shallow banks connect the ribbon to the ground.
+    const vertices=[],uv=[],idx=[],banks=[],bankIdx=[];
+    for(let i=0;i<=180;i++){
+      const z=-6+(this.streamEnd()+6)*i/180,x=this.streamX(z),width=this.streamHalfWidth(z),slope=this.streamSlope(z),norm=Math.hypot(1,slope),nx=1/norm,nz=-slope/norm;
+      let y=-.122;
+      for(let j=-2;j<=2;j++)y=Math.max(y,this.terrainSurfaceY(x+nx*width*j/2,z+nz*width*j/2)+.035);
+      for(const side of [-1,1]){
+        const bankWidth=.26+.14*(1+Math.sin(z*.72+side)*Math.cos(z*.31));
+        const px=x+side*nx*width,pz=z+side*nz*width,ox=x+side*nx*(width+bankWidth),oz=z+side*nz*(width+bankWidth);
+        vertices.push(px,y,pz);banks.push(px,y-.008,pz,ox,this.terrainSurfaceY(ox,oz)+.012,oz);
+      }
+      uv.push(0,i/180,1,i/180);
+      if(i<180){const a=i*2;idx.push(a,a+1,a+2,a+1,a+3,a+2);for(let side=0;side<2;side++){const b=i*4+side*2;bankIdx.push(b,b+1,b+4,b+1,b+5,b+4)}}
+    }
+    const streamGeo=new T.BufferGeometry();streamGeo.setAttribute('position',new T.Float32BufferAttribute(vertices,3));streamGeo.setAttribute('uv',new T.Float32BufferAttribute(uv,2));streamGeo.setIndex(idx);streamGeo.computeVertexNormals();this.mesh(streamGeo,this.waterMat).name='woodland-stream';
+    const bankGeo=new T.BufferGeometry();bankGeo.setAttribute('position',new T.Float32BufferAttribute(banks,3));bankGeo.setIndex(bankIdx);bankGeo.computeVertexNormals();const bankMat=this.mat('#929e7b');bankMat.side=T.DoubleSide;this.mesh(bankGeo,bankMat).name='stream-soft-banks';
     this.rippleRings=[];for(let i=0;i<6;i++){const ring=this.mesh(new T.RingGeometry(.37,.385,48),new T.MeshBasicMaterial({color:'#d9e6cb',transparent:true,opacity:.1,side:T.DoubleSide,depthWrite:false}),-5+rand()*5,-.11,-5+rand()*3);ring.rotation.x=-Math.PI/2;this.rippleRings.push(ring)}
   }
   buildSky(){
     super.buildSky();
+    this.rainbow.geometry.dispose();this.rainbow.geometry=new T.PlaneGeometry(76,76);this.rainbow.position.set(-8,1,-86);
+    this.rainbow.material.fragmentShader=`varying vec2 vUv;uniform float alpha;
+    float band(float r,float centre){return exp(-pow((r-centre)/.012,2.));}
+    void main(){
+      vec2 p=(vUv-.5)*2.;float r=length(p);
+      float red=band(r,.815),orange=band(r,.805),yellow=band(r,.795),green=band(r,.785),blue=band(r,.775),violet=band(r,.765);
+      float total=red+orange+yellow+green+blue+violet;
+      vec3 c=(red*vec3(1.,.43,.39)+orange*vec3(1.,.65,.37)+yellow*vec3(.98,.90,.53)+green*vec3(.48,.78,.62)+blue*vec3(.42,.65,.91)+violet*vec3(.69,.57,.85))/max(total,.001);
+      c=mix(c,vec3(.79,.87,.83),.08);
+      float mist=smoothstep(.02,.40,p.y)*(1.-smoothstep(.80,1.,abs(p.x)));
+      float a=min(total*.34,.62)*mist*alpha;
+      gl_FragColor=vec4(c,a);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`;this.rainbow.material.needsUpdate=true;
     configureSkyBackground(this.sky);
     this.skyMat.fragmentShader=`varying vec3 d;uniform float night,time,rain,light;${nGLSL}void main(){vec3 v=normalize(d);float y=max(0.,v.y);vec3 day=mix(vec3(.79,.87,.81),vec3(.42,.66,.76),pow(y,.6));vec3 dusk=mix(vec3(.17,.25,.34),vec3(.025,.045,.105),pow(y,.5));vec3 c=mix(day,dusk,night);c=mix(c,mix(vec3(.59,.67,.67),vec3(.10,.16,.21),night),rain*.42);float cl=fbm(v.xz/max(.18,v.y)*1.2+vec2(time*.003,0.));cl=smoothstep(.56,.77,cl)*smoothstep(0.,.12,v.y);c=mix(c,mix(vec3(.96,.97,.90),vec3(.16,.23,.29),night),cl*.55);gl_FragColor=vec4(c,1.);}`;this.skyMat.needsUpdate=true;
   }
@@ -89,7 +152,73 @@ class StoryWorld extends BaseWorld{
     if(!pondClearance||!bridgeClearance||!pathClearance)throw Error('Unsafe plant plot');
     return {x,z,y:this.groundHeight(x,z)};
   }
-  buildPlots(){this.plots=[];this.grown=[];this.plotRings=[];for(let i=0;i<6;i++){const {x,z,y}=this.plantPlot(i),soil=this.mesh(new T.CylinderGeometry(.41,.46,.045,40),this.mat('#a29072'),x,y+.015,z);soil.userData.plot=i;this.plots.push(soil);const ring=this.mesh(new T.RingGeometry(.49,.57,40),new T.MeshBasicMaterial({color:'#ffe6a1',transparent:true,opacity:0,side:T.DoubleSide,depthWrite:false}),x,y+.05,z);ring.rotation.x=-Math.PI/2;this.plotRings.push(ring);this.walkObstacles.push({x,z,radius:.48})}this.canvas.dataset.plotCount=String(this.plots.length)}
+  buildPlots(){
+    this.plots=[];this.grown=[];this.plotRings=[];
+    const shape=new T.Shape(),a=.43,b=.52,r=.17;
+    shape.moveTo(-a+r,-b);shape.lineTo(a-r,-b);shape.quadraticCurveTo(a,-b,a,-b+r);shape.lineTo(a,b-r);shape.quadraticCurveTo(a,b,a-r,b);shape.lineTo(-a+r,b);shape.quadraticCurveTo(-a,b,-a,b-r);shape.lineTo(-a,-b+r);shape.quadraticCurveTo(-a,-b,-a+r,-b);
+    const geo=new T.ExtrudeGeometry(shape,{depth:.035,bevelEnabled:true,bevelSize:.035,bevelThickness:.018,bevelSegments:3,steps:1,curveSegments:8});geo.rotateX(-Math.PI/2);
+    const soilMat=this.mat('#8c735a'),rimMat=this.mat('#a28b69');
+    soilMat.onBeforeCompile=s=>{
+      s.vertexShader='varying vec3 soilP;\n'+s.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nsoilP=position;');
+      s.fragmentShader='varying vec3 soilP;\n'+nGLSL+s.fragmentShader;
+      s.fragmentShader=s.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\nfloat grit=fbm(soilP.xz*75.);float furrow=pow(.5+.5*sin(soilP.x*46.+sin(soilP.z*9.)*.35),9.);diffuseColor.rgb*=.86+grit*.27-furrow*.07;');
+    };
+    const crumbs=new T.InstancedMesh(new T.SphereGeometry(1,6,4),this.mat('#b19a7d'),108),d=new T.Object3D();let n=0;
+    for(let i=0;i<6;i++){
+      const {x,z,y}=this.plantPlot(i),rim=this.mesh(geo,rimMat,x,y-.012,z);rim.scale.set(1.09,.7,1.08);
+      const soil=this.mesh(geo,soilMat,x,y+.015,z);soil.userData.plot=i;this.plots.push(soil);
+      for(let j=0;j<18;j++){
+        const px=Math.sin(i*47+j*13.7)*.35,pz=Math.cos(i*19+j*9.3)*.43,size=.012+(j%4)*.003;
+        d.position.set(x+px,y+.066,z+pz);d.scale.set(size*1.4,size*.5,size);d.rotation.set(j*.3,j*1.7,0);d.updateMatrix();crumbs.setMatrixAt(n++,d.matrix);
+      }
+      const ring=this.mesh(new T.RingGeometry(.49,.57,40),new T.MeshBasicMaterial({color:'#ffe6a1',transparent:true,opacity:0,side:T.DoubleSide,depthWrite:false}),x,y+.075,z);ring.rotation.x=-Math.PI/2;this.plotRings.push(ring);this.walkObstacles.push({x,z,radius:.54});
+    }
+    crumbs.receiveShadow=true;this.scene.add(crumbs);this.canvas.dataset.plotCount=String(this.plots.length);this.buildPlotFence();
+  }
+  focusGarden(){this.stopCatForCamera();this.follow=false;this.transition={pos:V(4.7,7.2,16),target:V(.7,.3,7.6)};this.selectRegion?.('garden')}
+  buildPlotFence(){
+    const root=new T.Group();root.name='planting-garden-fence';this.scene.add(root);
+    const wood=this.mat('#c5b697'),cap=this.mat('#d8cbb0'),postGeo=new T.CylinderGeometry(.045,.055,.36,8),capGeo=new T.SphereGeometry(.052,8,5);
+    // Follow the soil boundary with an open 1.6 m entrance facing the path.
+    const runs=[[-1.65,5.55,2.95,5.55],[-1.65,9.55,2.95,9.55],[-1.65,5.55,-1.65,9.55],[2.95,5.55,2.95,6.75],[2.95,8.35,2.95,9.55]];
+    const posts=new Set(),up=V(0,1,0);
+    for(const [ax,az,bx,bz] of runs){
+      const n=Math.ceil(Math.hypot(bx-ax,bz-az)/.72);
+      for(let i=0;i<=n;i++){
+        const x=ax+(bx-ax)*i/n,z=az+(bz-az)*i/n,y=this.groundHeight(x,z),key=x.toFixed(3)+':'+z.toFixed(3);
+        if(!posts.has(key)){posts.add(key);const post=new T.Mesh(postGeo,wood);post.position.set(x,y+.18,z);root.add(post);const top=new T.Mesh(capGeo,cap);top.scale.y=.45;top.position.set(x,y+.36,z);root.add(top);}
+        if(i===n)continue;
+        const nx=ax+(bx-ax)*(i+1)/n,nz=az+(bz-az)*(i+1)/n,ny=this.groundHeight(nx,nz);
+        for(const h of [.13,.29]){const a=V(x,y+h,z),b=V(nx,ny+h,nz),rail=new T.Mesh(new T.CylinderGeometry(.024,.024,a.distanceTo(b),6),wood);rail.position.copy(a).add(b).multiplyScalar(.5);rail.quaternion.setFromUnitVectors(up,b.sub(a).normalize());root.add(rail);}
+      }
+      // Existing navigation consumes these obstacles, keeping paws out of the rails.
+      const steps=Math.ceil(Math.hypot(bx-ax,bz-az)/.20);
+      for(let i=0;i<=steps;i++)this.walkObstacles.push({x:ax+(bx-ax)*i/steps,z:az+(bz-az)*i/steps,radius:.055});
+    }
+    root.traverse(o=>{if(o.isMesh){o.castShadow=this.quality!=='low';o.receiveShadow=true;}});
+    this.buildWindChime();
+  }
+  buildWindChime(){
+    const x=3.25,z=9.25,y=this.groundHeight(x,z),root=new T.Group();root.name='garden-bamboo-wind-chime';root.position.set(x,y,z);this.scene.add(root);
+    const wood=this.mat('#af8b59'),bamboo=this.mat('#d1b77e'),cord=this.mat('#77684c');
+    const add=(geo,mat,px,py,pz,parent=root)=>{const m=new T.Mesh(geo,mat);m.position.set(px,py,pz);m.castShadow=this.quality!=='low';m.receiveShadow=true;parent.add(m);return m;};
+    add(new T.CylinderGeometry(.035,.045,1.65,8),wood,0,.825,0);
+    const arm=add(new T.CylinderGeometry(.027,.027,.46,8),wood,-.2,1.63,0);arm.rotation.z=Math.PI/2;
+    const swing=new T.Group();swing.position.set(-.4,1.61,0);root.add(swing);this.chimeSwing=swing;this.chimeTubes=[];
+    add(new T.CylinderGeometry(.22,.24,.035,24),wood,0,-.12,0,swing);
+    add(new T.CylinderGeometry(.007,.007,.1,4),cord,0,-.05,0,swing);
+    for(let i=0;i<5;i++){
+      const a=i*Math.PI*2/5,pivot=new T.Group(),length=.33+(i%3)*.065;pivot.position.set(Math.sin(a)*.17,-.14,Math.cos(a)*.17);swing.add(pivot);
+      add(new T.CylinderGeometry(.004,.004,.14,4),cord,0,-.07,0,pivot);
+      add(new T.CylinderGeometry(.032,.028,length,9,1,true),bamboo,0,-.14-length/2,0,pivot);
+      const rim=add(new T.TorusGeometry(.029,.006,4,10),wood,0,-.14-length,0,pivot);rim.rotation.x=Math.PI/2;
+      this.chimeTubes.push(pivot);
+    }
+    add(new T.CylinderGeometry(.005,.005,.78,4),cord,0,-.53,0,swing);
+    add(new T.SphereGeometry(.068,12,8),wood,0,-.46,0,swing);
+    const sail=add(new T.SphereGeometry(1,12,8),this.mat('#8ca28b'),0,-.92,0,swing);sail.scale.set(.08,.14,.018);
+    this.walkObstacles.push({x,z,radius:.16});this.canvas.dataset.windChime='bamboo beside garden fence';
+  }
   plantSeed(seed='fern',plotIndex=this.plots.length-1){
     if(!this.plots.length)return false;
     const i=Math.max(0,Math.min(this.plots.length-1,plotIndex));
@@ -142,19 +271,43 @@ class StoryWorld extends BaseWorld{
     this.canvas.dataset.artVersion='storybook-v2';this.canvas.dataset.assets='Quaternius textured nature · CC0';
   }
   populateGarden(){
-    const q=this.quality,groupSize=q==='high'?4:q==='mid'?3:2,flowersPerBed=q==='high'?16:q==='mid'?9:5,bushes=q==='high'?28:q==='mid'?18:10,glbGrass=q==='high'?90:q==='mid'?28:0,lineTrees=q==='high'?26:q==='mid'?16:8;
-    const tree=(name,x,z,h,w=1)=>this.place(name,x,z,h,rand()*6.28,{width:w});
+    const q=this.quality,groupSize=q==='high'?6:q==='mid'?4:3,flowersPerBed=q==='high'?23:q==='mid'?14:8,bushes=q==='high'?48:q==='mid'?30:16,glbGrass=q==='high'?150:q==='mid'?60:16,lineTrees=q==='high'?38:q==='mid'?26:16;
+    this.treePlacements=[];
+    const tree=(name,x,z,h,w=1)=>{
+      // Test the whole rotated crown/branch footprint, with a strip of bank
+      // between it and the water. Move crowded trees outward to their own bank.
+      const footprint=this.treeFootprint(name,h,w),bankClearance=3.2,radius=footprint+bankClearance,bank=x<this.streamX(z)?-1:1;
+      // Let crowns shade the footpath while keeping trunks off it. Testing
+      // the full crown against the path had pushed the entire right bank away.
+      const clear=()=>this.clearForScenery(x,z,radius)&&Math.abs(x-this.pathX(z))>2.2
+        &&!(x>-2.1-footprint&&x<4.7+footprint&&z>5.1-footprint&&z<10+footprint);
+      let tries=0;
+      while(!clear()&&tries++<36)x+=bank*.7;
+      if(!clear())return;
+      this.treePlacements.push({name,x,z,footprint,bankClearance});
+      return this.place(name,x,z,h,rand()*6.28,{width:w});
+    };
+    this.placeGardenTree=tree;
     tree('CommonTree_1',9,-4,9,1.12);tree('CommonTree_2',-11,-6,8,1.12);tree('CommonTree_3',-7,-17,9);tree('CommonTree_5',15,-14,9);tree('CommonTree_2',9,-22,10);
     // 小型植物组为小桥、花坡和树林方向留出视线开口。
-    const groups=[[-22,-4],[-20,-19],[-13,-31],[0,-36],[19,-30],[29,-14],[27,9],[-22,13]];
+    const groups=[[-22,-4],[-20,-19],[-13,-31],[-10,-36],[9,-36],[19,-30],[29,-14],[27,9],[-22,13],[-15,5],[17,2],[-12,-23],[12,-26]];
     for(let j=0;j<groups.length;j++){const [gx,gz]=groups[j];for(let i=0;i<groupSize;i++){const x=gx+(rand()-.5)*10,z=gz+(rand()-.5)*10;if(!this.clearForScenery(x,z,1.6))continue;tree(['CommonTree_1','CommonTree_2','CommonTree_3','CommonTree_5'][(j+i)%4],x,z,7+rand()*7)}}
     const flowerBeds=[[-8,2,2.3],[-5,3,2],[-8,-8,2.3],[7,0,2.2],[9,5,2.8],[-5,10,2.4],[5,11,2.5],[15,-12,4.3],[18,-7,3.3],[-9,-21,3]];
     flowerBeds.push([-7,7,2.5],[7,8,2.4],[-10,-2,2],[2,-8,2]);
-    for(let bi=0;bi<flowerBeds.length;bi++){const [x,z,r]=flowerBeds[bi];for(let i=0;i<flowersPerBed;i++){const a=rand()*6.28,rr=Math.sqrt(rand())*r;const px=x+Math.cos(a)*rr,pz=z+Math.sin(a)*rr;if(!this.clearForScenery(px,pz,.4))continue;const height=.48+rand()*.52,flower=this.place(i%3?'Flower_4_Group':'Flower_3_Group',px,pz,height),hit=this.registerFlower(px,pz,height,.36);flower.traverse(o=>{if(o.isMesh)o.userData.flowerTarget=hit})}}
-    for(let i=0;i<lineTrees;i++){const x=-38+(lineTrees>1?i*(75/(lineTrees-1)):0),z=-43+Math.sin(i*.8)*5;tree('CommonTree_2',x,z,9+rand()*4,1.2)}
-    for(let i=0;i<bushes;i++){const a=rand()*6.28,r=12+rand()*21,x=Math.cos(a)*r,z=Math.sin(a)*r;if((z>14&&Math.abs(x)<13)||!this.clearForScenery(x,z,.8))continue;this.place('Bush_Common_Flowers',x,z,.6+rand()*.65)}
+    flowerBeds.push([-12,4,2.2],[-12,-12,2.6],[10,-10,2.5],[13,6,3],[-5,-17,1.6],[1,-20,1.6],[10,-19,2.8],[-6,13,2.3],[8,13,2.1],[-3,9,1]);
+    for(let bi=0;bi<flowerBeds.length;bi++){const [x,z,r]=flowerBeds[bi];for(let i=0;i<flowersPerBed;i++){const a=rand()*6.28,rr=Math.sqrt(rand())*r;const px=x+Math.cos(a)*rr,pz=z+Math.sin(a)*rr;if(!this.clearForPlanting(px,pz,.4))continue;const height=.35+rand()*.48,flower=this.place(i%3?'Flower_4_Group':'Flower_3_Group',px,pz,height),hit=this.registerFlower(px,pz,height,.36);flower.traverse(o=>{if(o.isMesh)o.userData.flowerTarget=hit})}}
+    for(let i=0;i<lineTrees;i++){const x=-41+(lineTrees>1?i*(82/(lineTrees-1)):0),z=-45+Math.sin(i*.8)*4-(i%2)*5;tree(['CommonTree_2','CommonTree_3','CommonTree_5'][i%3],x,z,8+rand()*6,1+rand()*.3)}
+    // Staggered, smaller riverside groves fill the right meadow without
+    // lining trunks up with the winding water in the upstream camera view.
+    for(let i=0;i<9;i++){
+      const z=-18-i*5.4,x=this.streamX(z),h=5.6+(i%3)*.8;
+      tree(['CommonTree_5','CommonTree_3','CommonTree_2'][i%3],x+7.5+(i%2)*2.2,z,h);
+      if(i%2===0)tree('CommonTree_5',x+14,z+2.7,h+1.2);
+      if(i%3===1)tree('CommonTree_3',x-8.5,z-2,6.4);
+    }
+    for(let i=0;i<bushes;i++){const a=rand()*6.28,r=11+rand()*21,x=Math.cos(a)*r,z=Math.sin(a)*r;if((z>14&&Math.abs(x)<13)||!this.clearForPlanting(x,z,.8))continue;this.place('Bush_Common_Flowers',x,z,.5+rand()*.65)}
     // 以密集植被丰富边缘，并刻意保留草坪与小径的留白。
-    for(let i=0;i<glbGrass;i++){let x=(rand()-.5)*62,z=(rand()-.5)*62;if(!this.clearForScenery(x,z,.3)||Math.abs(x-this.pathX(z))<1.2)continue;const centre=Math.hypot(x-1,z-3);if(centre<5.8&&rand()<.9)continue;if(z>14&&Math.abs(x)<9)continue;this.place(i%3?'Grass_Common_Tall':'Grass_Wispy_Tall',x,z,.18+rand()*.43)}
+    for(let i=0;i<glbGrass;i++){let x=(rand()-.5)*62,z=(rand()-.5)*62;if(!this.clearForPlanting(x,z,.3))continue;const centre=Math.hypot(x-1,z-3);if(centre<5.8&&rand()<.9)continue;if(z>14&&Math.abs(x)<9)continue;this.place(i%3?'Grass_Common_Tall':'Grass_Wispy_Tall',x,z,.18+rand()*.43)}
     [[-8,-5,.6],[-7,0,.4],[-1,-.2,.32],[1,-4,.5],[-5,-7,.5],[-3,-7,.35],[6,-7,.7],[11,6,.55],[-10,6,.9],[14,-13,1.1]].forEach(([x,z,h],i)=>this.place(i%2?'Rock_Medium_1':'Rock_Medium_3',x,z,h));
     // 单独摆放的磨损踏石嵌在土路中。
     for(let i=0;i<19;i++){const z=12-i*1.15,x=this.pathX(z);const stone=this.place('Rock_Medium_1',x,z,.13,Math.sin(i)*.2,{width:1.45});stone.scale.y=.7}
@@ -198,13 +351,13 @@ class StoryWorld extends BaseWorld{
   }
   buildNavigation(){
     const nav=document.createElement('nav');nav.className='region-nav';nav.setAttribute('aria-label','漫游花园');const regions=[['pond','池畔'],['meadow','花坡'],['woods','林间'],['garden','小花园']];
-    regions.forEach(([key,label])=>{const b=document.createElement('button');b.textContent=label;b.dataset.region=key;b.setAttribute('aria-pressed',key==='pond'?'true':'false');b.onclick=()=>{this.stopCatForCamera();this.follow=false;this.onExplore();if(key==='pond')this.home();else this.transition=key==='garden'?{pos:V(5,9,22),target:V(.6,.4,7.5)}:key==='meadow'?{pos:V(17,12,12),target:V(15,3,-10)}:{pos:V(7,10,-7),target:V(-3,2,-21)};this.selectRegion(key)};nav.append(b)});this.host.parentElement.append(nav);this.selectRegion=key=>{nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.region===key)));this.canvas.dataset.region=key};
+    regions.forEach(([key,label])=>{const b=document.createElement('button');b.textContent=label;b.dataset.region=key;b.setAttribute('aria-pressed',key==='pond'?'true':'false');b.onclick=()=>{this.stopCatForCamera();this.follow=false;this.onExplore();if(key==='pond')this.home();else this.transition=key==='garden'?{pos:V(5,9,22),target:V(.6,.4,7.5)}:key==='meadow'?{pos:V(17,12,12),target:V(15,3,-10)}:{pos:V(8,22,-1),target:V(0,1,-29)};this.selectRegion(key)};nav.append(b)});this.host.parentElement.append(nav);this.selectRegion=key=>{nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.region===key)));this.canvas.dataset.region=key};
   }
   handleExploreStart(){return false}
   // Camera commands never change the actor's path distance or world heading.
   stopCatForCamera(){this.catSpeed=0;this.cameraHoldUntil=(this.t||0)+.8}
   catCameraHeld(t){return this.follow||!!this.transition||t<(this.cameraHoldUntil||0)||!!this.gesture?.moved}
-  zoomBy(f){this.stopCatForCamera();super.zoomBy(f)}
+  zoomBy(f){this.stopCatForCamera();this.transition=null;this.camera.position.sub(this.controls.target).multiplyScalar(1/f).clampLength(this.controls.minDistance,this.controls.maxDistance).add(this.controls.target);this.controls.update()}
   focus(){this.companion?.stop();this.stopCatForCamera();this.controls.minDistance=3.6*(this.cat?.scale.x||.609375)/1.06;this.follow=true;this.transition=null;if(this.scene&&this.renderer)this.chooseCatFocusView()}
   chooseCatFocusView(){
     this.scene.updateMatrixWorld(true);
@@ -430,6 +583,12 @@ class StoryWorld extends BaseWorld{
   }
   beforeRender(dt){
     const n=this.skyMat.uniforms.night.value,light=this.state.light/100,rain=this.state.weather==='rain',t=this.t;
+    if(this.chimeSwing){
+      const w=this.state.reduced?0:this.state.wind/100;
+      this.chimeSwing.rotation.z=Math.sin(t*.92)*w*.2;this.chimeSwing.rotation.x=Math.cos(t*.73)*w*.12;
+      this.chimeTubes.forEach((tube,i)=>tube.rotation.z=Math.sin(t*1.8+i*1.7)*w*.1);
+      this.chimeContact=Math.floor(t*(.14+w*.56));
+    }
     this.hemi.intensity=T.MathUtils.lerp(1.1+light*.35,.68,n);this.hemi.color.set(n>.5?'#aac1d0':'#e9f2ed');this.hemi.groundColor.set(n>.5?'#435856':'#a1b282');
     this.sun.intensity=T.MathUtils.lerp((.22+light*2.7)*(rain?.52:1),.55,n);this.sun.color.set(n>.5?'#b3cee8':'#fff0d0');this.renderer.toneMappingExposure=T.MathUtils.lerp(1.02,1.0,n);this.scene.fog.color.copy(new T.Color('#c5dcd3').lerp(new T.Color('#283f50'),n));
     if(this.cat)this.cat.userData.turning=0;if(this.catContact){this.catContact.position.copy(this.cat.position);this.catContact.position.y+=.013;this.catContact.rotation.z=-this.cat.rotation.y}if(this.storyCat){this.updateCatContext();const moving=this.catSpeed>.025&&!this.cat.userData.contact;this.storyCat.animate(t,moving,this.state.wind/100,!moving,dt,this.state.reduced,this.catDistance*8,this.companion?.pose||(['walking','roaming'].includes(this.companion?.phase)?{action:'walk',time:0}:null));this.canvas.dataset.catPose=this.cat.userData.pose;this.canvas.dataset.catExpression=this.cat.userData.expression;this.canvas.dataset.petCount=String(this.cat.userData.petCount||0);this.canvas.dataset.petting=String(this.cat.userData.petting);this.canvas.dataset.catReaction=this.cat.userData.reactionName||'';this.canvas.dataset.catAction=this.cat.userData.idleAction||'rest';this.canvas.dataset.catRest=this.cat.userData.nightRest?'sleeping':this.cat.userData.companionPhase;this.canvas.dataset.catEnvironment=this.cat.userData.environmentReaction||''}
