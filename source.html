@@ -177,6 +177,8 @@ body{display:flex;justify-content:center}
 }
 .sound-category{font-size:12px;font-weight:500;color:var(--muted);margin:22px 0 4px;letter-spacing:1px}.sound-presets{display:flex;gap:6px;flex-wrap:wrap}.sound-presets button{border:1px solid var(--line);border-radius:22px;padding:0 12px;min-height:44px;font-size:12px}.sound-presets button[aria-pressed=true]{background:var(--ink);color:var(--paper)}
 </style>
+
+<link rel="stylesheet" href="city-world.css">
 </head>
 <body>
 <main class="app" id="app">
@@ -237,7 +239,7 @@ body{display:flex;justify-content:center}
   <div class="sunwash" id="sunwash"></div><div class="vignette"></div>
   <svg class="grain" width="100%" height="100%" aria-hidden="true"><filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="100%" height="100%" filter="url(#grain)" opacity=".42"/></svg>
  </div>
- <header class="topbar"><div class="brand"><svg viewBox="0 0 32 32"><path d="M9 28Q18 14 23 4M15 18Q3 18 6 8Q18 9 15 18ZM20 11Q20 1 29 4Q28 12 20 11Z"/></svg><div>眠境花园<small>A LITTLE PLACE TO REST</small></div></div><div class="top-actions"><button class="round" id="dayToggle" aria-label="切换到夜晚" title="昼夜切换"></button><button class="pill" id="gardenButton" aria-label="我的花园"></button></div></header>
+ <header class="topbar"><div class="brand"><svg viewBox="0 0 32 32"><path d="M9 28Q18 14 23 4M15 18Q3 18 6 8Q18 9 15 18ZM20 11Q20 1 29 4Q28 12 20 11Z"/></svg><div>眠境花园<small>A LITTLE PLACE TO REST</small></div></div><div class="top-actions"><button class="pill city-trigger" id="cityButton" aria-label="城市疗愈">城市疗愈</button><button class="round" id="dayToggle" aria-label="切换到夜晚" title="昼夜切换"></button><button class="pill" id="gardenButton" aria-label="我的花园"></button></div></header>
  <section class="home-copy" id="home"><p class="eyebrow">今晚，和音乐一起睡个好觉</p><h1>今晚，不用急着<br>让自己好起来。</h1><p class="description">一点音乐，一座花园，一只愿意等你的小猫。<br>从此刻的你开始，慢慢安静下来。</p><div class="theme-line"><span class="live-dot"></span><span id="recommendation">细雨 · 轻风 · 一点点呼噜</span></div><div class="home-dock" id="homeDock"><div class="tonight-choices"><p class="timer-kicker">此刻的你，更像哪一种？</p><div id="needChoices" class="choice-grid" role="group" aria-label="此刻的状态"><button data-need="busy" aria-pressed="true">思绪很多</button><button data-need="company" aria-pressed="false">想被陪伴</button><button data-need="sleepy" aria-pressed="false">有点困了</button></div><div class="plan-summary"><span id="planTitle">让思绪慢下来</span><button id="personalizeButton">为我调一点 ›</button></div><button id="pendingFeedback" class="text-action" hidden>补记上次听完的感受</button></div><div class="seed-picker" id="seedPicker"><p class="timer-kicker">选择要种的花</p><div class="seed-options" role="group" aria-label="选择要种的花"><button class="seed-option" data-seed="fern" aria-pressed="true"><svg viewBox="-40 -95 80 100" aria-hidden="true"><use href="#fern" x="-40" y="-95" width="80" height="100"/></svg><span>雨蕨</span></button><button class="seed-option" data-seed="bellflower" aria-pressed="false"><svg viewBox="-40 -95 80 100" aria-hidden="true"><use href="#bellflower" x="-40" y="-95" width="80" height="100"/></svg><span>铃花</span></button><button class="seed-option" data-seed="waterleaf" aria-pressed="false"><svg viewBox="-40 -95 80 100" aria-hidden="true"><use href="#waterleaf" x="-40" y="-95" width="80" height="100"/></svg><span>水叶草</span></button></div></div><div class="home-timer" id="homeTimer"><p class="timer-kicker">陪伴定时</p><div class="timer-chips" role="group" aria-label="选择陪伴时长"><button class="timer-chip" data-timer="15">15 分</button><button class="timer-chip" data-timer="30">30 分</button><button class="timer-chip" data-timer="60">60 分</button><button class="timer-chip" data-timer="0" aria-pressed="true">不限时</button></div></div><button class="primary" id="startButton">开始陪伴并播种 <span>→</span></button></div><p class="home-note">不想选择，直接开始就好 · 感受只存在这台设备</p></section>
  <div class="footer-note" id="footerNote">KUGOU · HEALING GARDEN / INTERACTIVE DEMO</div><div class="scene-caption" id="sceneCaption">风有风的节奏，<br>你也可以有自己的。</div>
  <section class="playing-title" id="playingTitle" hidden><h1 id="sceneTitle">细雨花园</h1><p id="stageText">不用急着睡着，先听一会儿。</p><span class="demo-label" id="demoLabel">陪伴中</span></section>
@@ -274,7 +276,46 @@ body{display:flex;justify-content:center}
  <div class="world-hint" id="worldHint">拖动探索 · 双指缩放</div>
  <div class="toast" role="status" aria-live="polite" id="toast" hidden></div>
  <div class="boot-loader" id="bootLoader" aria-live="polite"><p>花园正在醒来</p><span>场景与声音准备中</span></div>
+
+ <div class="city-overlay" id="cityOverlay" hidden>
+  <section class="city-location-card" id="cityLocationCard" role="dialog" aria-modal="true" aria-labelledby="cityLocationTitle">
+   <p class="city-kicker">CITY HEALING · 城市漫游</p><h2 id="cityLocationTitle">城市疗愈</h2>
+   <p>把当前位置，换成一处可以安静停留的地方。第一版先用模拟定位进入泉州。</p>
+   <div class="city-location-status" id="cityLocationStatus"><i></i><span id="cityLocationText">尚未匹配城市</span></div>
+   <div class="city-match-card" id="cityMatchCard" hidden><div class="city-match-thumb"><span>泉州</span><small>洛阳桥</small></div><div><strong>泉州 · 洛阳桥</strong><small>潮汐快照<br>石桥、树荫与一只愿意陪你的小猫</small></div></div>
+   <div class="city-actions"><button id="cityLocateButton" class="city-primary">模拟定位泉州</button><button id="cityCloseButton">先回花园</button></div>
+   <p class="city-foot">当前使用模拟定位，不会读取或保存你的真实位置。</p>
+  </section>
+  <section class="city-experience" id="cityExperience" data-view="entrance" hidden aria-label="泉州洛阳桥三维漫游">
+   <div class="city-world-host" id="cityWorldHost"></div>
+   <div class="city-top">
+    <button id="cityBackButton" aria-label="返回城市入口"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg></button>
+    <div class="city-title"><strong>泉州 · 洛阳桥</strong><small id="cityViewTitle">潮汐快照 · 桥头树荫</small></div>
+    <button id="cityExitButton" aria-label="回到花园"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 11 8-7 8 7M6 10v10h12V10M10 20v-6h4v6"/></svg></button>
+   </div>
+   <p class="city-caption" id="cityCaption">先在桥头站一会儿，让风慢慢经过。</p>
+   <div class="city-tools" role="group" aria-label="三维镜头">
+    <button id="cityZoomIn" aria-label="放大场景">+</button>
+    <button id="cityZoomOut" aria-label="缩小场景">−</button>
+    <button id="cityFollowButton" aria-label="跟随人物" aria-pressed="false" title="跟随人物"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="3"/><path d="M6 21v-3a6 6 0 0 1 12 0v3"/></svg></button>
+    <button id="cityHomeButton" aria-label="回到桥头全景" title="桥头全景"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5M8 12h8M12 8v8"/></svg></button>
+   </div>
+   <p class="city-controls-help">拖动环绕 · 双指缩放 · 点击石板路一起走</p>
+   <nav class="city-view-switcher" aria-label="洛阳桥视角">
+    <button data-city-view="entrance" aria-pressed="true">桥头</button><button data-city-view="bridge" aria-pressed="false">桥上</button><button data-city-view="left" aria-pressed="false">左看</button><button data-city-view="right" aria-pressed="false">右看</button>
+   </nav>
+   <section class="city-dock" aria-label="城市场景控制">
+    <div class="city-dock-head"><strong>和小猫，慢慢走一会儿</strong><output id="cityElapsed" aria-label="陪伴时长">00:00</output></div>
+    <p class="city-message" id="cityMessage" role="status" aria-live="polite">一段石板路，一只小猫，和此刻的你。</p>
+    <div class="city-dock-actions"><button class="city-walk" id="cityWalkButton">走上桥 →</button><button id="cityPlayButton">开始陪伴</button><button id="cityPetButton">摸摸小猫</button></div>
+    <div class="city-sound-row"><button id="cityWaterButton" data-on="true" aria-pressed="true">水声 · 开</button><button id="cityWindButton" data-on="true" aria-pressed="true">风声 · 开</button><span class="city-sound-spacer"></span><button class="city-text-button" id="cityResetButton">重置</button><button class="city-text-button" id="cityFinishButton">结束</button></div>
+   </section>
+   <div class="city-scene-status" id="citySceneStatus" role="status"><p id="citySceneStatusText">石桥与树荫正在醒来…</p><button id="cityRetryButton" hidden>重新进入</button></div>
+  </section>
+ </div>
+
 </main>
+<script src="city-soundscape.js"></script>
 <script src="session-clock.js"></script>
 <script src="garden-audio.js"></script>
 <script src="garden-personalization.js"></script>
@@ -513,6 +554,7 @@ document.querySelectorAll('button[data-weather]').forEach(b=>b.onclick=()=>setWe
 const environmentButton=document.createElement('button');environmentButton.id='environmentButton';environmentButton.className='round';environmentButton.setAttribute('aria-label','天气与风');environmentButton.innerHTML=icon('wind');environmentButton.onclick=()=>{selectTab(true);modal('soundOverlay')};document.querySelector('.top-actions').prepend(environmentButton);
 $('moreNature').onclick=()=>{['wind','rain','water'].forEach(k=>state.mix[k]=Math.min(100,state.mix[k]+12));state.mix.music=Math.max(0,state.mix.music-5);if(state.windLink)state.wind=state.mix.wind;updateEnvironment();changedMix();closeModal();toast('自然声更清楚了，音乐放轻了一点。')};$('lessCat').onclick=()=>{state.mix.cat=Math.max(0,state.mix.cat-15);changedMix();closeModal();toast('小猫会安静一点，继续陪着你。')};$('resetButton').onclick=resetSession;$('totalTime').onclick=openTimer;document.querySelectorAll('[data-timer]').forEach(b=>b.onclick=()=>setTimer(Number(b.dataset.timer)));$('customTimer').onclick=()=>{const input=$('customMinutes'),minutes=Number(input.value);input.setCustomValidity('');if(!input.checkValidity()||!Number.isInteger(minutes)){input.setCustomValidity('请输入 1–720 的整数分钟');input.reportValidity();return}setTimer(minutes)};$('customMinutes').oninput=()=>$('customMinutes').setCustomValidity('');$('customMinutes').onkeydown=e=>{if(e.key==='Enter')$('customTimer').click()};$('timerCancel').onclick=()=>setTimer(0);$('resetMix').onclick=()=>{state.mix={...defaults};state.wind=35;updateEnvironment();changedMix();toast('已经恢复为微风、流水和一点点呼噜。')};
 $('restartButton').onclick=()=>{closeModal(false);if(state.mode==='session')return;$('completionNotice').hidden=true;state.mode='home';state.focused=false;state.replayPending=false;experience?.prepare();if(worldEngine)worldEngine.home();showMode();$('startButton').focus()};$('skipFeedback').onclick=returnGarden;$('returnGarden').onclick=returnGarden;$('viewGarden').onclick=()=>{closeModal();if(state.mode==='session'){state.focused=false;showMode()}else returnGarden()};$('replayButton').onclick=()=>{if(state.mode==='session')return;experience?.replay(state.selected);state.replayPending=true;state.mix=normalizeMix(state.selected.mix);selectSeed(plantSymbol(state.selected.type));closeModal(false);state.mode='home';experience?.prepare();showMode();updateSliders();$('startButton').focus();toast('花种和声音已选好，点击开始播种。')};$('feedback').querySelectorAll('button').forEach(b=>b.onclick=()=>{state.selected.feedback=b.textContent;save();$('feedback').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));toast('记住了，谢谢你告诉花园。')});
+window.addEventListener('garden:city-enter',pauseForInterruption);
 function resize(){if(worldEngine)worldEngine.resize()}
 window.addEventListener('resize',resize);resize();setNight(false);state.wind=state.mix.wind;updateEnvironment();updateSliders();renderPlots();showMode();updateProgress();
 experience=createGardenExperience({state,clock,savedTimer:saved.timerSeconds,save,modal,closeModal,start,pause,setNight,updateEnvironment,changedMix,syncClock,updateProgress,showPlantResult,toast});
@@ -529,8 +571,11 @@ const changeWind=document.createElement('button');changeWind.textContent='换成
 const hotspots=el('g',{id:'soundSources'},$('camera'));
 [['water',390,473,'池塘水声'],['wind',720,476,'树梢的风'],['bugs',295,621,'草间虫鸣']].forEach(([key,x,y,label])=>{const g=el('g',{transform:`translate(${x} ${y})`,class:'source-hotspot',role:'button',tabindex:0,'aria-label':label},hotspots);el('circle',{cx:0,cy:0,r:15},g);const paths={water:'M0-8Q-8 2-4 6Q0 9 4 6Q8 2 0-8Z',wind:'M-8-3H3Q9-3 6-8M-7 2H7Q11 3 8 7M-5 7H1',bugs:'M-3-5Q0-8 3-5V5Q0 9-3 5ZM-3-2H-7M3-2H7M-3 3H-8M3 3H8'};el('path',{d:paths[key]},g);const act=()=>{if(state.mode!=='session'){toast('开始陪伴后，可以在这里调节'+label+'。');return}selectTab(false);modal('soundOverlay');$('volume-'+key).focus()};g.onclick=act;g.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();act()}}});
 $('waterMarks').setAttribute('transform','translate(0 -115)');
-function animate(now){const elapsedDt=lastTime?(now-lastTime)/1000:0,dt=Math.min(elapsedDt,1);lastTime=now;const paused=state.mode==='session'&&!state.playing;if(!paused)sceneTime+=dt;if(state.mode==='session'){clock.tick(now);syncClock();updateProgress();if(clock.expired)finish()}if(!worldEngine?.canvas){const t=sceneTime,motion=state.reduced?0:1,w=state.wind/100*motion;$('waterMarks').querySelectorAll('path').forEach((n,i)=>{n.setAttribute('transform',`translate(${Math.sin(t*.5+i)*w*4} ${Math.sin(t*.7+i)*w})`);n.style.opacity=.2+Math.sin(t*(.3+w*.4)+i)*.12});flies.forEach(f=>{f.n.setAttribute('cx',f.x+Math.sin(t*f.speed+f.p)*18*motion);f.n.setAttribute('cy',f.y+Math.cos(t*f.speed*.8+f.p)*14*motion);f.n.style.opacity=state.fireflies?.25+.7*(.5+.5*Math.sin(t*.7+f.p)):0});rains.forEach(r=>{const yy=170+(r.y+t*r.speed*motion)%660;const xx=r.x+Math.sin(t*.3)*w*7;r.n.setAttribute('x1',xx);r.n.setAttribute('y1',yy);r.n.setAttribute('x2',xx-w*3);r.n.setAttribute('y2',yy+6)});$('rain').style.opacity=state.mode==='session'?state.mix.rain/100*.7:0}if(!document.hidden&&!app.classList.contains('resting'))worldEngine.update(now);requestAnimationFrame(animate)}requestAnimationFrame(animate);
+function animate(now){const elapsedDt=lastTime?(now-lastTime)/1000:0,dt=Math.min(elapsedDt,1);lastTime=now;const paused=state.mode==='session'&&!state.playing;if(!paused)sceneTime+=dt;if(state.mode==='session'){clock.tick(now);syncClock();updateProgress();if(clock.expired)finish()}if(!worldEngine?.canvas){const t=sceneTime,motion=state.reduced?0:1,w=state.wind/100*motion;$('waterMarks').querySelectorAll('path').forEach((n,i)=>{n.setAttribute('transform',`translate(${Math.sin(t*.5+i)*w*4} ${Math.sin(t*.7+i)*w})`);n.style.opacity=.2+Math.sin(t*(.3+w*.4)+i)*.12});flies.forEach(f=>{f.n.setAttribute('cx',f.x+Math.sin(t*f.speed+f.p)*18*motion);f.n.setAttribute('cy',f.y+Math.cos(t*f.speed*.8+f.p)*14*motion);f.n.style.opacity=state.fireflies ? .25+.7*(.5+.5*Math.sin(t*.7+f.p)):0});rains.forEach(r=>{const yy=170+(r.y+t*r.speed*motion)%660;const xx=r.x+Math.sin(t*.3)*w*7;r.n.setAttribute('x1',xx);r.n.setAttribute('y1',yy);r.n.setAttribute('x2',xx-w*3);r.n.setAttribute('y2',yy+6)});$('rain').style.opacity=state.mode==='session'?state.mix.rain/100*.7:0}if(!document.hidden&&!app.classList.contains('resting')&&!app.classList.contains('city-open'))worldEngine.update(now);requestAnimationFrame(animate)}requestAnimationFrame(animate);
 })();
 </script>
+
+<script src="city-experience.js"></script>
+
 </body>
 </html>

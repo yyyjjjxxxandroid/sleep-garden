@@ -18,7 +18,7 @@ audio_manifest=json.loads((root/'audio/sources.json').read_text())
 audio_assets={key:'data:audio/mpeg;base64,'+base64.b64encode((root/'audio'/item['file']).read_bytes()).decode() for key,item in audio_manifest.items()}
 html=(root/'source.html').read_text()
 html=html.replace("(()=>{'use strict';", "Promise.resolve(window.GARDEN_READY).then(()=>{'use strict';")
-html=html.replace('})();\n</script>', '});\n</script>')
+html=html.replace('})();\n</script>', '});\n</script>',1)
 # source.html is the editable template; opening it should show the 3D product.
 # Remove its redirect from the generated product to prevent a reload loop.
 entry_start=html.index('<!-- source-entry-start -->')
@@ -44,8 +44,11 @@ html=html.replace('</main>','<details class="asset-credits"><summary>素材</sum
 html=html.replace('猫：<a href="https://sketchfab.com/3d-models/bicolor-cat-e623a618ca344a8393d7ba4d63ec23cf" target="_blank" rel="noreferrer">Bicolor Cat / kenchoo</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>，调整比例与材质。','猫：本 Demo 原创绘本造型与程序动画。').replace('Kenney Nature Kit · CC0','Quaternius Stylized Nature MegaKit · CC0')
 html=html.replace('<script src="session-clock.js"></script>','<script>'+ (root/'session-clock.js').read_text()+'</script>')
 html=html.replace('<script src="garden-audio.js"></script>','<script>'+ (root/'garden-audio.js').read_text()+'</script>')
+html=html.replace('<script src="city-soundscape.js"></script>','<script>'+ (root/'city-soundscape.js').read_text()+'</script>')
 for name in ['garden-personalization.js','garden-experience.js']:
     html=html.replace('<script src="'+name+'"></script>','<script>'+ (root/name).read_text()+'</script>')
 html=html.replace('<link rel="stylesheet" href="garden-experience.css">','<style>'+ (root/'garden-experience.css').read_text()+'</style>')
+html=html.replace('<link rel="stylesheet" href="city-world.css">','<style>'+ (root/'city-world.css').read_text()+'</style>')
+html=html.replace('<script src="city-experience.js"></script>','<script>'+ (root/'city-experience.js').read_text()+'</script>')
 (root/'index.html').write_text(html)
 print('Built offline 3D HTML',round(len(html.encode())/1024/1024,2),'MB')

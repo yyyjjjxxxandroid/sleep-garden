@@ -1,0 +1,53 @@
+/* The city shares the garden's quiet controls; the canvas owns the scenery. */
+.top-actions .city-trigger{width:auto;min-width:76px;padding:0 12px;font-size:12px;white-space:nowrap}
+.city-overlay{position:absolute;inset:0;z-index:24;display:flex;align-items:center;justify-content:center;padding:20px;background:#243b327a;backdrop-filter:blur(12px);color:#344c3b}
+.city-overlay[hidden],.city-location-card[hidden],.city-experience[hidden],.city-match-card[hidden]{display:none!important}
+.city-location-card{width:min(410px,100%);padding:29px 25px;border:1px solid #f9faebbb;border-radius:28px;background:#f0f2e4f5;box-shadow:0 22px 70px #152f2530}
+.city-kicker{margin:0 0 12px;font-size:10px;letter-spacing:3px;color:#7d8b70}
+.city-location-card h2{margin:0;font-family:'Songti SC','STSong',serif;font-size:30px;font-weight:400;letter-spacing:4px}
+.city-location-card>p:not(.city-kicker){font-size:12px;line-height:1.9;color:#74816b}
+.city-location-status{display:flex;align-items:center;gap:10px;padding:13px 15px;margin:22px 0 16px;background:#dce5ce;border-radius:15px;font-size:12px}
+.city-location-status i{width:7px;height:7px;border-radius:50%;background:#baa26c;box-shadow:0 0 0 4px #baa26c19}
+.city-location-status[data-ready=true] i{background:#6b8d61}
+.city-match-card{display:grid;grid-template-columns:76px 1fr;align-items:center;gap:16px;border:1px solid #b7c6aa80;border-radius:20px;padding:10px;margin:15px 0 20px}
+.city-match-thumb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;height:84px;border-radius:13px;background:linear-gradient(145deg,#c1ccb0,#dcd2b4);font-family:'Songti SC','STSong',serif;color:#68694d}
+.city-match-thumb span{font-size:22px;letter-spacing:3px}.city-match-thumb small{font-size:10px;letter-spacing:2px}
+.city-match-card strong{font-size:16px;letter-spacing:1px;font-weight:500}.city-match-card>div>small{display:block;margin-top:7px;font-size:11px;line-height:1.8;color:#74816b}
+.city-actions{display:flex;gap:8px}.city-actions button{flex:1;min-height:48px;border:1px solid #81977455;border-radius:24px;font-size:12px}
+.city-actions .city-primary{background:#425e49;color:#f5f4e5;border-color:#425e49}
+.city-location-card .city-foot{margin:15px 0 0!important;font-size:10px!important;line-height:1.7!important;color:#8c967f!important}
+.city-experience{position:absolute;inset:0;isolation:isolate;overflow:hidden;background:#d7ddc4}
+.city-world-host,.city-3d-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.city-3d-canvas{touch-action:none;outline:none;cursor:grab}.city-3d-canvas:active{cursor:grabbing}.city-3d-canvas:focus-visible{outline:2px solid #6e8d5d;outline-offset:-3px}
+.city-experience:after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,#f0f2dfc7 0%,#f0f2df35 13%,transparent 23%,transparent 76%,#d1dbc338 100%)}
+.city-top{position:absolute;z-index:3;top:max(21px,env(safe-area-inset-top));left:18px;right:18px;display:grid;grid-template-columns:44px 1fr 44px;gap:8px;align-items:start}
+.city-top>button{height:44px;min-width:44px;display:grid;place-items:center;border-radius:50%;border:1px solid #fff9;background:#f3f4e4ad;backdrop-filter:blur(10px);color:#415b40}
+.city-top>button svg{width:19px;height:19px}
+.city-title{text-align:center;padding-top:4px;pointer-events:none;text-shadow:0 1px 12px #f7f6e5}
+.city-title strong{display:block;font-family:'Songti SC','STSong',serif;font-size:23px;font-weight:400;letter-spacing:4px;color:#384d38}
+.city-title small{display:block;margin-top:7px;font-size:10px;letter-spacing:2px;color:#6b795f}
+.city-caption{position:absolute;z-index:2;top:100px;left:20px;right:20px;text-align:center;font-family:'Songti SC','STSong',serif;font-size:13px;line-height:1.8;letter-spacing:1px;color:#506346;text-shadow:0 1px 6px #f8f6e7;pointer-events:none}
+.city-tools{position:absolute;right:16px;top:34%;z-index:3;display:flex;flex-direction:column;gap:8px}
+.city-tools button{width:43px;height:43px;display:grid;place-items:center;border-radius:50%;border:1px solid #ffffff66;background:#f4f5e6b8;color:#4b6245;backdrop-filter:blur(10px);font-size:22px}
+.city-tools button svg{width:19px;height:19px}.city-tools button[aria-pressed=true]{background:#456149;color:#f7f5e6}
+.city-view-switcher{position:absolute;z-index:3;left:50%;bottom:213px;transform:translateX(-50%);display:flex;gap:4px;padding:4px;border:1px solid #fff8;border-radius:25px;background:#f0f2e3b8;backdrop-filter:blur(12px);white-space:nowrap}
+.city-view-switcher button{min-height:39px;padding:0 16px;border-radius:21px;color:#65765b;font-size:12px}
+.city-view-switcher button[aria-pressed=true]{background:#ffffefe6;color:#344f38;box-shadow:0 2px 8px #30452c0b}
+.city-dock{position:absolute;z-index:3;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(430px,calc(100% - 24px));padding:13px 14px 11px;background:#f0f3e4e8;border:1px solid #fff9;border-radius:26px;backdrop-filter:blur(14px);box-shadow:0 8px 28px #30452c16}
+.city-dock-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.city-dock-head strong{font-family:'Songti SC','STSong',serif;font-size:16px;font-weight:400;letter-spacing:1px}.city-dock-head output{font-size:12px;font-variant-numeric:tabular-nums;color:#7a886d}
+.city-message{margin:0 0 10px;min-height:18px;font-size:11px;line-height:1.7;color:#7a886e}
+.city-dock-actions{display:grid;grid-template-columns:1.12fr 1fr 1fr;gap:6px}
+.city-dock-actions button{min-height:45px;padding:0 8px;border-radius:23px;border:1px solid #8298724d;color:#4c6647;background:#eef1e0;font-size:12px;letter-spacing:1px}
+.city-dock-actions .city-walk{background:#445e47;color:#fbf7e6;border-color:#445e47}
+.city-dock-actions button:hover{filter:brightness(1.035)}
+.city-sound-row{display:flex;align-items:center;gap:7px;margin-top:9px}
+.city-sound-row button{min-height:32px;border-radius:17px;border:1px solid #8da07a45;padding:0 10px;font-size:10px;color:#879377;background:transparent}
+.city-sound-row button[data-on=true]{color:#4b6a45;background:#dbe5cd;border-color:#9caf8980}
+.city-sound-row .city-text-button{border:0;padding:0 4px;min-width:32px;background:transparent;color:#7a886d}.city-sound-spacer{flex:1}
+.city-controls-help{position:absolute;z-index:2;bottom:269px;left:20px;right:20px;text-align:center;font-size:10px;letter-spacing:1px;color:#f8f6e7;text-shadow:0 1px 4px #334d30,0 1px 10px #334d3055;pointer-events:none}
+.city-scene-status{position:absolute;z-index:5;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;background:#e5ead9e8;backdrop-filter:blur(10px);padding:35px;color:#526747;text-align:center}
+.city-scene-status p{font-family:'Songti SC','STSong',serif;font-size:19px;line-height:1.8;letter-spacing:2px;margin:0}.city-scene-status button{min-height:44px;border:1px solid #80967180;border-radius:23px;padding:0 24px;font-size:12px}
+.city-overlay button:focus-visible{outline:2px solid #af8f52;outline-offset:3px}
+@media(max-width:360px){.city-title strong{font-size:20px;letter-spacing:2px}.city-view-switcher button{padding:0 12px;font-size:11px}.city-dock{padding:12px 11px 10px}.city-sound-row{gap:4px}.city-sound-row button{padding:0 8px}.city-caption{font-size:12px}}
+@media(max-height:700px){.city-caption{top:86px;font-size:12px}.city-top{top:16px}.city-title strong{font-size:20px}.city-title small{margin-top:4px}.city-view-switcher{bottom:195px}.city-controls-help{top:130px;bottom:auto;font-size:9px;color:#5b6d4b;text-shadow:0 1px 5px #f4f3e5}.city-dock{bottom:10px;padding:11px 12px 9px}.city-message{margin-bottom:7px}.city-dock-actions button{min-height:42px}.city-sound-row{margin-top:6px}}

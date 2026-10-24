@@ -7,6 +7,7 @@ import { installDetails } from './story-detail.js';
 import { installAtmosphere } from './story-atmosphere.js';
 import { GardenCompanion } from './garden-companion.js';
 import { configureSkyBackground } from './world-sky.js';
+import { CityWorld } from './city-world.js';
 
 const seedModels={fern:'Grass_Common_Tall',bellflower:'Flower_4_Group',waterleaf:'Bush_Common_Flowers'};
 const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z),clamp=T.MathUtils.clamp;
@@ -453,3 +454,4 @@ class StoryWorld extends BaseWorld{
 }
 window.GARDEN_PLOT_COUNT=6;
 window.GardenWorld=StoryWorld;
+window.CityWorld=CityWorld;

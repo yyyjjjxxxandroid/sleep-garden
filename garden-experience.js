@@ -62,7 +62,7 @@ function createGardenExperience(hooks){
   const elapsed=breathingAt===null?60:Math.max(0,clock.elapsed-breathingAt),guiding=!done&&elapsed<60;
   $('skipBreathing').hidden=!guiding;$('breathOrb').hidden=!guiding;
   let cue='按你舒服的节奏呼吸就好';
-  if(guiding){const phase=elapsed%10;cue=!playing?'先停一会儿，按自己的节奏呼吸':phase<4?'轻轻吸气':'慢慢呼气';const scale=phase<4?.82+.18*(phase/4):1-.18*((phase-4)/6);$('breathOrb').style.transform=`scale(${state.reduced?1:scale})`;}
+  if(guiding){const phase=elapsed%10;cue=!playing?'先停一会儿，按自己的节奏呼吸':phase<4?'轻轻吸气':'慢慢呼气';const scale=phase<4 ? .82+.18*(phase/4):1-.18*((phase-4)/6);$('breathOrb').style.transform=`scale(${state.reduced?1:scale})`;}
   else if(breathingAt!==null){cue='这一分钟已经结束，接下来按自己的节奏就好。';}
   if(cue!==lastPhase){$('breathCue').textContent=cue;lastPhase=cue;}
  }
