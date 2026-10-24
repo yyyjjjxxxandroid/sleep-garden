@@ -26,6 +26,18 @@ test('both sides of the bridge are continuous water rather than nearby marsh pla
   city.water.dispose();
 });
 
+test('worn paving stays at the actors’ floor and new pagoda plinths are excluded from routes',()=>{
+  const city=buildCityScene({text:false});city.root.updateMatrixWorld(true);
+  for(const x of [-1.55,-.45,.55,1.55])for(const z of [-5,-9,-16,-24,-32,-38]){
+    const ray=new T.Raycaster(new T.Vector3(x,4,z),new T.Vector3(0,-1,0));
+    const hit=ray.intersectObjects(city.walkSurfaces,true)[0];
+    assert.ok(hit&&Math.abs(hit.point.y-CITY_FLOOR)<.015,`stone supports feet at ${x},${z}`);
+  }
+  for(const side of [-1,1])assert.equal(cityWalkable(side*5.5,-2.7),false,'stone tower base cannot be walked through');
+  assert.ok(city.root.getObjectByName('paired-bridgehead-stone-shelters'));
+  city.water.dispose();
+});
+
 test('tidal water updates its waves and owns a disposable HDR scene reflection',()=>{
   const city=buildCityScene({text:false}),water=city.water,target=water.getRenderTarget();
   assert.equal(water.material.uniforms.tDiffuse.value,target.texture);

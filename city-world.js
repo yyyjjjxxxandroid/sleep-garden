@@ -99,11 +99,11 @@ export class CityWorld {
     this.host=host;this.onMessage=onMessage;this.onView=onView;this.onError=onError;
     this.active=false;this.last=0;this.time=0;this.frame=0;this.follow=false;this.disposed=false;this.listeners=[];
     this.reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches||false;
-    this.scene=new T.Scene();this.scene.fog=new T.FogExp2('#d3d6bb',.008);
+    this.scene=new T.Scene();this.scene.fog=new T.FogExp2('#bac7ca',.007);
     this.camera=new T.PerspectiveCamera(48,1,.1,220);
     this.renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
-    this.renderer.outputColorSpace=T.SRGBColorSpace;this.renderer.toneMapping=T.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.08;
+    this.renderer.outputColorSpace=T.SRGBColorSpace;this.renderer.toneMapping=T.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.0;
     this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=T.PCFSoftShadowMap;
     this.canvas=this.renderer.domElement;this.canvas.className='city-3d-canvas';this.canvas.tabIndex=0;
     this.canvas.setAttribute('aria-label','洛阳桥三维场景。拖动旋转、双指缩放。点击石板路让人物行走，小猫会跟随。方向键旋转，WASD 行走，0 返回全景。');
@@ -111,8 +111,8 @@ export class CityWorld {
     this.controls=new OrbitControls(this.camera,this.canvas);
     Object.assign(this.controls,{enableDamping:true,dampingFactor:.075,minDistance:3.5,maxDistance:54,minPolarAngle:.25,maxPolarAngle:Math.PI*.475,rotateSpeed:.55,zoomSpeed:.8,panSpeed:.65,screenSpacePanning:false});
     this.controls.addEventListener('start',()=>{this.transition=null;this.follow=false;this.onView('free');});
-    const hemi=new T.HemisphereLight('#f7f4df','#879272',2.1);this.scene.add(hemi);
-    this.sun=new T.DirectionalLight('#fff0cc',3.0);this.sun.position.set(-12,22,9);this.sun.castShadow=true;
+    const hemi=new T.HemisphereLight('#dce6ea','#535f55',1.65);this.scene.add(hemi);
+    this.sun=new T.DirectionalLight('#fff5e7',1.9);this.sun.position.set(-12,22,9);this.sun.castShadow=true;
     this.sun.shadow.mapSize.set(1024,1024);Object.assign(this.sun.shadow.camera,{left:-20,right:20,top:28,bottom:-27,near:1,far:80});this.sun.shadow.normalBias=.04;this.sun.shadow.bias=-.0002;this.sun.shadow.radius=3;this.scene.add(this.sun);
     const generator=new T.PMREMGenerator(this.renderer),room=new RoomEnvironment();this.environment=generator.fromScene(room,.06);this.scene.environment=this.environment.texture;this.scene.environmentIntensity=.20;generator.dispose();room.dispose();
     this.scenery=buildCityScene();this.scene.add(this.scenery.root);this.batchStonework();
@@ -145,7 +145,7 @@ export class CityWorld {
     this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();
   }
   setView(view,immediate=false){
-    const presets={entrance:{position:V(.5,9.5,28),target:V(0,.2,1.8)},bridge:{position:V(5,5.5,1),target:V(0,.8,-12)},left:{position:V(9,5.5,-9),target:V(-3,.2,-13)},right:{position:V(-9,5.5,-9),target:V(3,.2,-13)}};
+    const presets={entrance:{position:V(.5,7.6,23),target:V(0,.5,1.0)},bridge:{position:V(.35,2.8,-.2),target:V(0,.75,-16)},left:{position:V(5.0,3.0,-7),target:V(-2.8,-.25,-18)},right:{position:V(-5.0,3.0,-7),target:V(2.8,-.25,-18)}};
     const preset=presets[view];if(!preset)return;
     this.follow=false;this.transition={...preset};
     if(immediate||this.reduced){this.camera.position.copy(preset.position);this.controls.target.copy(preset.target);this.transition=null;this.controls.update();}
@@ -222,8 +222,8 @@ export class CityWorld {
     if(this.disposed)return;this.deactivate();this.disposed=true;this.resizeObserver.disconnect();this.controls.dispose();this.listeners.forEach(remove=>remove());
     const geometries=new Set(),materials=new Set(),textures=new Set();
     // The kitten undercoat DataTexture is shared with the garden; only dispose
-    // city-owned canvas inscriptions, not shared material inputs.
-    this.scene.traverse(o=>{if(o.geometry)geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:o.material?[o.material]:[]){materials.add(m);for(const value of Object.values(m))if(value?.isCanvasTexture)textures.add(value);}});
+    // city-owned inscriptions and granite relief, not shared material inputs.
+    this.scene.traverse(o=>{if(o.geometry)geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:o.material?[o.material]:[]){materials.add(m);for(const value of Object.values(m))if(value?.isCanvasTexture)textures.add(value);for(const texture of m.userData?.cityTextures||[])textures.add(texture);}});
     this.scenery.water.dispose();geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());this.environment.dispose();this.renderer.dispose();this.canvas.remove();
   }
 }
