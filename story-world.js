@@ -8,6 +8,8 @@ import { installAtmosphere } from './story-atmosphere.js';
 import { GardenCompanion } from './garden-companion.js';
 import { configureSkyBackground } from './world-sky.js';
 import { CityWorld } from './city-world.js';
+import { environmentTargets, approach } from './world-environment.js';
+import { createSnowfall, updateSnowfall } from './world-weather.js';
 
 const seedModels={fern:'Grass_Common_Tall',bellflower:'Flower_4_Group',waterleaf:'Bush_Common_Flowers'};
 const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z),clamp=T.MathUtils.clamp;
@@ -43,6 +45,7 @@ class StoryWorld extends BaseWorld{
     return pond&&!this.onStream(x,z,margin)&&Math.hypot(x-bridge.x,z-bridge.z)>1.9+margin;
   }
   buildTerrain(){
+    this.snowCover={value:0};
     const seg=this.quality==='high'?120:this.quality==='mid'?80:56;
     const geo=new T.PlaneGeometry(170,170,seg,seg);geo.rotateX(-Math.PI/2);const p=geo.attributes.position,colors=[];
     const grass=new T.Color('#91ad77'),dark=new T.Color('#76956a'),sand=new T.Color('#cab998');
@@ -51,7 +54,7 @@ class StoryWorld extends BaseWorld{
       const pathDist=Math.abs(x-this.pathX(z)),pathBlend=(1-T.MathUtils.smoothstep(pathDist,.5,1.25))*T.MathUtils.smoothstep(28-Math.abs(z),0,4);
       c.lerp(sand,pathBlend*.82);const shore=Math.sqrt(((x+3.5)/5.6)**2+((z+3.5)/3.8)**2);c.lerp(new T.Color('#b0b38c'),(1-T.MathUtils.smoothstep(Math.abs(shore-1),.03,.19))*.7);colors.push(c.r,c.g,c.b);
     }geo.setAttribute('color',new T.Float32BufferAttribute(colors,3));geo.computeVertexNormals();
-    const mat=new T.MeshStandardMaterial({vertexColors:true,roughness:1});mat.onBeforeCompile=s=>{s.vertexShader='varying vec3 gardenP;\n'+s.vertexShader;s.vertexShader=s.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ngardenP=position;');s.fragmentShader='varying vec3 gardenP;\n'+nGLSL+s.fragmentShader;s.fragmentShader=s.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\nfloat grain=fbm(gardenP.xz*4.);diffuseColor.rgb*=.90+grain*.19;')};this.terrain=this.mesh(geo,mat);
+    const mat=new T.MeshStandardMaterial({vertexColors:true,roughness:1});mat.onBeforeCompile=s=>{s.uniforms.gardenSnow=this.snowCover;s.vertexShader='varying vec3 gardenP;\n'+s.vertexShader;s.vertexShader=s.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ngardenP=position;');s.fragmentShader='uniform float gardenSnow;varying vec3 gardenP;\n'+nGLSL+s.fragmentShader;s.fragmentShader=s.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\nfloat grain=fbm(gardenP.xz*4.);diffuseColor.rgb*=.90+grain*.19;float snowPatch=smoothstep(.23,.68,fbm(gardenP.xz*.75));diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.85,.90,.92),gardenSnow*(.55+.45*snowPatch));')};this.terrain=this.mesh(geo,mat);
     // 多层山脊围合远景，每一层都是真实地形网格。
     const ridgeLayers=this.quality==='low'?1:3;
     for(let layer=0;layer<ridgeLayers;layer++){
@@ -73,12 +76,17 @@ class StoryWorld extends BaseWorld{
   buildSky(){
     super.buildSky();
     configureSkyBackground(this.sky);
-    this.skyMat.fragmentShader=`varying vec3 d;uniform float night,time,rain,light;${nGLSL}void main(){vec3 v=normalize(d);float y=max(0.,v.y);vec3 day=mix(vec3(.79,.87,.81),vec3(.42,.66,.76),pow(y,.6));vec3 dusk=mix(vec3(.17,.25,.34),vec3(.025,.045,.105),pow(y,.5));vec3 c=mix(day,dusk,night);c=mix(c,mix(vec3(.59,.67,.67),vec3(.10,.16,.21),night),rain*.42);float cl=fbm(v.xz/max(.18,v.y)*1.2+vec2(time*.003,0.));cl=smoothstep(.56,.77,cl)*smoothstep(0.,.12,v.y);c=mix(c,mix(vec3(.96,.97,.90),vec3(.16,.23,.29),night),cl*.55);gl_FragColor=vec4(c,1.);}`;this.skyMat.needsUpdate=true;
+    this.skyMat.uniforms.warmth={value:0};this.skyMat.uniforms.cloudCover={value:0};
+    this.skyMat.uniforms.dawn={value:0};this.skyMat.uniforms.noon={value:0};this.skyMat.uniforms.deepNight={value:0};
+    this.skyMat.fragmentShader=`varying vec3 d;uniform float night,time,rain,light,warmth,cloudCover,dawn,noon,deepNight;${nGLSL}void main(){vec3 v=normalize(d);float y=max(0.,v.y);vec3 day=mix(vec3(.79,.87,.81),mix(vec3(.42,.66,.76),vec3(.34,.63,.83),noon*(1.-cloudCover)),pow(y,.6));vec3 dusk=mix(vec3(.17,.25,.34),vec3(.025,.045,.105),pow(y,.5))*(1.-deepNight*.18);vec3 c=mix(day,dusk,night);c=mix(c,vec3(.94,.59,.38),warmth*exp(-y*3.5)*.72);c=mix(c,vec3(.84,.62,.70),dawn*exp(-y*4.)*.32);c=mix(c,mix(vec3(.59,.67,.67),vec3(.10,.16,.21),night),cloudCover*.48);float cl=fbm(v.xz/max(.18,v.y)*1.2+vec2(time*.003,0.));cl=smoothstep(mix(.56,.26,cloudCover),.77,cl)*smoothstep(0.,.12,v.y);c=mix(c,mix(vec3(.96,.97,.90),vec3(.16,.23,.29),night),cl*(.55+cloudCover*.25));gl_FragColor=vec4(c,1.);}`;this.skyMat.needsUpdate=true;
   }
   addClouds(){
     const texCanvas=document.createElement('canvas');texCanvas.width=256;texCanvas.height=128;const c=texCanvas.getContext('2d');
     for(let i=0;i<25;i++){const x=30+rand()*190,y=48+rand()*28,r=16+rand()*23;const g=c.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,'rgba(255,255,240,.68)');g.addColorStop(.55,'rgba(255,255,240,.5)');g.addColorStop(1,'rgba(255,255,240,0)');c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2)}
     const tex=new T.CanvasTexture(texCanvas);this.clouds=[];for(let i=0;i<8;i++){const mat=new T.SpriteMaterial({map:tex,color:'#fff8e5',transparent:true,opacity:.75,depthWrite:false,fog:true});const cloud=new T.Sprite(mat);cloud.position.set(-45+i*15,23+rand()*9,-65-rand()*12);cloud.scale.set(28+rand()*18,15+rand()*8,1);this.scene.add(cloud);this.clouds.push(cloud)}
+  }
+  buildParticles(){
+    super.buildParticles();this.snowfall=createSnowfall(this.quality,(x,z)=>this.groundHeight(x,z));this.scene.add(this.snowfall);
   }
   plantPlot(i){
     const x=-.5+(i%3)*1.15,z=6.7+Math.floor(i/3)*1.7;
@@ -430,9 +438,18 @@ class StoryWorld extends BaseWorld{
     return false;
   }
   beforeRender(dt){
-    const n=this.skyMat.uniforms.night.value,light=this.state.light/100,rain=this.state.weather==='rain',t=this.t;
-    this.hemi.intensity=T.MathUtils.lerp(1.1+light*.35,.68,n);this.hemi.color.set(n>.5?'#aac1d0':'#e9f2ed');this.hemi.groundColor.set(n>.5?'#435856':'#a1b282');
-    this.sun.intensity=T.MathUtils.lerp((.22+light*2.7)*(rain?.52:1),.55,n);this.sun.color.set(n>.5?'#b3cee8':'#fff0d0');this.renderer.toneMappingExposure=T.MathUtils.lerp(1.02,1.0,n);this.scene.fog.color.copy(new T.Color('#c5dcd3').lerp(new T.Color('#283f50'),n));
+    const n=this.skyMat.uniforms.night.value,light=this.skyMat.uniforms.light.value,t=this.t,targets=environmentTargets(this.state);
+    const u=this.skyMat.uniforms;u.warmth.value=approach(u.warmth.value,targets.warmth,dt);u.cloudCover.value=approach(u.cloudCover.value,targets.cloud,dt);
+    for(const key of ['dawn','noon','deepNight'])u[key].value=approach(u[key].value,targets[key],dt);
+    const warm=u.warmth.value,cloud=u.cloudCover.value,deep=u.deepNight.value;
+    this.hemi.intensity=T.MathUtils.lerp(1.1+light*.35,.68*(1-deep*.28),n);this.hemi.color.set('#e9f2ed').lerp(new T.Color('#aac1d0'),n);this.hemi.groundColor.set('#a1b282').lerp(new T.Color('#435856'),n);
+    this.sun.intensity=T.MathUtils.lerp((.22+light*2.7)*(1-cloud*.72),.55*(1-deep*.45),n);this.sun.color.set('#fff0d0').lerp(new T.Color('#fff7e9'),u.noon.value).lerp(new T.Color('#ffc18b'),warm).lerp(new T.Color('#b3cee8'),n);this.renderer.toneMappingExposure=T.MathUtils.lerp(1.02,1.0,n);this.scene.fog.color.set('#c5dcd3').lerp(new T.Color('#d9b5a0'),warm*.4).lerp(new T.Color('#283f50'),n);
+    this.scene.environmentIntensity=this.state.localSky?T.MathUtils.lerp(.22,.10,n)*(1-deep*.2):.22;
+    this.scene.fog.density=approach(this.scene.fog.density,.007+targets.fog*.018,dt);
+    if(this.snowCover)this.snowCover.value=approach(this.snowCover.value,targets.snow*.85,dt*.5);
+    if(this.snowfall)updateSnowfall(this.snowfall,dt,t,{snow:targets.snow,night:n},this.state.wind/100,this.state.reduced,this.camera?.position);
+    const sunY=this.state.localSky?T.MathUtils.lerp(5+targets.altitude*23,24,n):24;
+    this.sun.position.x=approach(this.sun.position.x,this.state.localSky?T.MathUtils.lerp(targets.sunX,-15,n):-15,dt);this.sun.position.y=approach(this.sun.position.y,sunY,dt);
     if(this.cat)this.cat.userData.turning=0;if(this.catContact){this.catContact.position.copy(this.cat.position);this.catContact.position.y+=.013;this.catContact.rotation.z=-this.cat.rotation.y}if(this.storyCat){this.updateCatContext();const moving=this.catSpeed>.025&&!this.cat.userData.contact;this.storyCat.animate(t,moving,this.state.wind/100,!moving,dt,this.state.reduced,this.catDistance*8,this.companion?.pose||(['walking','roaming'].includes(this.companion?.phase)?{action:'walk',time:0}:null));this.canvas.dataset.catPose=this.cat.userData.pose;this.canvas.dataset.catExpression=this.cat.userData.expression;this.canvas.dataset.petCount=String(this.cat.userData.petCount||0);this.canvas.dataset.petting=String(this.cat.userData.petting);this.canvas.dataset.catReaction=this.cat.userData.reactionName||'';this.canvas.dataset.catAction=this.cat.userData.idleAction||'rest';this.canvas.dataset.catRest=this.cat.userData.nightRest?'sleeping':this.cat.userData.companionPhase;this.canvas.dataset.catEnvironment=this.cat.userData.environmentReaction||''}
     if(this.cat&&!this.state.night&&t-(this.lastCatNatureNotice||0)>16){
       const butterfly=this.butterflies?.find(b=>b.group.visible&&b.group.position.distanceTo(this.cat.position)<4);
@@ -441,7 +458,7 @@ class StoryWorld extends BaseWorld{
     if(this.seedFeedback){const f=this.seedFeedback;f.userData.age+=dt;const age=f.userData.age;if(!this.state.reduced){f.scale.setScalar(1+Math.sin(age*5)*.12+Math.min(age,.8)*.4);f.children[1].rotation.z+=dt*1.8;}f.children[1].material.opacity=Math.max(0,.8-age*.22);f.children[2].material.opacity=Math.max(0,.12-age*.035);if(age>4)this.clearSeedFeedback();}
     this.details?.update(t,n);
     this.atmosphere?.update(dt,t,n);
-    this.clouds?.forEach((c,i)=>{c.material.opacity=(1-n*.7)*.6;c.material.color.set(n>.5?'#718c9f':'#fff8e8');c.position.x+=dt*.045*(.2+this.state.wind/100)});
+    this.clouds?.forEach((c,i)=>{c.material.opacity=(1-n*.7)*.6;c.material.color.set('#fff8e8').lerp(new T.Color('#718c9f'),n);c.position.x+=dt*.045*(.2+this.state.wind/100)});
     this.rippleRings?.forEach((r,i)=>{const f=(t*.09+i*.17)%1;r.scale.setScalar(.4+f*1.8);r.material.opacity=(1-f)*.095});
     const planting=this.state.records.find(r=>r.growth!==undefined&&r.growth<1);
     this.plotRings?.forEach((ring,i)=>{const active=planting&&this.grown[i]?.scale.x===planting.growth;ring.material.opacity=active?(.22+.18*Math.sin(t*8)):0;ring.scale.setScalar(active?1+Math.sin(t*8)*.08:1)});

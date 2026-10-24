@@ -3,3 +3,17 @@
 .garden-3d[data-interaction="stroking"]{cursor:grabbing}
 .pet-access>span,.pet-access button{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);padding:0;border:0;white-space:nowrap}
 .pet-access button:focus-visible{clip-path:none;width:auto;height:auto;min-height:44px;left:50%;bottom:calc(var(--dock-height,156px) + 36px);transform:translateX(-50%);z-index:6;padding:10px 16px;border-radius:14px;background:var(--paper);color:var(--ink)}
+
+/* Brief, unboxed time card in the garden's lower-left safe area. */
+.local-environment{position:absolute;z-index:5;left:40px;bottom:56px;max-width:320px;color:#fffdf3;pointer-events:none;user-select:none;opacity:0;transform:translateY(6px);transition:opacity .55s ease-out,transform .7s ease-out;text-shadow:0 2px 6px #172f3b99,0 0 22px #172f3b55}
+.local-environment.is-visible{opacity:1;transform:translateY(0)}
+.local-environment[data-space=false],.app.city-open .local-environment,.app:has(.overlay:not([hidden]),.asset-credits[open]) .local-environment{opacity:0;transform:translateY(6px)}
+.local-clock{display:block;font-family:ui-rounded,"SF Pro Rounded","Arial Rounded MT Bold","PingFang SC",sans-serif;font-size:clamp(76px,8.5svh,96px);font-weight:500;line-height:1;letter-spacing:-2px;font-variant-numeric:tabular-nums}
+.local-date{margin-top:10px;padding-top:10px;border-top:2px solid currentColor;font-size:clamp(20px,2.2svh,26px);font-weight:500;letter-spacing:.7px}
+.local-place{display:block;margin-top:7px;font-size:clamp(18px,1.9svh,22px);line-height:1.5;letter-spacing:.8px;max-width:320px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app[data-weather=snow]:not(.night) .local-environment{color:#29434d;text-shadow:0 1px 6px #ffffffb3,0 0 20px #ffffff80}
+.environment-more .sheet-foot{flex-wrap:wrap;gap:8px}
+.weather-options{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:759px){.local-environment{left:24px;max-width:260px}.local-clock{font-size:clamp(60px,8svh,72px)}.local-date{font-size:18px}.local-place{font-size:17px;max-width:260px}}
+@media(prefers-reduced-motion:reduce){.local-environment,.local-environment.is-visible,.local-environment[data-space=false]{transform:none;transition:opacity .15s ease-out}}
+.app.reduced .local-environment{transform:none;transition:opacity .15s ease-out}

@@ -30,7 +30,7 @@ function createGardenExperience(hooks){
   leaveRest(false);finishedRecord=null;
   const c=replayRecord?.experience?.context;
   active={context:mix?(c?P.context(c):null):{...context},before:mix?null:before,after:null,returnIntent:null,recipe:mix?'replay':plan.title,startedAt:new Date().toISOString(),feedbackTiming:null};
-  if(!mix){state.weather=context.need==='sleepy'?'rain':'clear';setNight(true);$('stageText').textContent=plan.line;}
+  if(!mix){$('stageText').textContent=plan.line;}
   replayRecord=null;before=null;renderBefore();
  }
  function attach(record){record.experience={...active,context:active?.context?{...active.context}:null};}
