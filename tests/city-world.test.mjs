@@ -16,6 +16,25 @@ test('the city contains volumetric landmarks, a walkable bridge and water below 
   let sprites=0;city.root.traverse(o=>{if(o.isSprite)sprites++;});assert.equal(sprites,0);
 });
 
+test('both sides of the bridge are continuous water rather than nearby marsh platforms',()=>{
+  const city=buildCityScene({text:false});city.root.updateMatrixWorld(true);
+  for(const side of [-1,1])for(const z of [-8,-19,-34]){
+    const ray=new T.Raycaster(new T.Vector3(side*12,10,z),new T.Vector3(0,-1,0));
+    const hits=ray.intersectObject(city.root,true);
+    assert.equal(hits[0]?.object,city.water,`open tidal water at ${side*12},${z}`);
+  }
+  city.water.dispose();
+});
+
+test('tidal water updates its waves and owns a disposable HDR scene reflection',()=>{
+  const city=buildCityScene({text:false}),water=city.water,target=water.getRenderTarget();
+  assert.equal(water.material.uniforms.tDiffuse.value,target.texture);
+  assert.equal(target.texture.type,T.HalfFloatType,'reflections mix in linear light before tone mapping');
+  city.update(14.25);assert.equal(water.material.uniforms.time.value,14.25);
+  let disposed=0;target.addEventListener('dispose',()=>disposed++);water.dispose();water.dispose();
+  assert.equal(disposed,1,'exiting or rebuilding must release the water reflection once');
+});
+
 test('city routes avoid the monument, tree roots, river and bridge railings',()=>{
   for(const p of [[-4.25,2.2],[5.4,1.1],[3.35,-1],[8,5],[4,-15],[2.1,-20],[0,-41]])assert.equal(cityWalkable(...p),false,p.join(','));
   for(const p of [[0,6],[0,-3.5],[0,-4],[0,-20],[1.7,-30]])assert.ok(cityWalkable(...p),p.join(','));

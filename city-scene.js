@@ -1,5 +1,6 @@
 import * as T from './vendor/three/build/three.module.js';
 import { configureSkyBackground } from './world-sky.js';
+import { createCityWater } from './city-water.js';
 
 export const CITY_FLOOR=.055;
 export const CITY_OBSTACLES=[
@@ -34,7 +35,9 @@ function stoneMaterial(color){
     shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
       float grain=fract(sin(dot(floor(cityStoneP*150.),vec3(12.9898,78.233,43.13)))*43758.5453);
       float weather=sin(cityStoneP.x*2.7+sin(cityStoneP.z*1.9))*sin(cityStoneP.y*3.1+cityStoneP.z*.8);
-      diffuseColor.rgb*=.94+grain*.09+weather*.035;`);
+      diffuseColor.rgb*=.94+grain*.09+weather*.035;
+      float wetStone=1.-smoothstep(-1.12,-.67,cityStoneP.y);
+      diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(.53,.60,.56),wetStone*.72);`);
   };
   m.customProgramCacheKey=()=> 'luoyang-weathered-granite';
   return m;
@@ -160,12 +163,12 @@ export function buildCityScene({text=true}={}){
   box(190,1,48,green,0,-1.5,-89);
   const tidalFlat=new T.MeshStandardMaterial({color:'#8b9470',roughness:1});
   for(const side of [-1,1]){
-    const flat=mesh(new T.SphereGeometry(1,36,12),tidalFlat,side*22,-1.60,-12);flat.scale.set(13,.35,23);
-    const marsh=mesh(new T.SphereGeometry(1,32,12),green,side*32,-1.44,-24);marsh.scale.set(13,.5,25);
+    const flat=mesh(new T.SphereGeometry(1,36,12),tidalFlat,side*58,-1.70,-39);flat.scale.set(13,.35,23);
+    const marsh=mesh(new T.SphereGeometry(1,32,12),green,side*68,-1.44,-51);marsh.scale.set(13,.5,25);
   }
   const rocks=new T.InstancedMesh(new T.IcosahedronGeometry(1,1),darkStone,95);rocks.name='tidal-oyster-rocks';
   for(let i=0;i<95;i++){
-    const side=i%2?1:-1;dummy.position.set(side*(10+random()*22),-1.15,-3-random()*37);dummy.rotation.set(random()*2,random()*6,random());dummy.scale.set(.12+random()*.45,.06+random()*.18,.14+random()*.4);dummy.updateMatrix();rocks.setMatrixAt(i,dummy.matrix);
+    const side=i%2?1:-1;dummy.position.set(side*(40+random()*22),-1.15,-22-random()*37);dummy.rotation.set(random()*2,random()*6,random());dummy.scale.set(.12+random()*.45,.06+random()*.18,.14+random()*.4);dummy.updateMatrix();rocks.setMatrixAt(i,dummy.matrix);
   }rocks.receiveShadow=true;root.add(rocks);
   const distant=new T.MeshStandardMaterial({color:'#b8b49b',roughness:1});
   const buildings=new T.InstancedMesh(new T.BoxGeometry(1,1,1),distant,36);buildings.name='soft-quanzhou-skyline';
@@ -177,20 +180,8 @@ export function buildCityScene({text=true}={}){
   for(const x of [-1,1])for(const z of [-1,1])box(.18,2.1,.18,stone,x,1.05,z,pavilion);
   const roof=mesh(new T.ConeGeometry(2.05,.90,4),new T.MeshStandardMaterial({color:'#a07d64',roughness:1}),0,2.45,0,pavilion);roof.rotation.y=Math.PI/4;roof.scale.z=1.2;
 
-  const waterMaterial=new T.ShaderMaterial({uniforms:{time:{value:0}},vertexShader:`varying vec3 worldP;void main(){worldP=(modelMatrix*vec4(position,1.)).xyz;gl_Position=projectionMatrix*viewMatrix*vec4(worldP,1.);}`,
-    fragmentShader:`varying vec3 worldP;uniform float time;
-      float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
-      float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+1.),f.x),f.y);}
-      void main(){vec2 p=worldP.xz;float n=noise(p*.70+vec2(time*.05,-time*.035));
-      float ripple=sin(p.x*3.3+p.y*2.8+n*5.-time*.7)*sin(p.y*3.6-time*.31);
-      float fresnel=pow(1.-max(0.,normalize(cameraPosition-worldP).y),2.);
-      vec3 c=mix(vec3(.31,.48,.43),vec3(.68,.75,.64),.25+fresnel*.6);
-      c+=n*.04+pow(max(0.,ripple),17.)*.08;
-      float bridgeShadow=(1.-smoothstep(2.,4.2,abs(p.x)))*smoothstep(-43.,-39.,p.y)*(1.-smoothstep(-4.,-1.,p.y));
-      c*=1.-bridgeShadow*.14;
-      gl_FragColor=vec4(c,1.);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>}`});
-  const water=mesh(new T.PlaneGeometry(200,200),waterMaterial,0,-1.18,-38);water.rotation.x=-Math.PI/2;water.castShadow=false;water.name='moving-estuary-water';
+  const water=createCityWater();root.add(water);
   const skyMaterial=new T.ShaderMaterial({side:T.BackSide,depthWrite:false,depthTest:false,uniforms:{},vertexShader:'',fragmentShader:`varying vec3 d;void main(){float h=clamp(normalize(d).y,0.,1.);vec3 c=mix(vec3(.91,.86,.72),vec3(.57,.73,.75),pow(h,.65));float clouds=sin(d.x*.032+d.z*.021)*sin(d.z*.047-d.x*.011);c=mix(c,vec3(.96,.94,.83),smoothstep(.40,.83,clouds)*.22);gl_FragColor=vec4(c,1.);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>}`});
   const sky=new T.Mesh(new T.SphereGeometry(100,32,16),skyMaterial);configureSkyBackground(sky);root.add(sky);
-  return {root,walkSurfaces,water,stele,plaque,trees,update(time){waterMaterial.uniforms.time.value=time;foliageTime.value=time;}};
+  return {root,walkSurfaces,water,stele,plaque,trees,update(time){water.material.uniforms.time.value=time;foliageTime.value=time;}};
 }

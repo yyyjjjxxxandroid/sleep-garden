@@ -117,7 +117,7 @@ export class CityWorld {
     const generator=new T.PMREMGenerator(this.renderer),room=new RoomEnvironment();this.environment=generator.fromScene(room,.06);this.scene.environment=this.environment.texture;this.scene.environmentIntensity=.20;generator.dispose();room.dispose();
     this.scenery=buildCityScene();this.scene.add(this.scenery.root);this.batchStonework();
     this.actors=new CityCompanions({onMessage,reduced:this.reduced});this.scene.add(this.actors.human,this.actors.cat);
-    this.marker=new T.Mesh(new T.RingGeometry(.25,.31,40),new T.MeshBasicMaterial({color:'#fff1b8',side:T.DoubleSide,transparent:true,opacity:.8,depthWrite:false}));this.marker.rotation.x=-Math.PI/2;this.marker.position.y=CITY_FLOOR+.025;this.marker.visible=false;this.scene.add(this.marker);
+    this.marker=new T.Mesh(new T.RingGeometry(.25,.31,40),new T.MeshBasicMaterial({color:'#fff1b8',side:T.DoubleSide,transparent:true,opacity:.8,depthWrite:false}));this.marker.rotation.x=-Math.PI/2;this.marker.position.y=CITY_FLOOR+.025;this.marker.visible=false;this.marker.userData.skipWaterReflection=true;this.scene.add(this.marker);
     this.ray=new T.Raycaster();this.pointer=new T.Vector2();this.gesture=new TapGesture();
     this.bindPicking();this.resizeObserver=new ResizeObserver(()=>this.resize());this.resizeObserver.observe(host);
     this.setView('entrance',true);this.resize();
@@ -224,6 +224,6 @@ export class CityWorld {
     // The kitten undercoat DataTexture is shared with the garden; only dispose
     // city-owned canvas inscriptions, not shared material inputs.
     this.scene.traverse(o=>{if(o.geometry)geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:o.material?[o.material]:[]){materials.add(m);for(const value of Object.values(m))if(value?.isCanvasTexture)textures.add(value);}});
-    geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());this.environment.dispose();this.renderer.dispose();this.canvas.remove();
+    this.scenery.water.dispose();geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());this.environment.dispose();this.renderer.dispose();this.canvas.remove();
   }
 }
