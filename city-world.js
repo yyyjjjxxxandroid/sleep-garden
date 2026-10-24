@@ -148,7 +148,7 @@ export class CityWorld {
     this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();
   }
   setView(view,immediate=false){
-    const presets={entrance:{position:V(.5,7.6,23),target:V(0,.5,1.0)},bridge:{position:V(.35,2.8,-.2),target:V(0,.75,-16)},left:{position:V(3.2,2.5,-5.6),target:V(-8,-.15,-22)},right:{position:V(-3.2,2.5,-5.6),target:V(8,-.15,-22)}};
+    const presets={entrance:{position:V(.5,7.6,23),target:V(0,.5,1.0)},courtyard:{position:V(11,8,19),target:V(-5,2.1,5)},bridge:{position:V(.35,2.8,-.2),target:V(0,.75,-16)},left:{position:V(3.2,2.5,-5.6),target:V(-8,-.15,-22)},right:{position:V(-3.2,2.5,-5.6),target:V(8,-.15,-22)}};
     const preset=presets[view];if(!preset)return;
     this.follow=false;this.transition={...preset};
     if(immediate||this.reduced){this.camera.position.copy(preset.position);this.controls.target.copy(preset.target);this.transition=null;this.controls.update();}

@@ -2,7 +2,9 @@
   const $=id=>document.getElementById(id),overlay=$('cityOverlay'),experience=$('cityExperience'),location=$('cityLocationCard'),app=$('app');
   if(!overlay||!experience||!location)return;
   const city={world:null,loading:null,playing:false,accumulated:0,started:0,timer:null,sound:null,water:true,wind:true,version:0,locationTimer:null};
-  const views={entrance:['潮汐快照 · 桥头树荫','先在桥头站一会儿，让风慢慢经过。'],bridge:['石板路 · 桥上漫游','慢慢走，不需要急着抵达哪里。'],left:['向左看 · 潮水与远岸','水从桥下经过，风也轻轻经过你。'],right:['向右看 · 石桥与水面','把目光放远一点，把呼吸放慢一点。'],follow:['跟随人物 · 一起慢慢走','小猫会在你身旁，陪你走过这一段石板路。'],free:['自由视角 · 桥头漫游','拖动看看四周，点一下石板路，让我们走过去。']};
+  const views={entrance:['潮汐快照 · 桥头树荫','先在桥头站一会儿，让风慢慢经过。'],courtyard:['桥头庭院 · 红砖石亭','树荫落在石阶上，坐一会儿也很好。'],bridge:['石板路 · 桥上漫游','慢慢走，不需要急着抵达哪里。'],left:['向左看 · 潮水与远岸','水从桥下经过，风也轻轻经过你。'],right:['向右看 · 石桥与水面','把目光放远一点，把呼吸放慢一点。'],follow:['跟随人物 · 一起慢慢走','小猫会在你身旁，陪你走过这一段石板路。'],free:['自由视角 · 桥头漫游','拖动看看四周，点一下石板路，让我们走过去。']};
+  const courtyardButton=document.createElement('button');courtyardButton.type='button';courtyardButton.dataset.cityView='courtyard';courtyardButton.textContent='庭院';courtyardButton.setAttribute('aria-pressed','false');
+  experience.querySelector('[data-city-view="entrance"]').after(courtyardButton);
   function message(text){$('cityMessage').textContent=text;}
   const quietButton=document.createElement('button');quietButton.type='button';quietButton.className='city-quiet-toggle';quietButton.textContent='静赏';quietButton.title='静赏 · 收起面板';quietButton.setAttribute('aria-label','静赏，收起操作面板');quietButton.setAttribute('aria-pressed','false');
   experience.querySelector('.city-tools').append(quietButton);

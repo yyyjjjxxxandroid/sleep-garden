@@ -2,13 +2,15 @@ import * as T from './vendor/three/build/three.module.js';
 import { configureSkyBackground } from './world-sky.js';
 import { createCityWater } from './city-water.js';
 import { createGraniteTexture, createStoneMaterial, createWornStoneGeometry } from './city-stone.js';
+import { buildCityEntrance } from './city-entrance.js';
 
 export const CITY_FLOOR=.055;
 export const CITY_OBSTACLES=[
   {x:-4.25,z:2.2,hx:1.22,hz:.65},
-  {x:5.4,z:1.1,r:1.05},
+  {x:5.4,z:1.1,r:1.96},
   {x:3.35,z:-1.0,r:.34},{x:5.65,z:-1.0,r:.34},
   {x:-5.5,z:-2.7,hx:.75,hz:.75},{x:5.5,z:-2.7,hx:.75,hz:.75},
+  {x:-6.55,z:6.0,hx:2.55,hz:2.12},
 ];
 
 // Both actors and every route segment share this clearance mask. Bridge railings,
@@ -201,7 +203,7 @@ export function buildCityScene({text=true}={}){
   mesh(new T.PlaneGeometry(1.85,.21),inscription('一座石桥 · 一段潮汐',{vertical:false,width:1024,height:128,size:62,color:'#d0c29e'}),0,2.73,.279,plaque);
 
   // A broad banyan with curved branches, visible roots and volumetric foliage.
-  const tree=new T.Group();tree.position.set(5.4,0,1.1);tree.name='bridgehead-banyan';root.add(tree);solid(tree);
+  const tree=new T.Group();tree.position.set(5.4,.74,1.1);tree.scale.set(1,1.45,1);tree.name='bridgehead-banyan';root.add(tree);solid(tree);
   function branch(points,radius,parent=tree){const curve=new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p)));return mesh(new T.TubeGeometry(curve,14,radius,7,false),bark,0,0,0,parent)}
   branch([[0,0,0],[-.12,1.3,.12],[.13,2.6,0],[-.30,4.25,-.18]],.34);
   for(let i=0;i<9;i++){
@@ -221,11 +223,11 @@ export function buildCityScene({text=true}={}){
       transformed.x+=sin(cityTime*.65+phase)*.032*(position.y+1.);
       transformed.z+=cos(cityTime*.47+phase)*.025;`);
   };
-  const leaves=new T.InstancedMesh(new T.IcosahedronGeometry(1,2),leafMaterial,116);leaves.castShadow=leaves.receiveShadow=true;leaves.name='banyan-volumetric-canopy';
-  for(let i=0;i<116;i++){
+  const leaves=new T.InstancedMesh(new T.IcosahedronGeometry(1,2),leafMaterial,360);leaves.castShadow=leaves.receiveShadow=true;leaves.name='banyan-volumetric-canopy';
+  for(let i=0;i<360;i++){
     const a=i*2.39996,r=Math.sqrt(random())*4.6;
     dummy.position.set(Math.cos(a)*r,4.0+Math.sqrt(Math.max(0,1-r*r/23))*1.15+random()*.30,Math.sin(a)*r);
-    dummy.rotation.set(random(),random()*3,random());dummy.scale.set(.75+random()*.6,.38+random()*.38,.65+random()*.6);dummy.updateMatrix();leaves.setMatrixAt(i,dummy.matrix);
+    dummy.rotation.set(random(),random()*3,random());dummy.scale.set(.45+random()*.55,.23+random()*.29,.42+random()*.53);dummy.updateMatrix();leaves.setMatrixAt(i,dummy.matrix);
     leaves.setColorAt(i,new T.Color('#3e5848').lerp(new T.Color('#849775'),random()*.8));
   }tree.add(leaves);trees.push(tree);
   for(let i=0;i<13;i++){
@@ -233,8 +235,10 @@ export function buildCityScene({text=true}={}){
     branch([[x,y,z],[x-.05,y-1,z+.1],[x+.08,y-1.6-random(),z+.13]],.012);
   }
 
+  buildCityEntrance({root,mesh,box,stone,lightStone,darkStone,stoneMaterial});
+
   // Shore strips and the distant city give the orbit camera a complete world.
-  const land=box(160,1,88,new T.MeshStandardMaterial({color:'#666c58',roughness:1}),0,-1.65,56);land.name='southern-riverbank';
+  const land=box(160,5.2,88,new T.MeshStandardMaterial({color:'#666c58',roughness:1}),0,-2.70,56);land.name='southern-riverbank';
   box(190,1,48,green,0,-1.5,-89);
   const tidalFlat=new T.MeshStandardMaterial({color:'#8b9470',roughness:1});
   for(const side of [-1,1]){

@@ -60,10 +60,23 @@ test('moored boats retain their local meshes when static stonework is batched',(
 test('city routes avoid the monument, tree roots, river and bridge railings',()=>{
   for(const p of [[-4.25,2.2],[5.4,1.1],[3.35,-1],[8,5],[4,-15],[2.1,-20],[0,-41]])assert.equal(cityWalkable(...p),false,p.join(','));
   for(const p of [[0,6],[0,-3.5],[0,-4],[0,-20],[1.7,-30]])assert.ok(cityWalkable(...p),p.join(','));
-  const start={x:-6.5,z:5.5},end={x:-3.0,z:.4},route=findRoute(start,end,cityWalkable,{bound:44,step:.45});
+  const start={x:-6.5,z:9.5},end={x:-3.0,z:.4},route=findRoute(start,end,cityWalkable,{bound:44,step:.45});
   assert.ok(route?.length>1,'must go around the stele rather than cut through it');let previous=start;
   for(const point of route){assert.ok(clearSegment(previous,point,cityWalkable));previous=point;}
   assert.ok(clearSegment({x:0,z:7},{x:0,z:-37},cityWalkable),'the plaza and bridge form one continuous route');
+});
+
+test('entrance plaza is supported by land and routes avoid the stone portico and raised tree bed',()=>{
+  const city=buildCityScene({text:false});city.root.updateMatrixWorld(true);
+  const foundation=city.root.getObjectByName('solid-bridgehead-land-foundation'),bounds=new T.Box3().setFromObject(foundation);
+  assert.ok(bounds.max.y<0&&bounds.max.y>-.15,'land meets the terrace immediately below paving');
+  assert.ok(bounds.min.y<city.water.position.y-2,'earth extends well below the tidal surface');
+  for(const p of [new T.Vector3(0,-.7,11.8),new T.Vector3(7.8,-.7,5),new T.Vector3(-7.8,-.7,5)])assert.ok(bounds.containsPoint(p),'all plaza edges have solid support');
+  for(const name of ['reference-red-brick-entrance-hall','reference-four-column-stone-portico','reference-octagonal-banyan-planter','entrance-quay-retaining-walls'])assert.ok(city.root.getObjectByName(name));
+  assert.equal(cityWalkable(-6.55,6),false);assert.equal(cityWalkable(4,1.1),false);
+  const route=findRoute({x:-6.5,z:9.5},{x:0,z:-12},cityWalkable,{bound:44,step:.45});assert.ok(route?.length);
+  let previous={x:-6.5,z:9.5};for(const point of route){assert.ok(clearSegment(previous,point,cityWalkable));previous=point;}
+  city.water.dispose();
 });
 
 test('the hoodie companion has articulated 3D limbs and a stable ground contact',()=>{
@@ -93,7 +106,7 @@ test('a character and its kitten walk onto the bridge without entering the estua
 test('camera presets and following do not teleport either actor or replace their route',()=>{
   const actors=new CityCompanions(),world=Object.assign(Object.create(CityWorld.prototype),{actors,camera:new T.PerspectiveCamera(),controls:{target:new T.Vector3(),update(){}},onView(){}});
   actors.goTo({x:0,z:-10});const route=actors.route,person=actors.human.position.clone(),cat=actors.cat.position.clone();
-  for(const view of ['entrance','bridge','left','right']){world.setView(view);assert.equal(actors.route,route);assert.ok(actors.human.position.equals(person));assert.ok(actors.cat.position.equals(cat));}
+  for(const view of ['entrance','courtyard','bridge','left','right']){world.setView(view);assert.equal(actors.route,route);assert.ok(actors.human.position.equals(person));assert.ok(actors.cat.position.equals(cat));}
   world.focusPerson();assert.ok(world.follow);assert.ok(actors.human.position.equals(person));assert.ok(actors.cat.position.equals(cat));
 });
 
