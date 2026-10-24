@@ -19,7 +19,7 @@
 .city-experience{position:absolute;inset:0;isolation:isolate;overflow:hidden;background:#d7ddc4}
 .city-world-host,.city-3d-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .city-3d-canvas{touch-action:none;outline:none;cursor:grab}.city-3d-canvas:active{cursor:grabbing}.city-3d-canvas:focus-visible{outline:2px solid #6e8d5d;outline-offset:-3px}
-.city-experience:after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,#f0f2dfc7 0%,#f0f2df35 13%,transparent 23%,transparent 76%,#d1dbc338 100%)}
+.city-experience:after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,#dce5df9c 0%,#dce5df12 12%,transparent 22%,transparent 78%,#142d2b18 100%),radial-gradient(ellipse at 50% 44%,transparent 40%,#152d2c1a 100%)}
 .city-top{position:absolute;z-index:3;top:max(21px,env(safe-area-inset-top));left:18px;right:18px;display:grid;grid-template-columns:44px 1fr 44px;gap:8px;align-items:start}
 .city-top>button{height:44px;min-width:44px;display:grid;place-items:center;border-radius:50%;border:1px solid #fff9;background:#f3f4e4ad;backdrop-filter:blur(10px);color:#415b40}
 .city-top>button svg{width:19px;height:19px}
@@ -49,5 +49,10 @@
 .city-scene-status{position:absolute;z-index:5;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;background:#e5ead9e8;backdrop-filter:blur(10px);padding:35px;color:#526747;text-align:center}
 .city-scene-status p{font-family:'Songti SC','STSong',serif;font-size:19px;line-height:1.8;letter-spacing:2px;margin:0}.city-scene-status button{min-height:44px;border:1px solid #80967180;border-radius:23px;padding:0 24px;font-size:12px}
 .city-overlay button:focus-visible{outline:2px solid #af8f52;outline-offset:3px}
+.city-tools .city-quiet-toggle{font-family:'Songti SC','STSong',serif;font-size:12px;letter-spacing:1px}
+.city-dock,.city-view-switcher,.city-tools button,.city-caption,.city-controls-help{transition:opacity .65s ease,visibility .65s}
+.city-experience[data-quiet=true] .city-dock,.city-experience[data-quiet=true] .city-view-switcher,.city-experience[data-quiet=true] .city-caption,.city-experience[data-quiet=true] .city-controls-help,.city-experience[data-quiet=true] .city-tools button:not(.city-quiet-toggle){opacity:0;visibility:hidden;pointer-events:none}
+.city-experience[data-quiet=true] .city-quiet-toggle{background:#e0e7df80;border-color:#e9f0e740;color:#344f48}
+@media(prefers-reduced-motion:reduce){.city-dock,.city-view-switcher,.city-tools button,.city-caption,.city-controls-help{transition:none}}
 @media(max-width:360px){.city-title strong{font-size:20px;letter-spacing:2px}.city-view-switcher button{padding:0 12px;font-size:11px}.city-dock{padding:12px 11px 10px}.city-sound-row{gap:4px}.city-sound-row button{padding:0 8px}.city-caption{font-size:12px}}
 @media(max-height:700px){.city-caption{top:86px;font-size:12px}.city-top{top:16px}.city-title strong{font-size:20px}.city-title small{margin-top:4px}.city-view-switcher{bottom:195px}.city-controls-help{top:130px;bottom:auto;font-size:9px;color:#5b6d4b;text-shadow:0 1px 5px #f4f3e5}.city-dock{bottom:10px;padding:11px 12px 9px}.city-message{margin-bottom:7px}.city-dock-actions button{min-height:42px}.city-sound-row{margin-top:6px}}

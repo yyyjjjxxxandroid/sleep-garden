@@ -4,6 +4,16 @@
   const city={world:null,loading:null,playing:false,accumulated:0,started:0,timer:null,sound:null,water:true,wind:true,version:0,locationTimer:null};
   const views={entrance:['潮汐快照 · 桥头树荫','先在桥头站一会儿，让风慢慢经过。'],bridge:['石板路 · 桥上漫游','慢慢走，不需要急着抵达哪里。'],left:['向左看 · 潮水与远岸','水从桥下经过，风也轻轻经过你。'],right:['向右看 · 石桥与水面','把目光放远一点，把呼吸放慢一点。'],follow:['跟随人物 · 一起慢慢走','小猫会在你身旁，陪你走过这一段石板路。'],free:['自由视角 · 桥头漫游','拖动看看四周，点一下石板路，让我们走过去。']};
   function message(text){$('cityMessage').textContent=text;}
+  const quietButton=document.createElement('button');quietButton.type='button';quietButton.className='city-quiet-toggle';quietButton.textContent='静赏';quietButton.title='静赏 · 收起面板';quietButton.setAttribute('aria-label','静赏，收起操作面板');quietButton.setAttribute('aria-pressed','false');
+  experience.querySelector('.city-tools').append(quietButton);
+  function setQuiet(quiet){
+    experience.dataset.quiet=String(quiet);quietButton.setAttribute('aria-pressed',String(quiet));quietButton.textContent=quiet?'展开':'静赏';
+    quietButton.setAttribute('aria-label',quiet?'展开操作面板':'静赏，收起操作面板');quietButton.title=quiet?'展开操作面板':'静赏 · 收起面板';
+    // Hidden controls must also leave the keyboard and accessibility navigation.
+    for(const selector of ['.city-dock','.city-view-switcher'])experience.querySelector(selector).inert=quiet;
+    for(const button of experience.querySelectorAll('.city-tools button:not(.city-quiet-toggle)'))button.inert=quiet;
+  }
+  quietButton.addEventListener('click',()=>setQuiet(experience.dataset.quiet!=='true'));
   function viewChanged(view){
     const meta=views[view]||views.free;experience.dataset.view=view;$('cityViewTitle').textContent=meta[0];$('cityCaption').textContent=meta[1];
     document.querySelectorAll('[data-city-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.cityView===view)));
@@ -48,7 +58,7 @@
       updateMix();if(!started)message('当前浏览器未开启声音，仍可带着小猫漫游。');
     }catch(error){if(version===city.version)message('声音暂时没能开启，仍可带着小猫漫游。');}
   }
-  function reset(){pause();city.accumulated=0;city.world?.reset();updateTime();$('cityPlayButton').textContent='开始陪伴';message('一段石板路，一只小猫，和此刻的你。');}
+  function reset(){setQuiet(false);pause();city.accumulated=0;city.world?.reset();updateTime();$('cityPlayButton').textContent='开始陪伴';message('一段石板路，一只小猫，和此刻的你。');}
   function open(){
     reset();overlay.hidden=false;location.hidden=false;experience.hidden=true;app.classList.add('city-open');
     city.world?.deactivate();clearTimeout(city.locationTimer);$('cityLocateButton').disabled=false;$('cityLocateButton').textContent='模拟定位泉州';
@@ -74,7 +84,7 @@
   $('cityFinishButton').addEventListener('click',()=>{pause();message('这一段风景先留在这里。你还可以继续走走。');$('cityPlayButton').textContent='继续陪伴';});
   for(const [id,key,label] of [['cityWaterButton','water','水声'],['cityWindButton','wind','风声']])$(id).addEventListener('click',()=>{city[key]=!city[key];$(id).dataset.on=String(city[key]);$(id).setAttribute('aria-pressed',String(city[key]));$(id).textContent=label+' · '+(city[key]?'开':'关');updateMix();});
   $('cityRetryButton').addEventListener('click',()=>{city.world?.dispose();city.world=null;enter();});
-  overlay.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();close();}});
+  overlay.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();if(experience.dataset.quiet==='true'){setQuiet(false);quietButton.focus();}else close();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&city.playing){pause();message('回来后，再继续听这段潮水。');}});
   window.addEventListener('pagehide',()=>{pause();city.world?.dispose();city.world=null;city.sound?.close();city.sound=null;});
   window.CityPrototype={open,close,get world(){return city.world;}};

@@ -55,11 +55,11 @@ const shader={
     // Short, stretched noise gradients break up wind waves into uneven facets.
     // Independent scales and drifting domains avoid long coherent sine stripes.
     vec2 waveSlope(vec2 p,float t){
-      vec2 drift=vec2(t*.07,-t*.10);
+      vec2 drift=vec2(t*.031,-t*.043);
       vec2 q=p+vec2(noise(p*.62+drift*.23),noise(p*.73-drift*.31))*.12;
       vec2 facets=noiseGradient(q*vec2(2.4,9.1)+drift)*vec2(.075,.24);
       facets+=noiseGradient(q*vec2(5.7,16.3)-drift*1.6+12.3)*vec2(.055,.17);
-      facets+=noiseGradient(p*vec2(12.8,37.2)+drift*2.1+28.7)*vec2(.03,.09);
+      facets+=noiseGradient(p*vec2(12.8,37.2)+drift*2.1+28.7)*vec2(.014,.04);
       return facets;
     }
     void main(){
@@ -68,10 +68,13 @@ const shader={
       float distanceToEye=length(cameraPosition-worldP);
       // Fade the smallest wavelets before their projected size causes aliasing.
       float detail=1.-smoothstep(28.,85.,distanceToEye);
-      vec2 slope=waveSlope(p,time);
-      slope+=waveSlope(p*2.17+vec2(7.2,11.3),time*.73)*(.14*detail);
+      // Sheltered stretches alternate with small wind-brushed patches. Broad
+      // quiet reflections are the subject in references 05/06, not sparkles.
+      float breeze=smoothstep(.30,.74,noise(p*.11+vec2(time*.004,-time*.003)));
+      vec2 slope=waveSlope(p,time)*mix(.24,.60,breeze);
+      slope+=waveSlope(p*2.17+vec2(7.2,11.3),time*.73)*(.045*detail);
       vec3 normal=normalize(vec3(-slope.x,1.,-slope.y));
-      float fresnel=.045+.60*pow(1.-max(0.,dot(normal,view)),3.);
+      float fresnel=.09+.67*pow(1.-max(0.,dot(normal,view)),3.);
       vec2 uv=reflectionCoord.xy/reflectionCoord.w;
       vec2 distortion=slope*(.003+min(.035,.25/max(3.,distanceToEye)));
       uv=clamp(uv+distortion,vec2(.002),vec2(.998));
@@ -79,22 +82,22 @@ const shader={
       // sky. It is tone mapped only once, when mixed with the water body.
       vec3 reflected=texture2D(tDiffuse,uv).rgb;
       float patches=noise(p*.24+vec2(time*.012,-time*.009));
-      vec3 body=color*mix(.65,1.08,patches);
+      vec3 body=color*mix(.62,.94,patches);
       float beneathBridge=(1.-smoothstep(1.8,3.7,abs(p.x)))
         *smoothstep(-43.,-39.,p.y)*(1.-smoothstep(-4.,-1.,p.y));
       float byPier=(1.-smoothstep(2.15,4.3,abs(p.x)))
         *(1.-smoothstep(.45,1.6,abs(mod(p.y+6.+3.9,7.8)-3.9)))
         *smoothstep(-41.,-37.,p.y)*(1.-smoothstep(-4.,-1.,p.y));
       body*=1.-beneathBridge*.42-byPier*.16;
-      vec3 water=mix(body,reflected*.64,fresnel);
+      vec3 water=mix(body,reflected*.58,fresnel);
       // A broad, faint sky sheen plus small broken highlights, as seen on
       // overcast estuary water. Avoid the white, opaque sheet of the old shader.
       vec3 halfSky=normalize(view+vec3(-.18,.85,.38));
       float skyGlint=pow(max(0.,dot(normal,halfSky)),34.);
       float sunGlint=pow(max(0.,dot(normal,normalize(view+sunDirection))),110.);
       float broken=.30+.70*noise(p*vec2(4.7,8.3)+vec2(-time*.12,time*.08));
-      water+=vec3(.26,.31,.29)*skyGlint*broken*.40*(1.-beneathBridge*.70);
-      water+=vec3(.70,.72,.60)*sunGlint*.16;
+      water+=vec3(.26,.31,.29)*skyGlint*broken*.19*(1.-beneathBridge*.70);
+      water+=vec3(.70,.72,.60)*sunGlint*.045;
       // Alternating bright and dark facets are directional and change with
       // the orbit camera, so water still reads correctly in both side views.
       water*=.78+.32*max(0.,dot(normal,normalize(vec3(-.25,1.,.6))));

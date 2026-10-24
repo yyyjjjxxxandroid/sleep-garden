@@ -47,6 +47,16 @@ test('tidal water updates its waves and owns a disposable HDR scene reflection',
   assert.equal(disposed,1,'exiting or rebuilding must release the water reflection once');
 });
 
+test('moored boats retain their local meshes when static stonework is batched',()=>{
+  const scenery=buildCityScene({text:false}),scene=new T.Scene();scene.add(scenery.root);
+  const world=Object.assign(Object.create(CityWorld.prototype),{scenery,scene});world.batchStonework();
+  const boat=scenery.root.getObjectByName('moored-estuary-fishing-boats').children[0];
+  boat.traverse(o=>{if(o.isMesh)assert.ok(o.visible,'rocking hull and planks must not freeze into a static batch');});
+  scenery.update(2);const y=boat.position.y;scenery.update(8);
+  assert.notEqual(boat.position.y,y);assert.ok(Math.abs(boat.rotation.z)<.01,'moored motion remains small');
+  scenery.water.dispose();
+});
+
 test('city routes avoid the monument, tree roots, river and bridge railings',()=>{
   for(const p of [[-4.25,2.2],[5.4,1.1],[3.35,-1],[8,5],[4,-15],[2.1,-20],[0,-41]])assert.equal(cityWalkable(...p),false,p.join(','));
   for(const p of [[0,6],[0,-3.5],[0,-4],[0,-20],[1.7,-30]])assert.ok(cityWalkable(...p),p.join(','));

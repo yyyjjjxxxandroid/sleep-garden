@@ -31,7 +31,7 @@ export function buildCityScene({text=true}={}){
   const green=new T.MeshStandardMaterial({color:'#556653',roughness:1});
   const bark=stoneMaterial('#625f51');
   const wornBlocks=Array.from({length:6},(_,i)=>createWornStoneGeometry(173+i*319));let blockIndex=0;
-  const walkSurfaces=[],trees=[];
+  const walkSurfaces=[],trees=[],mooredBoats=[];
   function mesh(g,m,x=0,y=0,z=0,parent=root){const o=new T.Mesh(g,m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;parent.add(o);return o}
   const box=(w,h,d,m,x,y,z,parent=root)=>{
     if(!m.userData.cityStone)return mesh(new T.BoxGeometry(w,h,d),m,x,y,z,parent);
@@ -245,12 +245,12 @@ export function buildCityScene({text=true}={}){
   for(let i=0;i<95;i++){
     const side=i%2?1:-1;dummy.position.set(side*(40+random()*22),-1.15,-22-random()*37);dummy.rotation.set(random()*2,random()*6,random());dummy.scale.set(.12+random()*.45,.06+random()*.18,.14+random()*.4);dummy.updateMatrix();rocks.setMatrixAt(i,dummy.matrix);
   }rocks.receiveShadow=true;root.add(rocks);
-  const distant=new T.MeshStandardMaterial({color:'#a7b3b5',roughness:1});
+  const distant=new T.MeshStandardMaterial({color:'#829b9c',roughness:1});
   const buildings=new T.InstancedMesh(new T.BoxGeometry(1,1,1),distant,36);buildings.name='soft-quanzhou-skyline';
   for(let i=0;i<36;i++){
-    const h=2.0+random()*6;dummy.position.set(-55+i*3.2,h/2-1,-81-random()*8);dummy.rotation.set(0,0,0);dummy.scale.set(1.5+random()*1.1,h,1.4+random());dummy.updateMatrix();buildings.setMatrixAt(i,dummy.matrix);buildings.setColorAt(i,new T.Color('#b5bdbe').lerp(new T.Color('#87999e'),random()));
+    const h=2.0+random()*5;dummy.position.set(-63+i*3.6,h/2-1,-106-random()*15);dummy.rotation.set(0,0,0);dummy.scale.set(1.5+random()*1.1,h,1.4+random());dummy.updateMatrix();buildings.setMatrixAt(i,dummy.matrix);buildings.setColorAt(i,new T.Color('#abb3ad').lerp(new T.Color('#768f90'),random()));
   }root.add(buildings);
-  const skylineWindows=new T.InstancedMesh(new T.PlaneGeometry(1,1),new T.MeshStandardMaterial({color:'#627b81',roughness:1}),36*24);
+  const skylineWindows=new T.InstancedMesh(new T.PlaneGeometry(1,1),new T.MeshStandardMaterial({color:'#778f90',roughness:1}),36*24);
   let windowIndex=0;
   for(let i=0;i<36;i++){
     buildings.getMatrixAt(i,dummy.matrix);dummy.matrix.decompose(dummy.position,dummy.quaternion,dummy.scale);
@@ -278,10 +278,17 @@ export function buildCityScene({text=true}={}){
     dummy.position.set(x,-.35+Math.sin(cluster*2.31)*.45+(i%6)*.21,z);dummy.rotation.set(random(),random()*6,random());dummy.scale.set(r*1.4,r*.8,r);dummy.updateMatrix();shoreTrees.setMatrixAt(i,dummy.matrix);
     shoreTrees.setColorAt(i,new T.Color('#3b5147').lerp(new T.Color('#809477'),random()));
   }shoreTrees.name='layered-waterfront-trees';root.add(shoreTrees);
+  // Small reeds at the distant shore break the straight water/land edge while
+  // leaving the near water open. Their ochre echoes the margins in photo 06.
+  const reeds=new T.InstancedMesh(new T.IcosahedronGeometry(1,1),new T.MeshStandardMaterial({color:'#72745a',roughness:1}),90);
+  for(let i=0;i<90;i++){
+    dummy.position.set(-65+random()*130,-1.13+random()*.08,-62-random()*3.4);
+    dummy.rotation.set(0,random()*6,0);dummy.scale.set(.7+random()*1.1,.12+random()*.13,.45+random()*.7);dummy.updateMatrix();reeds.setMatrixAt(i,dummy.matrix);
+  }reeds.name='muted-distant-reed-margin';root.add(reeds);
   const boats=new T.Group();boats.name='moored-estuary-fishing-boats';root.add(boats);
-  const boatWood=new T.MeshStandardMaterial({color:'#736958',roughness:.9}),boatPaint=new T.MeshStandardMaterial({color:'#536e72',roughness:.78});
+  const boatWood=stoneMaterial('#877c69'),boatPaint=stoneMaterial('#a5afa0');
   for(const [x,z,angle] of [[-13,-17,.8],[17,-26,-.3],[-25,-40,.2],[12,-52,-.9]]){
-    const boat=new T.Group();boat.position.set(x,-1.16,z);boat.rotation.y=angle;boats.add(boat);
+    const boat=new T.Group();boat.position.set(x,-1.16,z);boat.rotation.y=angle;boat.userData.cityAnimated=true;boats.add(boat);mooredBoats.push(boat);
     const outline=[[-.43,-.8],[-.24,-1.35],[.24,-1.35],[.43,-.8],[.43,.8],[0,1.5],[-.43,.8]],hull=new T.Shape(outline.map(p=>new T.Vector2(...p)));
     const g=new T.ExtrudeGeometry(hull,{depth:.22,bevelEnabled:true,bevelSize:.07,bevelThickness:.07,bevelSegments:1,steps:1});g.rotateX(-Math.PI/2);mesh(g,boatPaint,0,-.07,0,boat);
     box(.65,.055,1.84,boatWood,0,.21,-.05,boat);
@@ -294,20 +301,27 @@ export function buildCityScene({text=true}={}){
     mesh(new T.TubeGeometry(rope,10,.012,4,false),boatWood,0,0,0,boat);
   }
   // A small Fujian roof silhouette across the estuary, away from the route.
-  const pavilion=new T.Group();pavilion.position.set(-15,-.6,-50);root.add(pavilion);
+  const pavilion=new T.Group();pavilion.position.set(-21,-.6,-67);root.add(pavilion);
   for(const x of [-1,1])for(const z of [-1,1])box(.18,2.1,.18,stone,x,1.05,z,pavilion);
   const roof=mesh(new T.ConeGeometry(2.05,.90,4),new T.MeshStandardMaterial({color:'#a07d64',roughness:1}),0,2.45,0,pavilion);roof.rotation.y=Math.PI/4;roof.scale.z=1.2;
 
   const water=createCityWater();root.add(water);
-  const skyMaterial=new T.ShaderMaterial({side:T.BackSide,depthWrite:false,depthTest:false,uniforms:{},vertexShader:'',fragmentShader:`
-    varying vec3 d;
+  const skyTime={value:0};
+  const skyMaterial=new T.ShaderMaterial({side:T.BackSide,depthWrite:false,depthTest:false,uniforms:{time:skyTime},vertexShader:'',fragmentShader:`
+    varying vec3 d;uniform float time;
     float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
     float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+1.),f.x),f.y);}
     void main(){vec3 direction=normalize(d);float h=clamp(direction.y,0.,1.);
-      vec3 c=mix(vec3(.64,.73,.76),vec3(.27,.40,.49),pow(h,.65));
-      vec2 p=direction.xz/max(.15,direction.y+.23)*3.;float clouds=noise(p)*.55+noise(p*2.13)*.28+noise(p*4.3)*.17;
-      c=mix(c,vec3(.84,.86,.85),smoothstep(.29,.76,clouds)*.77);
+      vec3 c=mix(vec3(.40,.51,.52),vec3(.12,.23,.28),pow(h,.58));
+      vec2 p=direction.xz/max(.15,direction.y+.23)*2.3+vec2(time*.0012,-time*.0006);
+      float clouds=noise(p)*.48+noise(p*2.13)*.27+noise(p*4.3)*.16+noise(p*8.7)*.09;
+      c=mix(c,vec3(.64,.68,.65),smoothstep(.28,.80,clouds)*.68);
+      float opening=pow(max(0.,dot(direction,normalize(vec3(-.65,.28,.42)))),12.);
+      c+=vec3(.12,.10,.065)*opening;
       gl_FragColor=vec4(c,1.);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>}`});
   const sky=new T.Mesh(new T.SphereGeometry(100,32,16),skyMaterial);configureSkyBackground(sky);root.add(sky);
-  return {root,walkSurfaces,water,stele,plaque,trees,update(time){water.material.uniforms.time.value=time;foliageTime.value=time;}};
+  return {root,walkSurfaces,water,stele,plaque,trees,update(time){
+    water.material.uniforms.time.value=time;foliageTime.value=time;skyTime.value=time;
+    mooredBoats.forEach((boat,i)=>{boat.position.y=-1.16+Math.sin(time*.40+i*1.7)*.013;boat.rotation.z=Math.sin(time*.32+i)*.005;boat.rotation.x=Math.cos(time*.28+i)*.004;});
+  }};
 }
