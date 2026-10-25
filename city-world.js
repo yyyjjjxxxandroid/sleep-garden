@@ -133,8 +133,8 @@ export class CityWorld {
     this.reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches||false;
     // Keep stone close and tangible; let the town recede into estuary air.
     this.scene=new T.Scene();this.scene.fog=new T.Fog('#8eaaa9',26,163);
-    if(city==='guangzhou'){this.scene.fog=new T.Fog('#a7b1a6',48,235);this.scene.background=new T.Color('#c2c7bb');}
-    if(city==='shenzhen'){this.scene.fog=new T.Fog('#aab5aa',48,240);this.scene.background=new T.Color('#c4cabd');}
+    if(city==='guangzhou'){this.scene.fog=new T.Fog('#a7b1a6',52,188);this.scene.background=new T.Color('#c2c7bb');}
+    if(city==='shenzhen'){this.scene.fog=new T.Fog('#aab5aa',52,192);this.scene.background=new T.Color('#c4cabd');}
     this.camera=new T.PerspectiveCamera(city==='quanzhou'?48:CITY_WATERFRONT_FOV,1,.1,220);
     this.renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
@@ -174,6 +174,7 @@ export class CityWorld {
     const p=this.atmosphere,c=this.atmosphereColors,sky=this.scenery.root.getObjectByName('infinite-garden-sky');
     sky.material.uniforms.top.value.lerp(c.top,blend);sky.material.uniforms.horizon.value.lerp(c.horizon,blend);
     this.scene.fog.color.lerp(c.fog,blend);this.scenery.water.material.uniforms.color.value.lerp(c.water,blend);
+    this.scene.fog.near=T.MathUtils.lerp(this.scene.fog.near,p.fogNear,blend);this.scene.fog.far=T.MathUtils.lerp(this.scene.fog.far,p.fogFar,blend);
     this.hemi.color.lerp(c.sky,blend);this.hemi.groundColor.lerp(c.ground,blend);this.sun.color.lerp(c.sun,blend);
     this.hemi.intensity=T.MathUtils.lerp(this.hemi.intensity,p.hemi,blend);this.sun.intensity=T.MathUtils.lerp(this.sun.intensity,p.key,blend);
     this.renderer.toneMappingExposure=T.MathUtils.lerp(this.renderer.toneMappingExposure,p.exposure,blend);
@@ -181,7 +182,7 @@ export class CityWorld {
   listen(target,type,fn,options){target.addEventListener(type,fn,options);this.listeners.push(()=>target.removeEventListener(type,fn,options));}
   hideProceduralNature(){
     if(this.cityId==='quanzhou')return;
-    const hidden=new Set(['pearl-river-banyan','pearl-river-procedural-shore-trees','shenzhen-procedural-shore-trees']);
+    const hidden=new Set(['pearl-river-banyan']);
     this.scenery.root.traverse(object=>{if(hidden.has(object.name))object.traverse(child=>{child.visible=false;});});
   }
   async installDetailedNature(){
@@ -190,26 +191,17 @@ export class CityWorld {
       const templates=await loadCityNatureTemplates();if(this.disposed||!templates?.size)return;
       const group=new T.Group();group.name=`${this.cityId}-textured-nature`;this.scenery.root.add(group);
       const place=(name,x,z,height,angle=0,width=1,y=0)=>{const template=templates.get(name);if(!template)return;const asset=detailedNatureAsset(template,height,width);asset.name=`${this.cityId}-${name.toLowerCase()}`;asset.position.set(x,y,z);asset.rotation.y=angle;group.add(asset);};
-      const trees=this.cityId==='guangzhou'?
-        [['CommonTree_1',17.5,6.5,6.4,.35,.94],['CommonTree_3',16.8,-2.2,7.0,2.1,.92],['CommonTree_2',12.4,-13.8,6.4,1.15,1.02],['CommonTree_5',17.1,-24.5,5.8,2.75,.96],['CommonTree_3',12.0,-35,5.2,.8,.88]]:
-        []; // Native mangroves retain their branching roots and low canopy.
-      trees.forEach(args=>place(...args));
-      const shoreTrees=Array.from({length:12},(_,index)=>this.cityId==='guangzhou'?
-        [['CommonTree_1','CommonTree_3','CommonTree_2','CommonTree_5'][index%4],-50+index*9.1,-53.3-(index%3)*.72,3.6+(index%4)*.34,index*.83,.72+(index%3)*.08,.14]:
-        [['CommonTree_3','CommonTree_1','CommonTree_5','CommonTree_2'][index%4],-50+index*9.1,-82.5-(index%3)*.74,3.5+(index%4)*.32,index*.79,.70+(index%3)*.08,.14]);
-      shoreTrees.forEach(args=>place(...args));
-      const undergrowth=this.cityId==='guangzhou'?
-        [[16.7,6.9,.82],[16.0,-1.6,.76],[11.6,-13.2,.70],[16.3,-23.9,.66],[11.2,-34.4,.62],[14.5,-8.2,.58],[14.8,-19.1,.54],[14.4,2.3,.58]]:
-        [[8.6,4.8,.82],[12.45,-4.15,.76],[9.05,-16.4,.70],[13.05,-29.4,.66],[9.3,-7.8,.62],[12.8,-17.5,.58],[9.1,-27.5,.56],[12.4,6.8,.58]];
-      undergrowth.forEach(([x,z,h],index)=>{
-        const side=Math.sign(x)||1,angle=index*1.7;
-        place('Bush_Common_Flowers',x,z,h,angle,.92);
-        place(index%2?'Grass_Wispy_Tall':'Grass_Common_Tall',x-side*.72,z+.5,h*.78,index*.9,.82);
-        place(index%2?'Flower_3_Group':'Flower_4_Group',x+side*.48,z-.48,h*.58,-angle,.86);
-        place(index%2?'Rock_Medium_3':'Rock_Medium_1',x-side*.28,z-.78,h*.48,angle*.6,1.08);
-      });
-      const rocks=this.cityId==='guangzhou'?[[-8.05,-2,.5],[-7.85,-25,.42],[7.95,-14,.45]]:[[-8.4,-5,.55],[8.6,-14,.48],[-9.2,-23,.6],[8.8,-32,.46]];
+      // Guangzhou and Shenzhen use their own low, continuous waterfront
+      // planting. Generic trees and flower clusters read as isolated props here.
+      const rocks=[];
       rocks.forEach(([x,z,h],index)=>place(index%2?'Rock_Medium_3':'Rock_Medium_1',x,z,h,index*1.13,1.15));
+      if(this.cityId==='shenzhen'){
+        for(let i=0;i<12;i++){
+          const z=6-i*3.8,x=9.28+(i%3)*.18;
+          place(i%2?'Grass_Wispy_Tall':'Grass_Common_Tall',x,z,.42+(i%4)*.07,i*.83,.72+(i%3)*.08);
+          if(i%3===0)place('Grass_Common_Tall',x-.26,z+.62,.30,i*.47,.68);
+        }
+      }
       this.canvas.dataset.nature='textured-quaternius';
     }catch(error){console.warn('Detailed city nature could not be loaded.',error);this.canvas.dataset.nature='procedural-fallback';}
   }

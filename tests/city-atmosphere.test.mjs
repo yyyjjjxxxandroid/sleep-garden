@@ -7,7 +7,7 @@ import {CityWorld} from '../city-world.js';
 import {CITY_VIEWS,CITY_WATERFRONT_FOV} from '../city-views.js';
 
 test('waterfront entrance cameras contain complete landmarks and both companions on wide and phone screens',()=>{
-  for(const [id,build,landmark] of [['guangzhou',buildGuangzhouScene,'canton-tower-volumetric-landmark'],['shenzhen',buildShenzhenScene,'pingan-finance-centre-landmark']]){
+  for(const [id,build,landmark] of [['guangzhou',buildGuangzhouScene,'canton-tower-volumetric-landmark'],['shenzhen',buildShenzhenScene,'shenzhen-spring-bamboo-landmark']]){
     const scenery=build(),bounds=new T.Box3().setFromObject(scenery.root.getObjectByName(landmark));
     for(const aspect of [1100/850,390/844,320/568]){
       const camera=new T.PerspectiveCamera(CITY_WATERFRONT_FOV,aspect,.1,220),preset=CITY_VIEWS[id].entrance;
@@ -29,6 +29,6 @@ test('switching atmosphere blends sky, fog, water and light together without mov
   const middle=scenery.water.material.uniforms.color.value.clone();assert.ok(!before.equals(middle));
   world.updateAtmosphere(1);assert.ok(!middle.equals(scenery.water.material.uniforms.color.value));
   const sky=scenery.root.getObjectByName('infinite-garden-sky');assert.equal(sky.material.depthWrite,false);assert.equal(sky.frustumCulled,false);
-  world.hideProceduralNature();assert.equal(scenery.root.getObjectByName('shenzhen-bay-mangrove').visible,true);
+  world.hideProceduralNature();assert.equal(scenery.root.getObjectByName('shenzhen-spring-bamboo-landmark').visible,true);
   scenery.water.dispose();
 });
