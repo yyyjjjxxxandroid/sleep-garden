@@ -102,6 +102,8 @@ test('scratching paws lift over the board edge, stay above ribs and retract smoo
     now=frame/60;cat.animate(now,false,0,true,1/60,false,0,{action:'scratch',time:now,duration:7,board});root.updateMatrixWorld(true);
     for(const side of [-1,1]){
       const foot=root.getObjectByName(`paw-front-${side}`),p=foot.getWorldPosition(new T.Vector3());
+      assert.ok(foot.position.length()<=.370001,'the wrist stays within the short leg reach');
+      assert.ok(Math.abs(foot.getWorldQuaternion(new T.Quaternion()).dot(root.getWorldQuaternion(new T.Quaternion())))>.999,'paw keeps the cat heading instead of twisting 180 degrees');
       if(previous.has(side))maxStep=Math.max(maxStep,p.distanceTo(previous.get(side)));previous.set(side,p);
       // Expanded board bounds include the entire paw (not just its centre).
       if(Math.abs(p.x-board.x)<.425+.11&&p.z-board.z<.725+.13){
@@ -114,9 +116,32 @@ test('scratching paws lift over the board edge, stay above ribs and retract smoo
   assert.ok(contact>400,'paws actually reach the board');assert.ok(maxStep<.025,`continuous paw motion ${maxStep}`);
 });
 
+test('box approach uses its open doorway and visible leg surfaces clear walls and floor',async()=>{
+  globalThis.window??={};await import('../story-world.js');
+  let now=0;const actor=createStoryCat({clock:()=>now,random:()=>.4});actor.root.scale.setScalar(.609375);
+  const w=Object.assign(Object.create(window.GardenWorld.prototype),{scene:new T.Scene(),quality:'mid',walkObstacles:[],plots:[],canvas:{dataset:{}},state:{reduced:false,mode:'session'},cat:actor.root,storyCat:actor,place:()=>new T.Group(),onExplore(){}});
+  w.scene.add(actor.root);actor.root.position.set(8,w.groundHeight(8,8),8);w.companion=new GardenCompanion(w);
+  const care=Object.create(PetCare.prototype);Object.assign(care,{w,props:{},elapsed:0,services:{},data:{care:0},greeted:true,launcher:{},overlay:{hidden:true}});care.buildProps();
+  assert.equal(care.command('box',true),true);const b=care.props.box.position;
+  assert.ok(care.job.route.some(p=>Math.abs(p.x-b.x)<.001&&Math.abs(p.z-b.z-1.45)<.001),'route includes a straight doorway approach');
+  const surfaces=[];actor.root.traverse(o=>{if(o.isSkinnedMesh&&o.name.startsWith('upper-')&&o.name.endsWith('-surface'))surfaces.push(o)});
+  let support=0,seenInside=false;
+  for(let f=0;f<420;f++){
+    now+=1/60;care.update(1/60);w.companion.update(1/60,!!care.pose);support=T.MathUtils.damp(support,care.supportHeight,8,1/60);actor.root.position.y=w.groundHeight(actor.root.position.x,actor.root.position.z)+support;
+    actor.animate(now,w.catMoving,0,!w.catMoving,1/60,false,now*5,care.pose||{action:'walk',time:0});actor.root.updateMatrixWorld(true);
+    if(f%4)continue;
+    for(const mesh of surfaces){const p=new T.Vector3();for(let i=0;i<mesh.geometry.attributes.position.count;i+=5){mesh.getVertexPosition(i,p).applyMatrix4(mesh.matrixWorld).sub(b);
+      if(p.y<.57&&p.y>.08&&p.z>-.7775&&p.z<.7775)assert.ok(Math.abs(p.x)<.6925||Math.abs(p.x)>.7475,'leg must not intersect a side wall');
+      if(p.y<.57&&p.y>.08&&Math.abs(p.x)<.725)assert.ok(p.z>-.7225||p.z<-.7775,'leg must not intersect back wall');
+      if(Math.abs(p.x)<.58&&Math.abs(p.z)<.60){seenInside=true;assert.ok(p.y>=.075,`leg remains above box floor: f=${f} y=${p.y} root=${actor.root.position.y-b.y} support=${support} ${mesh.name}`)}
+    }}
+  }
+  assert.ok(seenInside);assert.equal(care.job.stage,'acting');assert.ok(Math.abs(Math.abs(actor.root.rotation.y)-Math.PI)<.04,'no in-box 180 degree turn');
+});
+
 test('bedding support persists after completion while the scratch station remains on ground',()=>{
   const care=Object.create(PetCare.prototype);care.props={box:{position:new T.Vector3(0,0,0)},nook:{position:new T.Vector3(10,0,0)}};care.w={cat:new T.Group()};
-  care.job=null;assert.equal(care.supportHeight,.20);care.w.cat.position.x=10;assert.equal(care.supportHeight,.34);
+  care.job=null;assert.equal(care.supportHeight,.12);care.w.cat.position.x=10;assert.equal(care.supportHeight,.34);
   care.w.cat.position.set(5,0,5);care.job={kind:'scratch',point:{x:5,z:5}};assert.equal(care.supportHeight,0);
 });
 

@@ -4,6 +4,7 @@ import {capturePetPortrait,captureObjectPortrait,PORTRAIT_VERSION} from './pet-p
 import {linen,softBoxGeometry,ceramicBowlGeometry,buildTailoredClothes} from './pet-craft.js';
 import {DEMO_PHOTOS} from './pet-photo-pose.js';
 import {PET_LAYOUT,overlapsPetProp} from './pet-layout.mjs';
+import {findRoute} from './garden-navigation.mjs';
 
 const names={meal:'猫粮',treat:'小鱼零食',water:'清水',box:'纸箱',scratch:'抓板',cushion:'软垫',pet:'摸摸头',chin:'挠下巴',ball:'滚球'};
 const outfits={collar:[['none','不佩戴'],['sage','鼠尾草项圈'],['rose','玫瑰项圈']],scarf:[['none','不佩戴'],['cream','奶油围巾'],['blue','雾蓝围巾']],head:[['none','不佩戴'],['flower','小雏菊'],['bow','蝴蝶结'],['rose','小玫瑰']]};
@@ -83,11 +84,12 @@ export class PetCare{
       this.mesh(box,softBoxGeometry(1.45,.08,1.55,.025),cardboard,[0,.04,0]);
       for(const s of [-1,1])this.mesh(box,new T.BoxGeometry(.055,.54,1.55),cardboard,[s*.72,.30,0]);
       this.mesh(box,new T.BoxGeometry(1.45,.54,.055),cardboard,[0,.30,-.75]);
-      this.mesh(box,new T.BoxGeometry(1.45,.16,.055),cardboard,[0,.12,.75]);
+      // Low open doorway, instead of a solid front wall through the incoming legs.
+      for(const side of [-1,1])this.mesh(box,new T.BoxGeometry(.20,.16,.055),cardboard,[side*.625,.12,.75]);
       for(const s of [-1,1]){const flap=this.mesh(box,new T.BoxGeometry(.42,.04,1.45),edge,[s*.9,.52,0]);flap.rotation.z=-s*.25}
       this.mesh(box,new T.BoxGeometry(.22,.015,1.4),edge,[0,.09,0]);
-      this.rounded(box,cream,[0,.125,0],[.59,.07,.61]);
-      const stamp=this.mat('#a48a69');for(const s of [-1,1])this.rounded(box,stamp,[s*.1,.19,.785],[.035,.028,.009]);this.rounded(box,stamp,[0,.13,.785],[.07,.045,.009]);
+      this.rounded(box,cream,[0,.095,0],[.59,.025,.61]);
+      const ramp=new T.BufferGeometry();ramp.setAttribute('position',new T.Float32BufferAttribute([-.51,0,1.13,.51,0,1.13,-.51,.08,.73,.51,0,1.13,.51,.08,.73,-.51,.08,.73],3));ramp.computeVertexNormals();this.mesh(box,ramp,cardboard);
     }
     const scratch=this.prop('scratch',7.6,6,.8);
     if(scratch){
@@ -230,7 +232,7 @@ export class PetCare{
       else{const retry=element('button','pet-memory-shot','重拍小猫');retry.onclick=()=>{this.legacyPortrait=null;this.render()};card.append(retry)}
       const text=element('div');text.append(element('strong',null,m.title),element('p',null,`${new Date(m.at).toLocaleDateString('zh-CN')} · ${m.weather} · ${m.music}`));
       if(legacy&&photo)text.append(element('small','pet-photo-note','当前小猫补拍 · 原记录保留'));
-      const worn=Object.entries(m.outfit||{}).filter(([,v])=>v!=='none').map(([k,v])=>outfits[k]?.find(x=>x[0]===v)?.[1]).filter(Boolean);if(worn.length)text.append(element('p',null,worn.join(' · ')));card.append(text);this.body.append(card);
+      card.append(text);gallery.append(card);
     }
   }
   inviteUser(text,page='play'){this.launcher.title=text;this.launcher.dataset.notice='true';this.inviteMode=page;this.inviteUntil=this.elapsed+7}
@@ -253,9 +255,14 @@ export class PetCare{
     }else if(kind==='treat'){
       const a=this.w.cat.rotation.y;const p={x:this.w.cat.position.x+Math.sin(a)*.25,z:this.w.cat.position.z+Math.cos(a)*.25};point=this.w.companion.walkable(p.x,p.z)?p:{x:this.w.cat.position.x,z:this.w.cat.position.z};lookTarget={x:point.x+Math.sin(a)*.6,z:point.z+Math.cos(a)*.6};this.treat.position.set(lookTarget.x,this.w.groundHeight(lookTarget.x,lookTarget.z)+.02,lookTarget.z);this.treat.visible=true;
     }else{
-      const prop=this.props[kind];if(prop){lookTarget=prop.position;const inset=['box','cushion','nook'].includes(kind),offset=inset?0:kind==='scratch'?1.10:.80;point={x:prop.position.x,z:prop.position.z+offset};if(kind==='nook'||kind==='box')lookTarget={x:point.x,z:point.z+2}}
+      const prop=this.props[kind];if(prop){lookTarget=prop.position;const inset=['box','cushion','nook'].includes(kind),offset=inset?0:kind==='scratch'?1.10:.80;point={x:prop.position.x,z:prop.position.z+offset};if(kind==='nook')lookTarget={x:point.x,z:point.z+2};if(kind==='box')lookTarget={x:point.x,z:point.z-2}}
     }
-    const route=point&&this.w.companion.routeTo(point);
+    let route=point&&this.w.companion.routeTo(point);
+    if(route&&kind==='box'){
+      const entrance={x:point.x,z:point.z+1.45},walkable=(x,z)=>this.w.companion.walkable(x,z);
+      const outside=findRoute(this.w.cat.position,entrance,walkable),inside=findRoute(entrance,point,walkable);
+      route=outside&&inside?[...outside,...inside]:null;
+    }
     if(!route){if(!automatic)this.services.toast('这边有点挤，换一块附近的草地再试试。');this.ball.visible=this.treat.visible=false;return false}
     if(kind==='meal'||kind==='water'){this.props[kind].userData.contents.visible=true;this.props[kind].userData.contents.children.forEach(o=>o.visible=true)}
     this.w.companion.begin(route,null);this.w.companion.showMarker=false;if(this.w.companion.marker)this.w.companion.marker.visible=false;
@@ -332,7 +339,9 @@ export class PetCare{
   }
   get supportHeight(){
     // Bedding remains solid after the action ends; only leave its height when walking out.
-    let height=0;for(const [key,top]of [['box',.20],['nook',.34]]){const p=this.props[key]?.position;if(!p)continue;const d=Math.hypot(this.w.cat.position.x-p.x,this.w.cat.position.z-p.z);height=Math.max(height,top*(1-T.MathUtils.smoothstep(d,.45,1.05)))}return height;
+    let height=0;for(const [key,top]of [['box',.12],['nook',.34]]){const p=this.props[key]?.position;if(!p)continue;const cat=this.w.cat.position,d=Math.hypot(cat.x-p.x,cat.z-p.z);
+      const lift=key==='box'?Math.max(0,p.y+top-(this.w.groundHeight?.(cat.x,cat.z)||0)):top;
+      height=Math.max(height,lift*(1-T.MathUtils.smoothstep(d,key==='box'?1.10:.45,key==='box'?1.65:1.05)))}return height;
   }
   get pose(){
     const j=this.job;if(!j||j.stage==='approach')return null;
