@@ -4,6 +4,8 @@ import * as T from '../vendor/three/build/three.module.js';
 import { createCityPerson } from '../city-person.js';
 import { buildCityScene, cityWalkable, CITY_FLOOR } from '../city-scene.js';
 import { CityCompanions, CityWorld } from '../city-world.js';
+import { buildGuangzhouScene, guangzhouWalkable } from '../guangzhou-scene.js';
+import { buildShenzhenScene, shenzhenWalkable } from '../shenzhen-scene.js';
 import { clearSegment, findRoute } from '../garden-navigation.mjs';
 
 test('the city contains volumetric landmarks, a walkable bridge and water below its deck',()=>{
@@ -14,6 +16,23 @@ test('the city contains volumetric landmarks, a walkable bridge and water below 
   }
   assert.ok(city.walkSurfaces.length>=2);assert.ok(city.water.position.y<CITY_FLOOR-1);
   let sprites=0;city.root.traverse(o=>{if(o.isSprite)sprites++;});assert.equal(sprites,0);
+});
+
+test('Guangzhou provides its own Pearl River scene and keeps companions on the promenade',()=>{
+  const city=buildGuangzhouScene();
+  for(const name of ['canton-tower-volumetric-landmark','canton-tower-twisting-lattice','pearl-river-lit-skyline','pearl-river-near-bank-architecture','pearl-river-near-bank-park','pearl-river-near-bank-foundation','pearl-river-city-side-greenbelt','pearl-river-city-side-greenway','pearl-river-near-bank-retaining-wall','pearl-river-solid-city-bank','pearl-river-flood-wall','pearl-river-opposite-promenade','pearl-river-opposite-greenbelt','pearl-river-opposite-road','pearl-river-interlocking-stone-paving','pearl-river-aged-paving-details','pearl-river-quanzhou-detail-rail','pearl-river-city-side-planter-edge','pearl-river-tactile-guidance-strip','pearl-river-city-side-lamps','pearl-river-procedural-shore-trees','pearl-river-street-furniture','pearl-river-glowing-lookout','pearl-river-broken-light-reflections'])assert.ok(city.root.getObjectByName(name),name);
+  const tower=city.root.getObjectByName('canton-tower-volumetric-landmark'),building=city.root.getObjectByName('guangzhou-landed-building'),podium=city.root.getObjectByName('guangzhou-landed-podium-building');assert.ok(tower.position.y>=0&&tower.position.z<-70,'the Canton Tower stands on the opposite bank');assert.ok(building.position.y>0&&podium.position.y>0,'both skyline layers stand above the bank');
+  assert.ok(guangzhouWalkable(0,7));assert.ok(guangzhouWalkable(0,-19));assert.equal(guangzhouWalkable(0,-10.4),false,'the pavilion is not walkable');assert.equal(guangzhouWalkable(-6.8,-6.1),false,'the ticket kiosk is not walkable');assert.equal(guangzhouWalkable(11,-19),false,'the river edge is not walkable');
+  city.water.dispose();
+});
+
+test('Shenzhen provides a distinct bay boardwalk with mangroves and a skyline landmark',()=>{
+  const city=buildShenzhenScene();
+  for(const name of ['shenzhen-bay-timber-planks','shenzhen-quanzhou-detail-rail','shenzhen-deck-fasteners','shenzhen-bay-near-bank-park','shenzhen-waterfront-park-foundation','shenzhen-waterfront-park-lawn','shenzhen-bay-greenway','shenzhen-bay-retaining-edge','shenzhen-park-side-seating-edge','shenzhen-boardwalk-drainage-detail','shenzhen-bay-park-markers','shenzhen-bay-mangrove','shenzhen-bay-viewing-frame','shenzhen-solid-city-bank','shenzhen-bay-flood-wall','shenzhen-waterfront-promenade','shenzhen-waterfront-greenbelt','shenzhen-shoreline-road','shenzhen-procedural-shore-trees','pingan-finance-centre-landmark','pingan-landed-podium','shenzhen-bay-lit-skyline'])assert.ok(city.root.getObjectByName(name),name);
+  const tower=city.root.getObjectByName('pingan-finance-centre-landmark'),building=city.root.getObjectByName('shenzhen-landed-building');assert.ok(tower.position.y>=0&&tower.position.z<-90,'the tower stands on the rear bank');assert.ok(building.position.y>=0&&building.position.z<-90,'the skyline stands behind the shoreline');
+  assert.ok(tower.scale.y<.8,'the landmark keeps breathing room above the skyline');
+  assert.ok(shenzhenWalkable(0,7));assert.ok(shenzhenWalkable(0,-19));assert.equal(shenzhenWalkable(0,-11.5),false,'the viewing frame is not walkable');assert.equal(shenzhenWalkable(-4.65,-7),false,'the near bench is not walkable');assert.equal(shenzhenWalkable(11,-19),false,'the bay edge is not walkable');
+  city.water.dispose();
 });
 
 test('both sides of the bridge are continuous water rather than nearby marsh platforms',()=>{

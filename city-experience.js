@@ -1,8 +1,16 @@
 (()=>{
   const $=id=>document.getElementById(id),overlay=$('cityOverlay'),experience=$('cityExperience'),location=$('cityLocationCard'),app=$('app');
   if(!overlay||!experience||!location)return;
-  const city={world:null,loading:null,playing:false,accumulated:0,started:0,timer:null,sound:null,water:true,wind:true,version:0,locationTimer:null};
-  const views={entrance:['潮汐快照 · 桥头树荫','先在桥头站一会儿，让风慢慢经过。'],courtyard:['桥头庭院 · 红砖石亭','树荫落在石阶上，坐一会儿也很好。'],bridge:['石板路 · 桥上漫游','慢慢走，不需要急着抵达哪里。'],left:['向左看 · 潮水与远岸','水从桥下经过，风也轻轻经过你。'],right:['向右看 · 石桥与水面','把目光放远一点，把呼吸放慢一点。'],follow:['跟随人物 · 一起慢慢走','小猫会在你身旁，陪你走过这一段石板路。'],free:['自由视角 · 桥头漫游','拖动看看四周，点一下石板路，让我们走过去。']};
+  const city={world:null,loading:null,playing:false,accumulated:0,started:0,timer:null,sound:null,water:true,wind:true,version:0,locationTimer:null,id:'quanzhou'};
+  const cities={quanzhou:{title:'泉州 · 洛阳桥',name:'泉州',place:'洛阳桥',locate:'模拟定位泉州',enter:'进入洛阳桥',walk:'走上桥 →',loading:'石桥与树荫正在醒来…',description:'潮汐快照<br>石桥、树荫与一只愿意陪你的小猫',welcome:'一段石板路，一只小猫，和此刻的你。',views:{entrance:['潮汐快照 · 桥头树荫','先在桥头站一会儿，让风慢慢经过。'],courtyard:['桥头庭院 · 红砖石亭','树荫落在石阶上，坐一会儿也很好。'],bridge:['石板路 · 桥上漫游','慢慢走，不需要急着抵达哪里。'],left:['向左看 · 潮水与远岸','水从桥下经过，风也轻轻经过你。'],right:['向右看 · 石桥与水面','把目光放远一点，把呼吸放慢一点。'],follow:['跟随人物 · 一起慢慢走','小猫会在你身旁，陪你走过这一段石板路。'],free:['自由视角 · 桥头漫游','拖动看看四周，点一下石板路，让我们走过去。']}},guangzhou:{title:'广州 · 珠江边',name:'广州',place:'珠江边',locate:'模拟定位广州',enter:'进入珠江边',walk:'沿江慢走 →',loading:'珠江与城市天际线正在醒来…',description:'江风快照<br>珠江、榕树与一只愿意陪你的小猫',welcome:'一段滨江步道，一只小猫，和此刻的你。',views:{entrance:['江畔快照 · 城市天际线','先在江边站一会儿，让风慢慢经过。'],courtyard:['榕树广场 · 江畔休憩','树荫落在石阶上，坐一会儿也很好。'],bridge:['滨江步道 · 慢慢前行','沿着珠江慢慢走，不需要急着抵达哪里。'],left:['向左看 · 江面与塔影','把目光放远一点，让呼吸跟着江面舒展开。'],right:['向右看 · 树影与城市','水从身边经过，风也轻轻经过你。'],follow:['跟随人物 · 一起慢慢走','小猫会在你身旁，陪你走过这一段江边。'],free:['自由视角 · 珠江漫游','拖动看看四周，点一下步道，让我们走过去。']}},shenzhen:{title:'深圳 · 深圳湾',name:'深圳',place:'深圳湾',locate:'模拟定位深圳',enter:'进入深圳湾',walk:'沿湾慢走 →',loading:'深圳湾、红树林与城市灯带正在醒来…',description:'海湾快照<br>红树林、城市灯带与一只愿意陪你的小猫',welcome:'一段海湾栈道，一只小猫，和此刻的你。',views:{entrance:['湾畔快照 · 海风与灯带','先在海湾边站一会儿，让风慢慢经过。'],courtyard:['红树林下 · 静静停留','树影落在木栈道上，坐一会儿也很好。'],bridge:['海湾栈道 · 慢慢前行','沿着深圳湾慢慢走，不需要急着抵达哪里。'],left:['向左看 · 红树林与海面','把目光交给海湾，让呼吸慢一点。'],right:['向右看 · 城市与塔尖','城市灯光很远，海风就在身边。'],follow:['跟随人物 · 一起慢慢走','小猫会在你身旁，陪你走过这一段海湾。'],free:['自由视角 · 深圳湾漫游','拖动看看四周，点一下木栈道，让我们走过去。']}}};
+  const current=()=>cities[city.id];
+  function selectCity(id){
+    city.id=id;const info=current();experience.dataset.city=id;location.dataset.city=id;document.querySelectorAll('[data-city-choice]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.cityChoice===id)));
+    $('cityLocateButton').textContent=info.locate;$('cityMatchName').textContent=info.name;$('cityMatchPlace').textContent=info.place;$('cityMatchTitle').textContent=info.title;$('cityMatchDescription').innerHTML=info.description;$('cityExperienceTitle').textContent=info.title;$('cityExperience').setAttribute('aria-label',info.title+'三维漫游');$('cityWalkButton').textContent=info.walk;
+    const labels=id==='guangzhou'?{entrance:'江畔',courtyard:'榕下',bridge:'步道',left:'江面',right:'塔影'}:id==='shenzhen'?{entrance:'湾畔',courtyard:'红树',bridge:'栈道',left:'海面',right:'城景'}:{entrance:'桥头',courtyard:'庭院',bridge:'桥上',left:'左看',right:'右看'};
+    const home=id==='guangzhou'?'江畔':id==='shenzhen'?'湾畔':'桥头';
+    document.querySelectorAll('[data-city-view]').forEach(button=>{if(labels[button.dataset.cityView])button.textContent=labels[button.dataset.cityView]});$('cityViewSwitcher').setAttribute('aria-label',info.title+'视角');$('cityControlsHelp').textContent=id==='guangzhou'?'拖动环绕 · 双指缩放 · 点击滨江步道一起走':id==='shenzhen'?'拖动环绕 · 双指缩放 · 点击海湾栈道一起走':'拖动环绕 · 双指缩放 · 点击石板路一起走';$('cityHomeButton').setAttribute('aria-label','回到'+home+'全景');$('cityHomeButton').title=home+'全景';message(info.welcome);
+  }
   const courtyardButton=document.createElement('button');courtyardButton.type='button';courtyardButton.dataset.cityView='courtyard';courtyardButton.textContent='庭院';courtyardButton.setAttribute('aria-pressed','false');
   experience.querySelector('[data-city-view="entrance"]').after(courtyardButton);
   function message(text){$('cityMessage').textContent=text;}
@@ -17,7 +25,7 @@
   }
   quietButton.addEventListener('click',()=>setQuiet(experience.dataset.quiet!=='true'));
   function viewChanged(view){
-    const meta=views[view]||views.free;experience.dataset.view=view;$('cityViewTitle').textContent=meta[0];$('cityCaption').textContent=meta[1];
+    const meta=current().views[view]||current().views.free;experience.dataset.view=view;$('cityViewTitle').textContent=meta[0];$('cityCaption').textContent=meta[1];
     document.querySelectorAll('[data-city-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.cityView===view)));
     $('cityFollowButton').setAttribute('aria-pressed',String(view==='follow'));
   }
@@ -33,11 +41,11 @@
   async function ensureWorld(){
     if(city.world)return city.world;
     if(city.loading)return city.loading;
-    $('citySceneStatus').hidden=false;$('cityRetryButton').hidden=true;$('citySceneStatusText').textContent='石桥与树荫正在醒来…';
+    $('citySceneStatus').hidden=false;$('cityRetryButton').hidden=true;$('citySceneStatusText').textContent=current().loading;
     city.loading=(async()=>{
       await Promise.resolve(window.GARDEN_READY);
       if(!window.CityWorld)throw Error('City 3D module unavailable');
-      const world=new window.CityWorld({host:$('cityWorldHost'),onMessage:message,onView:viewChanged,onError:sceneError});
+      const world=new window.CityWorld({host:$('cityWorldHost'),onMessage:message,onView:viewChanged,onError:sceneError,city:city.id});
       city.world=world;$('citySceneStatus').hidden=true;return world;
     })();
     try{return await city.loading;}catch(error){console.error(error);sceneError('三维场景暂时没有载入，点击重试。');return null;}finally{city.loading=null;}
@@ -51,7 +59,7 @@
     if(city.playing){pause();message('在这里停一会儿，想继续时再开始。');return;}
     if(!city.world){message('等石桥和小猫准备好，再开始吧。');return;}
     city.playing=true;city.started=performance.now();const version=++city.version;
-    city.world.setPlaying(true);$('cityPlayButton').textContent='暂停陪伴';message('声音轻轻响起，小猫陪你在桥头停一会儿。');
+    city.world.setPlaying(true);$('cityPlayButton').textContent='暂停陪伴';message('声音轻轻响起，小猫陪你在这里停一会儿。');
     city.timer=setInterval(updateTime,250);
     try{
       if(!city.sound)city.sound=new window.CitySoundscape();
@@ -60,20 +68,21 @@
       updateMix();if(!started)message('当前浏览器未开启声音，仍可带着小猫漫游。');
     }catch(error){if(version===city.version)message('声音暂时没能开启，仍可带着小猫漫游。');}
   }
-  function reset(){setQuiet(false);pause();city.accumulated=0;city.world?.reset();updateTime();$('cityPlayButton').textContent='开始陪伴';message('一段石板路，一只小猫，和此刻的你。');}
+  function reset(){setQuiet(false);pause();city.accumulated=0;city.world?.reset();updateTime();$('cityPlayButton').textContent='开始陪伴';message(current().welcome);}
   function open(){
     reset();overlay.hidden=false;location.hidden=false;experience.hidden=true;app.classList.add('city-open');
-    city.world?.deactivate();clearTimeout(city.locationTimer);$('cityLocateButton').disabled=false;$('cityLocateButton').textContent='模拟定位泉州';
+    city.world?.deactivate();clearTimeout(city.locationTimer);$('cityLocateButton').disabled=false;selectCity(city.id);
     $('cityLocationStatus').dataset.ready='false';$('cityLocationText').textContent='尚未匹配城市';$('cityMatchCard').hidden=true;
     window.dispatchEvent(new Event('garden:city-enter'));$('cityLocateButton').focus({preventScroll:true});
   }
   function close(){pause();clearTimeout(city.locationTimer);city.world?.deactivate();overlay.hidden=true;app.classList.remove('city-open');$('cityButton').focus({preventScroll:true});}
   $('cityButton').addEventListener('click',open);$('cityCloseButton').addEventListener('click',close);$('cityExitButton').addEventListener('click',close);
   $('cityBackButton').addEventListener('click',()=>{pause();city.world?.deactivate();experience.hidden=true;location.hidden=false;$('cityLocateButton').focus({preventScroll:true});});
+  document.querySelectorAll('[data-city-choice]').forEach(button=>button.addEventListener('click',()=>{if(city.id===button.dataset.cityChoice)return;pause();city.world?.dispose();city.world=null;city.loading=null;city.id=button.dataset.cityChoice;selectCity(city.id);$('cityLocationStatus').dataset.ready='false';$('cityLocationText').textContent='尚未匹配城市';$('cityMatchCard').hidden=true;}));
   $('cityLocateButton').addEventListener('click',()=>{
     if($('cityLocationStatus').dataset.ready==='true'){enter();return;}
-    $('cityLocateButton').disabled=true;$('cityLocationText').textContent='正在匹配泉州…';
-    city.locationTimer=setTimeout(()=>{$('cityLocationStatus').dataset.ready='true';$('cityLocationText').textContent='已匹配：泉州（模拟定位）';$('cityMatchCard').hidden=false;$('cityLocateButton').disabled=false;$('cityLocateButton').textContent='进入洛阳桥';},450);
+    const info=current();$('cityLocateButton').disabled=true;$('cityLocationText').textContent='正在匹配'+info.name+'…';
+    city.locationTimer=setTimeout(()=>{$('cityLocationStatus').dataset.ready='true';$('cityLocationText').textContent='已匹配：'+info.name+'（模拟定位）';$('cityMatchCard').hidden=false;$('cityLocateButton').disabled=false;$('cityLocateButton').textContent=info.enter;},450);
   });
   $('cityWalkButton').addEventListener('click',()=>city.world?.walkBridge());
   $('cityFollowButton').addEventListener('click',()=>{if(city.world?.follow)city.world.setView('entrance');else city.world?.focusPerson();});
@@ -87,7 +96,7 @@
   for(const [id,key,label] of [['cityWaterButton','water','水声'],['cityWindButton','wind','风声']])$(id).addEventListener('click',()=>{city[key]=!city[key];$(id).dataset.on=String(city[key]);$(id).setAttribute('aria-pressed',String(city[key]));$(id).textContent=label+' · '+(city[key]?'开':'关');updateMix();});
   $('cityRetryButton').addEventListener('click',()=>{city.world?.dispose();city.world=null;enter();});
   overlay.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();if(experience.dataset.quiet==='true'){setQuiet(false);quietButton.focus();}else close();}});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden&&city.playing){pause();message('回来后，再继续听这段潮水。');}});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden&&city.playing){pause();message('回来后，再继续听这段声音。');}});
   window.addEventListener('pagehide',()=>{pause();city.world?.dispose();city.world=null;city.sound?.close();city.sound=null;});
   window.CityPrototype={open,close,get world(){return city.world;}};
 })();

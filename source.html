@@ -280,17 +280,18 @@ body{display:flex;justify-content:center}
  <div class="city-overlay" id="cityOverlay" hidden>
   <section class="city-location-card" id="cityLocationCard" role="dialog" aria-modal="true" aria-labelledby="cityLocationTitle">
    <p class="city-kicker">CITY HEALING · 城市漫游</p><h2 id="cityLocationTitle">城市疗愈</h2>
-   <p>把当前位置，换成一处可以安静停留的地方。第一版先用模拟定位进入泉州。</p>
+   <p>选择一座可以安静停留的城市。当前使用模拟定位，不会读取或保存真实位置。</p>
+   <div class="city-picker" role="group" aria-label="选择城市"><button type="button" data-city-choice="quanzhou" aria-pressed="true"><strong>泉州</strong><small>洛阳桥</small></button><button type="button" data-city-choice="guangzhou" aria-pressed="false"><strong>广州</strong><small>珠江边</small></button><button type="button" data-city-choice="shenzhen" aria-pressed="false"><strong>深圳</strong><small>深圳湾</small></button></div>
    <div class="city-location-status" id="cityLocationStatus"><i></i><span id="cityLocationText">尚未匹配城市</span></div>
-   <div class="city-match-card" id="cityMatchCard" hidden><div class="city-match-thumb"><span>泉州</span><small>洛阳桥</small></div><div><strong>泉州 · 洛阳桥</strong><small>潮汐快照<br>石桥、树荫与一只愿意陪你的小猫</small></div></div>
+   <div class="city-match-card" id="cityMatchCard" hidden><div class="city-match-thumb"><span id="cityMatchName">泉州</span><small id="cityMatchPlace">洛阳桥</small></div><div><strong id="cityMatchTitle">泉州 · 洛阳桥</strong><small id="cityMatchDescription">潮汐快照<br>石桥、树荫与一只愿意陪你的小猫</small></div></div>
    <div class="city-actions"><button id="cityLocateButton" class="city-primary">模拟定位泉州</button><button id="cityCloseButton">先回花园</button></div>
    <p class="city-foot">当前使用模拟定位，不会读取或保存你的真实位置。</p>
   </section>
-  <section class="city-experience" id="cityExperience" data-view="entrance" hidden aria-label="泉州洛阳桥三维漫游">
+  <section class="city-experience" id="cityExperience" data-view="entrance" hidden aria-label="城市三维漫游">
    <div class="city-world-host" id="cityWorldHost"></div>
    <div class="city-top">
     <button id="cityBackButton" aria-label="返回城市入口"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg></button>
-    <div class="city-title"><strong>泉州 · 洛阳桥</strong><small id="cityViewTitle">潮汐快照 · 桥头树荫</small></div>
+    <div class="city-title"><strong id="cityExperienceTitle">泉州 · 洛阳桥</strong><small id="cityViewTitle">潮汐快照 · 桥头树荫</small></div>
     <button id="cityExitButton" aria-label="回到花园"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 11 8-7 8 7M6 10v10h12V10M10 20v-6h4v6"/></svg></button>
    </div>
    <p class="city-caption" id="cityCaption">先在桥头站一会儿，让风慢慢经过。</p>
@@ -298,11 +299,11 @@ body{display:flex;justify-content:center}
     <button id="cityZoomIn" aria-label="放大场景">+</button>
     <button id="cityZoomOut" aria-label="缩小场景">−</button>
     <button id="cityFollowButton" aria-label="跟随人物" aria-pressed="false" title="跟随人物"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="3"/><path d="M6 21v-3a6 6 0 0 1 12 0v3"/></svg></button>
-    <button id="cityHomeButton" aria-label="回到桥头全景" title="桥头全景"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5M8 12h8M12 8v8"/></svg></button>
+    <button id="cityHomeButton" aria-label="回到城市全景" title="城市全景"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5M8 12h8M12 8v8"/></svg></button>
    </div>
-   <p class="city-controls-help">拖动环绕 · 双指缩放 · 点击石板路一起走</p>
-   <nav class="city-view-switcher" aria-label="洛阳桥视角">
-    <button data-city-view="entrance" aria-pressed="true">桥头</button><button data-city-view="bridge" aria-pressed="false">桥上</button><button data-city-view="left" aria-pressed="false">左看</button><button data-city-view="right" aria-pressed="false">右看</button>
+   <p class="city-controls-help" id="cityControlsHelp">拖动环绕 · 双指缩放 · 点击步道一起走</p>
+   <nav class="city-view-switcher" id="cityViewSwitcher" aria-label="城市视角">
+    <button data-city-view="entrance" aria-pressed="true">入口</button><button data-city-view="bridge" aria-pressed="false">漫游</button><button data-city-view="left" aria-pressed="false">水岸</button><button data-city-view="right" aria-pressed="false">远景</button>
    </nav>
    <section class="city-dock" aria-label="城市场景控制">
     <div class="city-dock-head"><strong>和小猫，慢慢走一会儿</strong><output id="cityElapsed" aria-label="陪伴时长">00:00</output></div>

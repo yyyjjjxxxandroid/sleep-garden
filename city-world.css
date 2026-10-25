@@ -6,6 +6,7 @@
 .city-kicker{margin:0 0 12px;font-size:10px;letter-spacing:3px;color:#7d8b70}
 .city-location-card h2{margin:0;font-family:'Songti SC','STSong',serif;font-size:30px;font-weight:400;letter-spacing:4px}
 .city-location-card>p:not(.city-kicker){font-size:12px;line-height:1.9;color:#74816b}
+.city-picker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:17px 0}.city-picker button{position:relative;overflow:hidden;min-height:66px;border:1px solid #aebda180;border-radius:16px;background:#e8eddb;color:#607057;text-align:left;padding:11px 12px;transition:transform .25s ease,border-color .25s ease,background .25s ease}.city-picker button:before{content:'';position:absolute;inset:0 0 auto;height:3px;opacity:.28;background:#78906f}.city-picker button[data-city-choice=guangzhou]:before{background:#b89059}.city-picker button[data-city-choice=shenzhen]:before{background:#4e8d97}.city-picker button[aria-pressed=true]{transform:translateY(-2px);border-color:#536c50;background:#d5e0c9;color:#36533d;box-shadow:0 7px 18px #48623d18}.city-picker button[aria-pressed=true]:before{opacity:1}.city-picker strong,.city-picker small{display:block}.city-picker strong{font-family:'Songti SC','STSong',serif;font-size:17px;font-weight:400;letter-spacing:2px}.city-picker small{margin-top:5px;font-size:10px;letter-spacing:1px;opacity:.76}
 .city-location-status{display:flex;align-items:center;gap:10px;padding:13px 15px;margin:22px 0 16px;background:#dce5ce;border-radius:15px;font-size:12px}
 .city-location-status i{width:7px;height:7px;border-radius:50%;background:#baa26c;box-shadow:0 0 0 4px #baa26c19}
 .city-location-status[data-ready=true] i{background:#6b8d61}
@@ -20,6 +21,8 @@
 .city-world-host,.city-3d-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .city-3d-canvas{touch-action:none;outline:none;cursor:grab}.city-3d-canvas:active{cursor:grabbing}.city-3d-canvas:focus-visible{outline:2px solid #6e8d5d;outline-offset:-3px}
 .city-experience:after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,#dce5df9c 0%,#dce5df12 12%,transparent 22%,transparent 78%,#142d2b18 100%),radial-gradient(ellipse at 50% 44%,transparent 40%,#152d2c1a 100%)}
+.city-experience[data-city=guangzhou]:after{background:linear-gradient(180deg,#f0eee09c 0%,transparent 23%,transparent 78%,#4a514323 100%),radial-gradient(ellipse at 52% 40%,transparent 42%,#56605212 100%)}
+.city-experience[data-city=shenzhen]:after{background:linear-gradient(180deg,#f0efe39c 0%,#bdc6b915 24%,transparent 60%,#46524722 100%),radial-gradient(ellipse at 50% 38%,transparent 45%,#59645712 100%)}
 .city-top{position:absolute;z-index:3;top:max(21px,env(safe-area-inset-top));left:18px;right:18px;display:grid;grid-template-columns:44px 1fr 44px;gap:8px;align-items:start}
 .city-top>button{height:44px;min-width:44px;display:grid;place-items:center;border-radius:50%;border:1px solid #fff9;background:#f3f4e4ad;backdrop-filter:blur(10px);color:#415b40}
 .city-top>button svg{width:19px;height:19px}
