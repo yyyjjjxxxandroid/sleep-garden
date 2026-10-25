@@ -5,6 +5,8 @@ import { RoomEnvironment } from './vendor/three/examples/jsm/environments/RoomEn
 import { createStoryCat } from './story-cat.js';
 import { installDetails } from './story-detail.js';
 import { installAtmosphere } from './story-atmosphere.js';
+import { installGardenContent } from './story-garden-content.js';
+import { installGardenOutskirts } from './story-garden-outskirts.js';
 import { GardenCompanion } from './garden-companion.js';
 import { configureSkyBackground } from './world-sky.js';
 import { CityWorld } from './city-world.js';
@@ -55,12 +57,6 @@ class StoryWorld extends BaseWorld{
       c.lerp(sand,pathBlend*.82);const shore=Math.sqrt(((x+3.5)/5.6)**2+((z+3.5)/3.8)**2);c.lerp(new T.Color('#b0b38c'),(1-T.MathUtils.smoothstep(Math.abs(shore-1),.03,.19))*.7);colors.push(c.r,c.g,c.b);
     }geo.setAttribute('color',new T.Float32BufferAttribute(colors,3));geo.computeVertexNormals();
     const mat=new T.MeshStandardMaterial({vertexColors:true,roughness:1});mat.onBeforeCompile=s=>{s.uniforms.gardenSnow=this.snowCover;s.vertexShader='varying vec3 gardenP;\n'+s.vertexShader;s.vertexShader=s.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ngardenP=position;');s.fragmentShader='uniform float gardenSnow;varying vec3 gardenP;\n'+nGLSL+s.fragmentShader;s.fragmentShader=s.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\nfloat grain=fbm(gardenP.xz*4.);diffuseColor.rgb*=.90+grain*.19;float snowPatch=smoothstep(.23,.68,fbm(gardenP.xz*.75));diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.85,.90,.92),gardenSnow*(.55+.45*snowPatch));')};this.terrain=this.mesh(geo,mat);
-    // 多层山脊围合远景，每一层都是真实地形网格。
-    const ridgeLayers=this.quality==='low'?1:3;
-    for(let layer=0;layer<ridgeLayers;layer++){
-      const g=new T.PlaneGeometry(240,95,this.quality==='high'?70:36,this.quality==='high'?26:14);g.rotateX(-Math.PI/2);const pp=g.attributes.position;
-      for(let i=0;i<pp.count;i++){const x=pp.getX(i),z=pp.getZ(i);const h=(Math.sin(x*.023+layer*2)*.5+.5)*10+(Math.sin(x*.058+layer)*.5+.5)*5;pp.setY(i,Math.max(0,Math.sin((z+47.5)/95*Math.PI))*h-2)}g.computeVertexNormals();const o=this.mesh(g,this.mat(['#8faf9b','#9bbbaa','#b3cec0'][layer]),0,0,-103-layer*23);o.receiveShadow=false;
-    }
   }
   buildWater(){
     const shape=new T.Shape();const pts=[];
@@ -147,7 +143,7 @@ class StoryWorld extends BaseWorld{
     this.staticRoots=[];this.place=(name,x,z,height,angle=rand()*6.28,options={})=>{
       const o=this.cloneShared(name),t=this.templates[name],s=height/t.height,group=new T.Group();o.scale.setScalar(s);o.position.y=-t.minY*s;group.add(o);group.position.set(x,this.groundHeight(x,z)+(options.lift||0),z);group.rotation.y=angle;if(options.width){group.scale.x=options.width;group.scale.z=options.width}this.scene.add(group);if(/^CommonTree/.test(name))this.walkObstacles.push({x,z,radius:Math.max(.38,height*.06)});else if(/^Rock/.test(name)&&height>.22)this.walkObstacles.push({x,z,radius:Math.max(.22,height*.65)});else if(/^Bush/.test(name)&&!options.dynamic)this.walkObstacles.push({x,z,radius:height*.4});if(!options.dynamic)this.staticRoots.push(group);return group;
     };
-    this.populateGarden();this.details=installDetails(this);this.atmosphere=installAtmosphere(this,T);this.batchScenery();this.makeCat();this.updateGrowth(true);this.buildBridge();this.addLilyPads();
+    this.populateGarden();this.details=installDetails(this);this.atmosphere=installAtmosphere(this,T);this.cozyContent=installGardenContent(this,T);this.outskirts=installGardenOutskirts(this,T);this.batchScenery();this.makeCat();this.updateGrowth(true);this.buildBridge();this.addLilyPads();
     this.canvas.dataset.artVersion='storybook-v2';this.canvas.dataset.assets='Quaternius textured nature · CC0';
   }
   populateGarden(){
@@ -206,8 +202,9 @@ class StoryWorld extends BaseWorld{
     this.stopCatForCamera();this.storyCat?.release();this.controls.minDistance=3.6;this.follow=false;const weatherSky=['rainbow','aurora','meteor'].includes(this.state.weather),target=weatherSky?V(-1,4,-3):V(-1,2,-1.5),pos=weatherSky?V(6,9.5,27):V(6,12,29);if(immediate){this.camera.position.copy(pos);this.controls.target.copy(target);this.controls.update()}else this.transition={pos,target};this.selectRegion?.('pond');
   }
   buildNavigation(){
-    const nav=document.createElement('nav');nav.className='region-nav';nav.setAttribute('aria-label','漫游花园');const regions=[['pond','池畔'],['meadow','花坡'],['woods','林间'],['garden','小花园']];
-    regions.forEach(([key,label])=>{const b=document.createElement('button');b.textContent=label;b.dataset.region=key;b.setAttribute('aria-pressed',key==='pond'?'true':'false');b.onclick=()=>{this.stopCatForCamera();this.follow=false;this.onExplore();if(key==='pond')this.home();else this.transition=key==='garden'?{pos:V(5,9,22),target:V(.6,.4,7.5)}:key==='meadow'?{pos:V(17,12,12),target:V(15,3,-10)}:{pos:V(7,10,-7),target:V(-3,2,-21)};this.selectRegion(key)};nav.append(b)});this.host.parentElement.append(nav);this.selectRegion=key=>{nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.region===key)));this.canvas.dataset.region=key};
+    const nav=document.createElement('nav');nav.className='region-nav';nav.setAttribute('aria-label','漫游花园');const regions=[['pond','池畔'],['entrance','花廊'],['meadow','花坡亭'],['cottage','猫屋'],['grove','萤火林'],['moon','月光园'],['garden','小花园'],['country','乡间'],['wetland','湿地']];
+    const views={entrance:{pos:V(11,6,25),target:V(5,1,15)},meadow:{pos:V(27,9,5),target:V(17,2,-8.5)},cottage:{pos:V(-3,7,2),target:V(-12,1.4,-13)},grove:{pos:V(-12,7,16),target:V(-22,1,4)},moon:{pos:V(9,8,-16),target:V(1,2,-31)},garden:{pos:V(5,9,22),target:V(.6,.4,7.5)},country:{pos:V(18,10,55),target:V(3,1,40)},wetland:{pos:V(-32,20,-25),target:V(-14,1,-48)}};
+    regions.forEach(([key,label])=>{const b=document.createElement('button');b.textContent=label;b.dataset.region=key;b.setAttribute('aria-pressed',key==='pond'?'true':'false');b.onclick=()=>{this.stopCatForCamera();this.follow=false;this.onExplore();if(key==='pond')this.home();else this.transition=views[key];this.selectRegion(key)};nav.append(b)});this.host.parentElement.append(nav);this.selectRegion=key=>{nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.region===key)));this.canvas.dataset.region=key};
   }
   handleExploreStart(){return false}
   // Camera commands never change the actor's path distance or world heading.
@@ -458,6 +455,7 @@ class StoryWorld extends BaseWorld{
     if(this.seedFeedback){const f=this.seedFeedback;f.userData.age+=dt;const age=f.userData.age;if(!this.state.reduced){f.scale.setScalar(1+Math.sin(age*5)*.12+Math.min(age,.8)*.4);f.children[1].rotation.z+=dt*1.8;}f.children[1].material.opacity=Math.max(0,.8-age*.22);f.children[2].material.opacity=Math.max(0,.12-age*.035);if(age>4)this.clearSeedFeedback();}
     this.details?.update(t,n);
     this.atmosphere?.update(dt,t,n);
+    this.cozyContent?.update(t,n);
     this.clouds?.forEach((c,i)=>{c.material.opacity=(1-n*.7)*.6;c.material.color.set('#fff8e8').lerp(new T.Color('#718c9f'),n);c.position.x+=dt*.045*(.2+this.state.wind/100)});
     this.rippleRings?.forEach((r,i)=>{const f=(t*.09+i*.17)%1;r.scale.setScalar(.4+f*1.8);r.material.opacity=(1-f)*.095});
     const planting=this.state.records.find(r=>r.growth!==undefined&&r.growth<1);

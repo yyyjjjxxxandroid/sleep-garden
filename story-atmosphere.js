@@ -7,6 +7,44 @@ const makeRandom = seed => () => {
   return seed / 4294967296;
 };
 
+export function makeHeroMountainGeometry(T, seed = 1, segments = 14) {
+  const random=makeRandom(seed),positions=[],indices=[];
+  const rings=[
+    {radius:1,y:0,ox:0,oz:0},
+    {radius:.68,y:.34,ox:-.07,oz:.02},
+    {radius:.34,y:.70,ox:.08,oz:-.04},
+  ];
+  rings.forEach((ring,ringIndex)=>{
+    for(let i=0;i<segments;i++){
+      const angle=i/segments*Math.PI*2,wobble=.84+random()*.25;
+      const shoulder=ringIndex===1&&Math.cos(angle+.8)>.55?1.18:1;
+      positions.push(ring.ox+Math.sin(angle)*ring.radius*wobble*shoulder,ring.y+(ringIndex?Math.sin(i*1.73+seed)*.025:0),ring.oz+Math.cos(angle)*ring.radius*wobble);
+    }
+  });
+  const summit=segments*3;positions.push(-.08,1,.06);
+  for(let ring=0;ring<2;ring++)for(let i=0;i<segments;i++){
+    const next=(i+1)%segments,a=ring*segments+i,b=ring*segments+next,c=(ring+1)*segments+next,d=(ring+1)*segments+i;
+    indices.push(a,b,c,a,c,d);
+  }
+  for(let i=0;i<segments;i++)indices.push(segments*2+i,segments*2+(i+1)%segments,summit);
+  const geometry = new T.BufferGeometry();
+  geometry.setAttribute('position', new T.Float32BufferAttribute(positions, 3));
+  geometry.setIndex(indices);geometry.clearGroups();
+  geometry.addGroup(0,segments*6,0);geometry.addGroup(segments*6,segments*6,1);geometry.addGroup(segments*12,segments*3,2);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+function makeMountains(world, T) {
+  const baseMaterial=new T.MeshStandardMaterial({color:'#78877e',roughness:1,metalness:0,flatShading:true,side:T.DoubleSide});
+  const rockMaterial=new T.MeshStandardMaterial({color:'#87918f',roughness:1,metalness:0,flatShading:true,side:T.DoubleSide});
+  const capMaterial=new T.MeshStandardMaterial({color:'#c4c9bf',roughness:1,metalness:0,flatShading:true,side:T.DoubleSide});
+  const mountain=new T.Mesh(makeHeroMountainGeometry(T,0x8f31,16),[baseMaterial,rockMaterial,capMaterial]);
+  mountain.name='hero-mountain';mountain.position.set(-30,-4,-108);mountain.rotation.y=-.18;mountain.scale.set(43,45,32);
+  mountain.castShadow=false;mountain.receiveShadow=false;mountain.renderOrder=-2;world.scene.add(mountain);
+  return {mountains:[mountain],baseMaterial,rockMaterial,capMaterial};
+}
+
 function paintCloudTexture(T) {
   const canvas = document.createElement('canvas');
   canvas.width = 512;
@@ -120,6 +158,7 @@ function makeClouds(world, T) {
 export function installAtmosphere(world, T) {
   if (!world?.place || !world?.scene) throw new Error('installAtmosphere requires loaded StoryWorld assets');
   const trees = placeForest(world);
+  const mountainRange = makeMountains(world,T);
   const clouds = makeClouds(world, T);
   return {
     update(dt = 0, t = 0, night = 0) {
@@ -132,8 +171,12 @@ export function installAtmosphere(world, T) {
         cloud.material.opacity = daylight * (.76 + .12 * Math.sin(t * .07 + phase));
         cloud.material.color.set(night > .45 ? '#8fa6b4' : '#fff9e8');
       });
+      mountainRange.baseMaterial.color.set('#78877e').lerp(new T.Color('#31464b'),night);
+      mountainRange.rockMaterial.color.set('#87918f').lerp(new T.Color('#3c4b56'),night);
+      mountainRange.capMaterial.color.set('#c4c9bf').lerp(new T.Color('#71808c'),night);
     },
     trees,
+    mountains: mountainRange.mountains,
     clouds: clouds.map(entry => entry.cloud),
   };
 }
