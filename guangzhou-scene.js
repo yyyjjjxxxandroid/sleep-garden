@@ -1,5 +1,5 @@
 import * as T from './vendor/three/build/three.module.js';
-import { configureSkyBackground } from './world-sky.js';
+import { createCitySky } from './city-atmosphere.js';
 import { createCityWater } from './city-water.js';
 import { createGraniteTexture, createStoneMaterial, createWornStoneGeometry } from './city-stone.js';
 import { createFacadeMaterial } from './city-facade.js';
@@ -28,7 +28,7 @@ export function buildGuangzhouScene(){
   box(8.8,.24,51.5,bankGrass,13.7,-.04,-13.2,cityBank).name='pearl-river-city-side-greenbelt';
   box(4.3,.16,51.5,cyclePath,20.3,.01,-13.2,cityBank).name='pearl-river-city-side-greenway';
   box(.34,.46,51.5,stone,-9.22,-.03,-13.2,cityBank).name='pearl-river-near-bank-retaining-wall';
-  for(let z=9;z>-38;z-=5.4){box(3.4,.025,.07,new T.MeshStandardMaterial({color:'#d1c9ae',roughness:.8}),20.3,.11,z,cityBank);box(8.2,.06,.22,stone,13.7,.12,z+.8,cityBank);}
+  for(let z=9;z>-38;z-=5.4){box(.07,.025,1.6,new T.MeshStandardMaterial({color:'#d1c9ae',roughness:.8}),20.3,.11,z,cityBank);}
   // 入口广场与连续滨江步道采用错缝石材，近景足够细密而不依赖外部贴图。
   addWalk(box(18.4,.48,16.2,pavingDark,0,-.18,4.1),'pearl-river-arrival-plaza');addWalk(box(18.4,.48,36.4,pavingDark,0,-.18,-21.4),'pearl-river-walkable-promenade');
   const slabs=new T.InstancedMesh(createWornStoneGeometry(9137),paving,370),dummy=new T.Object3D();let slab=0;
@@ -82,7 +82,7 @@ export function buildGuangzhouScene(){
   box(132,.16,4.8,shoreRoad,0,.02,-60.5,oppositeShore).name='pearl-river-opposite-road';
   const shoreTrees=new T.Group();shoreTrees.name='pearl-river-procedural-shore-trees';oppositeShore.add(shoreTrees);
   for(let i=0;i<45;i++){const x=-59+i*2.7,z=-53.2-(i%3)*.7;box(.11,.78,.11,bark,x,.39,z,shoreTrees);const crown=mesh(new T.IcosahedronGeometry(.46+(i%3)*.10,2),leaf,x,1.08,z,shoreTrees);crown.scale.y=.66;crown.castShadow=false;}
-  const tower=new T.Group();tower.name='canton-tower-volumetric-landmark';tower.position.set(-10,.16,-82);tower.scale.setScalar(.82);root.add(tower);
+  const tower=new T.Group();tower.name='canton-tower-volumetric-landmark';tower.position.set(-10,.16,-82);tower.scale.setScalar(.66);root.add(tower);
   const towerGlass=new T.MeshStandardMaterial({color:'#6f8584',emissive:'#354946',emissiveIntensity:.16,roughness:.46,metalness:.18,transparent:true,opacity:.84}),towerSteel=new T.MeshStandardMaterial({color:'#c5cec2',emissive:'#718d82',emissiveIntensity:.28,roughness:.46,metalness:.38}),towerGlow=emissive('#f4d39d'),towerCyan=emissive('#bfd9c7');
   const waistRadius=y=>1.02+2.52*Math.pow(Math.abs(y-29.5)/29.5,1.48);
   const coreParts=[];for(let level=0;level<18;level++){const y0=level*3.28,y1=(level+1)*3.28,r0=waistRadius(y0)*.79,r1=waistRadius(y1)*.79;const section=mesh(new T.CylinderGeometry(r1,r0,y1-y0,20,1,true),towerGlass,0,(y0+y1)/2,0,tower);coreParts.push(section);}
@@ -100,7 +100,7 @@ export function buildGuangzhouScene(){
   const bridges=new T.Group();bridges.name='pearl-river-skybridge-and-media-facades';root.add(bridges);for(const [x,z,w] of [[-38,-63,5.2],[27,-65,4.4]]){const bridge=box(w,.24,.45,brass,x,7.8,z,bridges);for(let i=0;i<12;i++){const pixel=box(w/14,.10,.03,i%3?edgeLight:emissive('#6de1df'),x-w*.42+i*w*.075,7.82,z+.24,bridges);pixel.castShadow=false;lightMaterials.push(pixel.material);cityLightMaterials.push(pixel.material);}}
   const water=createCityWater();water.name='pearl-river-water-with-reflections';water.material.uniforms.color.value.set('#536f65');root.add(water);
   const riverGlow=new T.Group();riverGlow.name='pearl-river-broken-light-reflections';root.add(riverGlow);for(let i=0;i<86;i++){const x=-30+(i*7%61),z=-8-(i*13%64),length=.24+(i%7)*.16;const material=emissive(i%5===0?'#f6ba69':'#55b8c2');material.transparent=true;material.opacity=.14+(i%4)*.035;const line=mesh(new T.BoxGeometry(.035+(i%3)*.018,.009,length),material,x,-1.157,z,riverGlow);line.userData.skipWaterReflection=true;lightMaterials.push(material);}
-  // 直接采用泉州已验证的云层天空配方，保证广州远景也有同样稳定、柔和的空气透视。
-  const skyMat=new T.ShaderMaterial({side:T.BackSide,depthWrite:false,depthTest:false,uniforms:{time:{value:0}},vertexShader:'',fragmentShader:'varying vec3 d;uniform float time;float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+1.),f.x),f.y);}void main(){vec3 direction=normalize(d);float h=clamp(direction.y,0.,1.);vec3 c=mix(vec3(.67,.70,.64),vec3(.35,.42,.41),pow(h,.62));vec2 p=direction.xz/max(.15,direction.y+.23)*2.3+vec2(time*.0012,-time*.0006);float clouds=noise(p)*.48+noise(p*2.13)*.27+noise(p*4.3)*.16+noise(p*8.7)*.09;c=mix(c,vec3(.76,.76,.69),smoothstep(.28,.80,clouds)*.62);float opening=pow(max(0.,dot(direction,normalize(vec3(-.65,.28,.42)))),12.);c+=vec3(.10,.08,.04)*opening;gl_FragColor=vec4(c,1.);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}'});const sky=new T.Mesh(new T.SphereGeometry(100,32,16),skyMat);configureSkyBackground(sky);root.add(sky);
+  // A warm river horizon distinguishes this scene from the blue bay.
+  const sky=createCitySky('dusk'),skyMat=sky.material;root.add(sky);
   return {root,walkSurfaces,water,update(time){water.material.uniforms.time.value=time;skyMat.uniforms.time.value=time;lightMaterials.forEach((m,i)=>m.emissiveIntensity=.52+.08*Math.sin(time*.48+i*.71));towerLightMaterials.forEach((m,i)=>m.emissiveIntensity=.62+.10*Math.sin(time*.42+i*.43));cityLightMaterials.forEach((m,i)=>m.emissiveIntensity=.54+.08*Math.sin(time*.28+i*.19));movingBoats.forEach(({g,phase})=>{g.position.x+=Math.sin(time*.13+phase)*.002;g.position.y=-1.04+Math.sin(time*.65+phase)*.035;g.rotation.z=Math.sin(time*.42+phase)*.012;});}};
 }
