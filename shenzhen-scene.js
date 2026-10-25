@@ -1,5 +1,5 @@
 import * as T from './vendor/three/build/three.module.js';
-import { configureSkyBackground } from './world-sky.js';
+import { createCitySky } from './city-atmosphere.js';
 import { createCityWater } from './city-water.js';
 import { createFacadeMaterial } from './city-facade.js';
 
@@ -29,7 +29,7 @@ export function buildShenzhenScene(){
   box(10.5,.26,51.5,parkGrass,11.8,-.04,-13.2,bayPark).name='shenzhen-waterfront-park-lawn';
   box(4.4,.16,51.5,runningPath,19.3,.01,-13.2,bayPark).name='shenzhen-bay-greenway';
   box(.30,.52,51.5,stone,-6.44,-.08,-13.2,bayPark).name='shenzhen-bay-retaining-edge';
-  for(let z=9;z>-38;z-=5.8){box(3.4,.025,.075,new T.MeshStandardMaterial({color:'#d9d6bd',roughness:.8}),19.3,.105,z,bayPark);box(9.6,.07,.28,stone,11.8,.13,z+.9,bayPark);}
+  for(let z=9;z>-38;z-=5.8){box(.075,.025,1.6,new T.MeshStandardMaterial({color:'#d9d6bd',roughness:.8}),19.3,.105,z,bayPark);}
   walk(box(12.9,.46,16.1,wood,0,-.17,4),'shenzhen-bay-arrival-deck');
   walk(box(12.9,.48,36.3,wood,0,-.18,-21.3),'shenzhen-bay-continuous-boardwalk');
   const planks=new T.InstancedMesh(new T.BoxGeometry(1,1,1),woodLight,294),d=new T.Object3D();let count=0;
@@ -88,7 +88,7 @@ export function buildShenzhenScene(){
 
   // Ping An Financial Centre remains the anchor, but the skyline now has layered
   // silhouettes, podiums and setbacks rather than a wall of identical boxes.
-  const pingan=new T.Group();pingan.name='pingan-finance-centre-landmark';pingan.position.set(5,.16,-99);pingan.scale.y=.72;root.add(pingan);box(7.2,.42,6.8,stone,0,.05,0,pingan).name='pingan-landed-podium';for(const [y,h,r1,r2] of [[12,24,2.15,1.45],[31,16,1.45,.85],[45,13,.85,.34]])mesh(new T.CylinderGeometry(r2,r1,h,4),glass,0,y,0,pingan).rotation.y=Math.PI/4;mesh(new T.CylinderGeometry(.08,.16,18,8),steel,0,60,0,pingan);mesh(new T.ConeGeometry(.07,8,8),cyan,0,73,0,pingan);for(let i=0;i<23;i++){const y=2+i*2.45,band=mesh(new T.BoxGeometry(2*Math.max(.22,1-i/30),.075,2*Math.max(.22,1-i/30)),i%4?cyan:warm,0,y,0,pingan);band.rotation.y=Math.PI/4;lights.push(band.material);}
+  const pingan=new T.Group();pingan.name='pingan-finance-centre-landmark';pingan.position.set(5,.16,-99);pingan.scale.y=.56;root.add(pingan);box(7.2,.42,6.8,stone,0,.05,0,pingan).name='pingan-landed-podium';for(const [y,h,r1,r2] of [[12,24,2.15,1.45],[31,16,1.45,.85],[45,13,.85,.34]])mesh(new T.CylinderGeometry(r2,r1,h,4),glass,0,y,0,pingan).rotation.y=Math.PI/4;mesh(new T.CylinderGeometry(.08,.16,18,8),steel,0,60,0,pingan);mesh(new T.ConeGeometry(.07,8,8),cyan,0,73,0,pingan);for(let i=0;i<23;i++){const y=2+i*2.45,band=mesh(new T.BoxGeometry(2*Math.max(.22,1-i/30),.075,2*Math.max(.22,1-i/30)),i%4?cyan:warm,0,y,0,pingan);band.rotation.y=Math.PI/4;lights.push(band.material);}
   const skyline=new T.Group();skyline.name='shenzhen-bay-lit-skyline';root.add(skyline);
   for(let i=0;i<37;i++){const x=-58+i*3.25,z=-98-(i%4)*2.1,h=4+(i*17%11),w=1.25+(i%4)*.48;if(Math.abs(x-5)<7)continue;const g=new T.Group();g.name='shenzhen-landed-building';g.position.set(x,.16,z);skyline.add(g);if(i%5===0){for(let tier=0;tier<3;tier++)box(w*(1-tier*.16),h/3-.08,w*.75,facade,0,h/6+tier*h/3,0,g);}else if(i%7===0){const body=mesh(new T.CylinderGeometry(w*.34,w*.52,h,8),facade,0,h/2,0,g);body.rotation.y=Math.PI/8;}else box(w,h,w*.72,facade,0,h/2,0,g);box(w*1.55,.36,w*1.35,stone,0,.02,0,g);for(const side of [-1,1])box(.055,h*.90,.07,steel,side*w*.43,h*.48,w*.37+.04,g);if(i%4===0){box(w*.76,.22,w*.52,steel,0,h+.11,0,g);mesh(new T.CylinderGeometry(.025,.04,.85,6),steel,0,h+.55,0,g);}for(let f=0;f<Math.floor(h/1.65);f++){const window=box(w*.52,.055,.028,(f+i)%4?cyan:warm,0,.65+f*1.48,w*.37+.02,g);window.castShadow=false;lights.push(window.material);}}
 
@@ -97,6 +97,6 @@ export function buildShenzhenScene(){
   const water=createCityWater();water.name='shenzhen-bay-water-with-reflections';water.material.uniforms.color.value.set('#55766c');root.add(water);
   const reflections=new T.Group();reflections.name='shenzhen-bay-broken-light-reflections';root.add(reflections);for(let i=0;i<96;i++){const side=i%2?-1:1,x=side*(7.1+(i*11%18)*.62),z=8-(i*13%74),length=.22+(i%8)*.13,material=glow(i%5===0?'#e8c895':'#b9d1bf');material.transparent=true;material.opacity=.07+(i%4)*.018;const line=box(.035+(i%3)*.018,.009,length,material,x,-1.155,z,reflections);line.userData.skipWaterReflection=true;lights.push(material);}
 
-  const skyMat=new T.ShaderMaterial({side:T.BackSide,depthWrite:false,depthTest:false,uniforms:{time:{value:0}},vertexShader:'varying vec3 d;void main(){d=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:'varying vec3 d;uniform float time;float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+1.),f.x),f.y);}void main(){vec3 direction=normalize(d);float h=clamp(direction.y,0.,1.);vec3 c=mix(vec3(.67,.70,.64),vec3(.35,.42,.41),pow(h,.62));float opening=pow(max(0.,dot(direction,normalize(vec3(-.72,.22,.3)))),10.);c+=vec3(.11,.085,.045)*opening;float cloud=noise(direction.xz/max(.16,direction.y+.28)*2.2+time*.0005);c=mix(c,vec3(.76,.76,.69),smoothstep(.44,.79,cloud)*.42);gl_FragColor=vec4(c,1.);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}'});const sky=new T.Mesh(new T.SphereGeometry(100,32,16),skyMat);configureSkyBackground(sky);root.add(sky);
+  const sky=createCitySky('night'),skyMat=sky.material;root.add(sky);
   return {root,walkSurfaces,water,update(time){water.material.uniforms.time.value=time;skyMat.uniforms.time.value=time;lights.forEach((m,i)=>m.emissiveIntensity=.48+.10*Math.sin(time*.72+i*.51));boats.forEach((boat,i)=>{boat.position.y=-1.03+Math.sin(time*.62+i)*.035;boat.position.x+=Math.sin(time*.11+i)*.0015;boat.rotation.z=Math.sin(time*.39+i)*.01;});}};
 }

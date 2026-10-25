@@ -280,12 +280,12 @@ body{display:flex;justify-content:center}
  <div class="city-overlay" id="cityOverlay" hidden>
   <section class="city-location-card" id="cityLocationCard" role="dialog" aria-modal="true" aria-labelledby="cityLocationTitle">
    <p class="city-kicker">CITY HEALING · 城市漫游</p><h2 id="cityLocationTitle">城市疗愈</h2>
-   <p>选择一座可以安静停留的城市。当前使用模拟定位，不会读取或保存真实位置。</p>
+   <p>选一处熟悉的风景，让城市的节奏慢下来。</p>
    <div class="city-picker" role="group" aria-label="选择城市"><button type="button" data-city-choice="quanzhou" aria-pressed="true"><strong>泉州</strong><small>洛阳桥</small></button><button type="button" data-city-choice="guangzhou" aria-pressed="false"><strong>广州</strong><small>珠江边</small></button><button type="button" data-city-choice="shenzhen" aria-pressed="false"><strong>深圳</strong><small>深圳湾</small></button></div>
    <div class="city-location-status" id="cityLocationStatus"><i></i><span id="cityLocationText">尚未匹配城市</span></div>
    <div class="city-match-card" id="cityMatchCard" hidden><div class="city-match-thumb"><span id="cityMatchName">泉州</span><small id="cityMatchPlace">洛阳桥</small></div><div><strong id="cityMatchTitle">泉州 · 洛阳桥</strong><small id="cityMatchDescription">潮汐快照<br>石桥、树荫与一只愿意陪你的小猫</small></div></div>
-   <div class="city-actions"><button id="cityLocateButton" class="city-primary">模拟定位泉州</button><button id="cityCloseButton">先回花园</button></div>
-   <p class="city-foot">当前使用模拟定位，不会读取或保存你的真实位置。</p>
+   <div class="city-actions"><button id="cityLocateButton" class="city-primary">进入洛阳桥</button><button id="cityCloseButton">先回花园</button></div>
+   <p class="city-foot">手动选择城市，无需定位。风景为艺术化呈现，声音为环境录音混音。</p>
   </section>
   <section class="city-experience" id="cityExperience" data-view="entrance" hidden aria-label="城市三维漫游">
    <div class="city-world-host" id="cityWorldHost"></div>
@@ -309,7 +309,7 @@ body{display:flex;justify-content:center}
     <div class="city-dock-head"><strong>和小猫，慢慢走一会儿</strong><output id="cityElapsed" aria-label="陪伴时长">00:00</output></div>
     <p class="city-message" id="cityMessage" role="status" aria-live="polite">一段石板路，一只小猫，和此刻的你。</p>
     <div class="city-dock-actions"><button class="city-walk" id="cityWalkButton">走上桥 →</button><button id="cityPlayButton">开始陪伴</button><button id="cityPetButton">摸摸小猫</button></div>
-    <div class="city-sound-row"><button id="cityWaterButton" data-on="true" aria-pressed="true">水声 · 开</button><button id="cityWindButton" data-on="true" aria-pressed="true">风声 · 开</button><span class="city-sound-spacer"></span><button class="city-text-button" id="cityResetButton">重置</button><button class="city-text-button" id="cityFinishButton">结束</button></div>
+    <div class="city-sound-row"><button id="cityWaterButton" data-on="true" aria-pressed="true">水声 · 开</button><button id="cityWindButton" data-on="true" aria-pressed="true">风声 · 开</button><button id="cityMusicButton" data-on="false" aria-pressed="false">轻音乐 · 关</button><span class="city-sound-spacer"></span><button class="city-text-button" id="cityResetButton">重置</button><button class="city-text-button" id="cityFinishButton">结束</button></div>
    </section>
    <div class="city-scene-status" id="citySceneStatus" role="status"><p id="citySceneStatusText">石桥与树荫正在醒来…</p><button id="cityRetryButton" hidden>重新进入</button></div>
   </section>
