@@ -59,3 +59,29 @@
 @media(prefers-reduced-motion:reduce){.city-dock,.city-view-switcher,.city-tools button,.city-caption,.city-controls-help{transition:none}}
 @media(max-width:360px){.city-title strong{font-size:20px;letter-spacing:2px}.city-view-switcher button{padding:0 12px;font-size:11px}.city-dock{padding:12px 11px 10px}.city-sound-row{gap:4px}.city-sound-row button{padding:0 8px}.city-caption{font-size:12px}}
 @media(max-height:700px){.city-caption{top:86px;font-size:12px}.city-top{top:16px}.city-title strong{font-size:20px}.city-title small{margin-top:4px}.city-view-switcher{bottom:195px}.city-controls-help{top:130px;bottom:auto;font-size:9px;color:#5b6d4b;text-shadow:0 1px 5px #f4f3e5}.city-dock{bottom:10px;padding:11px 12px 9px}.city-message{margin-bottom:7px}.city-dock-actions button{min-height:42px}.city-sound-row{margin-top:6px}}
+
+/* Waterfront lighting and controls stay legible without bleaching the sky. */
+.city-experience[data-city=guangzhou]:after,.city-experience[data-city=shenzhen]:after{background:linear-gradient(180deg,#202b3538,transparent 24%,transparent 76%,#15273125)}
+.city-experience[data-city=guangzhou] .city-title,.city-experience[data-city=shenzhen] .city-title{text-shadow:0 1px 12px #15273899}
+.city-experience[data-city=guangzhou] .city-title strong,.city-experience[data-city=shenzhen] .city-title strong{color:#fff0d9}
+.city-experience[data-city=guangzhou] .city-title small,.city-experience[data-city=shenzhen] .city-title small{color:#f4e6d5}
+.city-mood-toggle{position:absolute;z-index:3;top:95px;left:50%;transform:translateX(-50%);min-height:44px;padding:0 17px;border:1px solid #fff5;border-radius:24px;background:#263c4899;backdrop-filter:blur(10px);color:#fff0dc;font-size:11px;letter-spacing:1px;white-space:nowrap}
+.city-experience:not([data-city=quanzhou]) .city-caption{top:145px;color:#fff0dc;text-shadow:0 1px 7px #192d3a}
+.city-experience[data-mood=night]:not([data-city=quanzhou]) .city-dock{background:#233c4ee8;color:#edf0e5;border-color:#c9e0ee44}
+.city-experience[data-mood=night]:not([data-city=quanzhou]) .city-message,.city-experience[data-mood=night]:not([data-city=quanzhou]) .city-dock output{color:#c0d0d8}
+.city-experience[data-mood=night]:not([data-city=quanzhou]) .city-sound-row button{color:#c7d6de;border-color:#bad6e43b}
+.city-experience[data-mood=night]:not([data-city=quanzhou]) .city-sound-row button[data-on=true]{color:#edf2e4;background:#4b6571}
+.city-tools button{width:44px;height:44px}
+.city-view-switcher{bottom:calc(var(--city-dock-height, 190px) + max(16px,env(safe-area-inset-bottom)) + 12px)}
+.city-controls-help{top:auto;bottom:calc(var(--city-dock-height, 190px) + max(16px,env(safe-area-inset-bottom)) + 68px)}
+.city-sound-row{flex-wrap:wrap;gap:4px}
+.city-sound-row button{min-height:44px;padding:0 8px}
+.city-sound-row .city-text-button{min-width:32px;padding:0 2px}
+.city-quiet-player{position:absolute;z-index:3;bottom:max(24px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);min-height:48px;min-width:136px;padding:0 24px;border-radius:28px;border:1px solid #f1ecd875;background:#293f48d9;backdrop-filter:blur(14px);color:#fff0dc;font-size:13px;letter-spacing:2px}
+.city-quiet-player[hidden],.city-mood-toggle[hidden]{display:none!important}
+.city-experience[data-quiet=true] .city-tools{top:auto;bottom:max(26px,env(safe-area-inset-bottom))}
+.city-experience[data-quiet=true] .city-tools button:not(.city-quiet-toggle){display:none}
+.city-experience[data-quiet=true] .city-quiet-toggle{background:#293f48c9;color:#fff0dc}
+@media(max-width:360px){.city-sound-row{gap:3px}.city-sound-row button{font-size:9px;padding:0 6px}.city-dock-actions button{font-size:11px;letter-spacing:0}.city-view-switcher button{padding:0 10px}}
+@media(max-height:700px){.city-mood-toggle{top:82px}.city-experience:not([data-city=quanzhou]) .city-caption{top:129px}.city-controls-help{display:none}.city-view-switcher{bottom:calc(var(--city-dock-height, 190px) + 22px)}}
+@media(max-height:700px){.city-tools{top:160px;right:12px;display:grid;grid-template-columns:repeat(2,44px);gap:5px}.city-tools .city-quiet-toggle{grid-column:2}.city-experience[data-quiet=true] .city-tools{display:flex;top:auto}}

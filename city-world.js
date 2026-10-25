@@ -8,6 +8,8 @@ import { createCityPerson } from './city-person.js';
 import { buildCityScene, cityWalkable, CITY_FLOOR } from './city-scene.js';
 import { buildGuangzhouScene, guangzhouWalkable, GUANGZHOU_FLOOR } from './guangzhou-scene.js';
 import { buildShenzhenScene, shenzhenWalkable, SHENZHEN_FLOOR } from './shenzhen-scene.js';
+import { CITY_VIEWS, CITY_WATERFRONT_FOV } from './city-views.js';
+import { CITY_ATMOSPHERES, defaultCityMood } from './city-atmosphere.js';
 import { TapGesture, findRoute, clearSegment } from './garden-navigation.mjs';
 
 const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z);
@@ -124,16 +126,16 @@ export class CityCompanions {
 export class CityWorld {
   constructor({host,onMessage=()=>{},onView=()=>{},onError=()=>{},city='quanzhou'}){
     this.host=host;this.onMessage=onMessage;this.onView=onView;this.onError=onError;
-    this.cityId=city;this.city=city==='shenzhen'?{build:buildShenzhenScene,walkable:shenzhenWalkable,floor:SHENZHEN_FLOOR,start:{x:0,z:7},destination:{x:0,z:-19},bounds:{x:32,zMin:-116,zMax:15},presets:{entrance:{position:V(20,8.6,24),target:V(3,.55,-7)},courtyard:{position:V(15,6.6,16),target:V(2,.8,-5)},bridge:{position:V(7.5,3.6,-1),target:V(0,.6,-23)},left:{position:V(6.8,4.2,-8),target:V(-12,.15,-27)},right:{position:V(17,24,18),target:V(4,21,-99)}}}:city==='guangzhou'?{build:buildGuangzhouScene,walkable:guangzhouWalkable,floor:GUANGZHOU_FLOOR,start:{x:0,z:7},destination:{x:0,z:-19},bounds:{x:34,zMin:-96,zMax:15},presets:{entrance:{position:V(20,9.2,24),target:V(3,.55,-7)},courtyard:{position:V(15.5,6.8,14),target:V(2,.7,-10)},bridge:{position:V(7.5,4.8,-4),target:V(-7,13,-76)},left:{position:V(7.2,4.1,-9),target:V(-12,4,-62)},right:{position:V(14,25,12),target:V(-10,24,-78)}}}:{build:buildCityScene,walkable:cityWalkable,floor:CITY_FLOOR,start:{x:.15,z:6.5},destination:{x:0,z:-12},bounds:{x:18,zMin:-43,zMax:15},presets:null};
+    // 默认镜头以滨水步道为前景，让人物、小猫和城市地标同时进入画面。
+    // 旧镜头从停车带后方俯拍，首屏会被大块空地占掉，地标也容易被截在屏幕边缘。
+    this.cityId=city;this.city=city==='shenzhen'?{build:buildShenzhenScene,walkable:shenzhenWalkable,floor:SHENZHEN_FLOOR,start:{x:0,z:7},destination:{x:0,z:-19},bounds:{x:32,zMin:-116,zMax:15},presets:CITY_VIEWS.shenzhen}:city==='guangzhou'?{build:buildGuangzhouScene,walkable:guangzhouWalkable,floor:GUANGZHOU_FLOOR,start:{x:0,z:7},destination:{x:0,z:-19},bounds:{x:34,zMin:-96,zMax:15},presets:CITY_VIEWS.guangzhou}:{build:buildCityScene,walkable:cityWalkable,floor:CITY_FLOOR,start:{x:.15,z:6.5},destination:{x:0,z:-12},bounds:{x:18,zMin:-43,zMax:15},presets:null};
     this.active=false;this.last=0;this.time=0;this.frame=0;this.follow=false;this.disposed=false;this.listeners=[];
     this.reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches||false;
     // Keep stone close and tangible; let the town recede into estuary air.
     this.scene=new T.Scene();this.scene.fog=new T.Fog('#8eaaa9',26,163);
-    // The two modern waterfronts share Quanzhou's soft overcast atmosphere.
-    // A warm grey-green fog keeps glass, foliage and water from collapsing into blue-black silhouettes.
     if(city==='guangzhou'){this.scene.fog=new T.Fog('#a7b1a6',48,235);this.scene.background=new T.Color('#c2c7bb');}
     if(city==='shenzhen'){this.scene.fog=new T.Fog('#aab5aa',48,240);this.scene.background=new T.Color('#c4cabd');}
-    this.camera=new T.PerspectiveCamera(48,1,.1,220);
+    this.camera=new T.PerspectiveCamera(city==='quanzhou'?48:CITY_WATERFRONT_FOV,1,.1,220);
     this.renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
     this.renderer.outputColorSpace=T.SRGBColorSpace;this.renderer.toneMapping=T.ACESFilmicToneMapping;this.renderer.toneMappingExposure=.88;
@@ -146,13 +148,13 @@ export class CityWorld {
     Object.assign(this.controls,{enableDamping:true,dampingFactor:.075,minDistance:3.5,maxDistance:54,minPolarAngle:.25,maxPolarAngle:Math.PI*.475,rotateSpeed:.55,zoomSpeed:.8,panSpeed:.65,screenSpacePanning:false});
     if(city==='guangzhou'||city==='shenzhen')this.controls.maxDistance=124;
     this.controls.addEventListener('start',()=>{this.transition=null;this.follow=false;this.onView('free');});
-    const hemi=new T.HemisphereLight('#c1d2d5','#46544c',1.55);this.scene.add(hemi);
+    const hemi=this.hemi=new T.HemisphereLight('#c1d2d5','#46544c',1.55);this.scene.add(hemi);
     this.sun=new T.DirectionalLight('#f3dec2',1.25);this.sun.position.set(-12,22,9);this.sun.castShadow=true;
     if(city==='guangzhou'){hemi.color.set('#e4e6d8');hemi.groundColor.set('#7b826f');hemi.intensity=1.62;this.sun.color.set('#f7e8cb');this.sun.intensity=1.12;this.sun.position.set(-12,24,11);}
     if(city==='shenzhen'){hemi.color.set('#e5e8dc');hemi.groundColor.set('#747f70');hemi.intensity=1.66;this.sun.color.set('#f8e7c8');this.sun.intensity=1.08;this.sun.position.set(-14,23,10);}
     this.sun.shadow.mapSize.set(1024,1024);Object.assign(this.sun.shadow.camera,{left:-20,right:20,top:28,bottom:-27,near:1,far:80});this.sun.shadow.normalBias=.04;this.sun.shadow.bias=-.0002;this.sun.shadow.radius=3;this.scene.add(this.sun);
     const generator=new T.PMREMGenerator(this.renderer),room=new RoomEnvironment();this.environment=generator.fromScene(room,.06);this.scene.environment=this.environment.texture;this.scene.environmentIntensity=city==='quanzhou'?.20:.34;generator.dispose();room.dispose();
-    this.scenery=this.city.build();this.scene.add(this.scenery.root);this.hideProceduralNature();this.batchStonework();this.installDetailedNature();
+    this.scenery=this.city.build();this.scene.add(this.scenery.root);this.setMood(defaultCityMood(city),true);this.hideProceduralNature();this.batchStonework();this.installDetailedNature();
     this.actors=new CityCompanions({onMessage,reduced:this.reduced,walkable:this.city.walkable,floor:this.city.floor,start:this.city.start});this.scene.add(this.actors.human,this.actors.cat);
     this.marker=new T.Mesh(new T.RingGeometry(.25,.31,40),new T.MeshBasicMaterial({color:'#fff1b8',side:T.DoubleSide,transparent:true,opacity:.8,depthWrite:false}));this.marker.rotation.x=-Math.PI/2;this.marker.position.y=this.city.floor+.025;this.marker.visible=false;this.marker.userData.skipWaterReflection=true;this.scene.add(this.marker);
     this.ray=new T.Raycaster();this.pointer=new T.Vector2();this.gesture=new TapGesture();
@@ -161,10 +163,25 @@ export class CityWorld {
     this.canvas.dataset.ready='true';this.canvas.dataset.scene=city==='guangzhou'?'guangzhou-pearl-river-volumetric-3d':city==='shenzhen'?'shenzhen-bay-volumetric-3d':'luoyang-bridge-volumetric-3d';
     this.listen(this.canvas,'webglcontextlost',event=>{event.preventDefault();this.deactivate();this.onError('三维画面暂时中断，请返回花园后重新进入。');});
   }
+  setMood(mood,immediate=false){
+    if(this.cityId==='quanzhou'||!CITY_ATMOSPHERES[mood])return;
+    this.mood=mood;this.atmosphere=CITY_ATMOSPHERES[mood];
+    this.atmosphereColors=Object.fromEntries(['top','horizon','fog','water','sky','ground','sun'].map(key=>[key,new T.Color(this.atmosphere[key])]));
+    if(immediate||this.reduced)this.updateAtmosphere(1);
+  }
+  updateAtmosphere(blend){
+    if(!this.atmosphere)return;
+    const p=this.atmosphere,c=this.atmosphereColors,sky=this.scenery.root.getObjectByName('infinite-garden-sky');
+    sky.material.uniforms.top.value.lerp(c.top,blend);sky.material.uniforms.horizon.value.lerp(c.horizon,blend);
+    this.scene.fog.color.lerp(c.fog,blend);this.scenery.water.material.uniforms.color.value.lerp(c.water,blend);
+    this.hemi.color.lerp(c.sky,blend);this.hemi.groundColor.lerp(c.ground,blend);this.sun.color.lerp(c.sun,blend);
+    this.hemi.intensity=T.MathUtils.lerp(this.hemi.intensity,p.hemi,blend);this.sun.intensity=T.MathUtils.lerp(this.sun.intensity,p.key,blend);
+    this.renderer.toneMappingExposure=T.MathUtils.lerp(this.renderer.toneMappingExposure,p.exposure,blend);
+  }
   listen(target,type,fn,options){target.addEventListener(type,fn,options);this.listeners.push(()=>target.removeEventListener(type,fn,options));}
   hideProceduralNature(){
     if(this.cityId==='quanzhou')return;
-    const hidden=new Set(['pearl-river-banyan','shenzhen-bay-mangrove','pearl-river-procedural-shore-trees','shenzhen-procedural-shore-trees']);
+    const hidden=new Set(['pearl-river-banyan','pearl-river-procedural-shore-trees','shenzhen-procedural-shore-trees']);
     this.scenery.root.traverse(object=>{if(hidden.has(object.name))object.traverse(child=>{child.visible=false;});});
   }
   async installDetailedNature(){
@@ -175,7 +192,7 @@ export class CityWorld {
       const place=(name,x,z,height,angle=0,width=1,y=0)=>{const template=templates.get(name);if(!template)return;const asset=detailedNatureAsset(template,height,width);asset.name=`${this.cityId}-${name.toLowerCase()}`;asset.position.set(x,y,z);asset.rotation.y=angle;group.add(asset);};
       const trees=this.cityId==='guangzhou'?
         [['CommonTree_1',17.5,6.5,6.4,.35,.94],['CommonTree_3',16.8,-2.2,7.0,2.1,.92],['CommonTree_2',12.4,-13.8,6.4,1.15,1.02],['CommonTree_5',17.1,-24.5,5.8,2.75,.96],['CommonTree_3',12.0,-35,5.2,.8,.88]]:
-        [['CommonTree_3',9.3,4.2,6.5,.25,.82],['CommonTree_1',13.2,-4.8,6.0,2.2,.78],['CommonTree_2',9.8,-17,5.5,1.1,.74],['CommonTree_5',13.8,-30,5.0,2.8,.72],['CommonTree_2',-10,3,4.9,.7,.76,-.92],['CommonTree_5',10,-1,4.5,2.4,.72,-.92],['CommonTree_1',-12,-13,4.8,1.6,.7,-.92],['CommonTree_3',11,-21,4.2,.3,.66,-.92],['CommonTree_2',-15,-31,4.0,2.8,.62,-.92],['CommonTree_5',14,-36,3.7,1.2,.6,-.92]];
+        []; // Native mangroves retain their branching roots and low canopy.
       trees.forEach(args=>place(...args));
       const shoreTrees=Array.from({length:12},(_,index)=>this.cityId==='guangzhou'?
         [['CommonTree_1','CommonTree_3','CommonTree_2','CommonTree_5'][index%4],-50+index*9.1,-53.3-(index%3)*.72,3.6+(index%4)*.34,index*.83,.72+(index%3)*.08,.14]:
@@ -274,6 +291,7 @@ export class CityWorld {
     this.frame=requestAnimationFrame(t=>this.update(t));
     if(document.hidden){this.last=now;return;}
     const dt=this.last?Math.min(.05,(now-this.last)/1000):0;this.last=now;this.time+=dt;
+    this.updateAtmosphere(this.reduced?1:1-Math.exp(-dt*2));
     this.actors.update(dt);this.scenery.update(this.reduced?0:this.time);
     if(this.follow){
       const target=this.actors.human.position.clone().add(V(0,1.0,0));
