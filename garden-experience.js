@@ -11,7 +11,7 @@ function createGardenExperience(hooks){
  }
  function renderBefore(){ratings($('beforeRating'),before,n=>{before=n;renderBefore()})}
  function refresh(changeTimer=false,preserveMix=false){
-  plan=P.recommend(context,state.records);if(preserveMix){plan.mix={...state.mix};plan.remembered=false;plan.retained=true;plan.reason='保留了你刚才的声音和时长。可以直接开始，也可以按现在的感受换一种。'}else state.mix={...plan.mix};state.wind=state.mix.wind;
+  plan=P.recommend(context,state.records);if(preserveMix){plan.mix={...state.mix};plan.remembered=false;plan.retained=true;plan.reason='保留了你刚才的声音和时长。可以直接开始，也可以按现在的感受换一种。'}else state.mix={footsteps:22,chime:18,...plan.mix};state.wind=state.mix.wind;
   if(changeTimer){clock.setTimer(plan.minutes*60,performance.now());syncClock();}
   updateEnvironment();changedMix();updateProgress();
   updatePlanLabel();$('planHeading').textContent=plan.title;$('planReason').textContent=plan.reason;
@@ -21,7 +21,7 @@ function createGardenExperience(hooks){
   $('includeMusic').checked=context.music;
   renderBefore();store();
  }
- document.querySelectorAll('[data-need]').forEach(b=>b.onclick=()=>{context.need=b.dataset.need;refresh(true)});
+ document.querySelectorAll('[data-need]').forEach(b=>b.onclick=()=>{context.need=b.dataset.need;refresh(false)});
  for(const key of ['environment','device'])document.querySelectorAll(`[data-${key}]`).forEach(b=>b.onclick=()=>{context[key]=b.dataset[key];refresh(false)});
  $('includeMusic').onchange=e=>{context.music=e.target.checked;refresh(false)};
  $('personalizeButton').onclick=()=>modal('personalizeOverlay');$('confirmPlan').onclick=closeModal;
@@ -91,6 +91,6 @@ function createGardenExperience(hooks){
  function summary(){const n=P.summarize(state.records);$('feedbackSummary').textContent=`本机 ${n.sessions} 次体验 · ${n.paired} 份前后感受${n.paired?'，平均变化 '+(n.meanChange>=0?'+':'')+n.meanChange.toFixed(1)+' / 5':''} · ${n.intentResponses} 份再听意愿中 ${n.yes} 份愿意。仅为自报体验，不代表睡眠改善。`;}
  $('recordFeedback').onclick=()=>showPlantResult(state.selected);
  $('exportFeedback').onclick=()=>{const output={version:1,exportedAt:new Date().toISOString(),note:'本机自报体验。没有记录即没有测量，不推断睡眠或临床效果。',summary:P.summarize(state.records),records:state.records.map(({growth,...r})=>r)};const url=URL.createObjectURL(new Blob([JSON.stringify(output,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='眠境花园-本机体验记录.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
- refresh(!Number.isInteger(hooks.savedTimer));pending();
+ refresh(false);pending();
  return {prepare,begin,attach,renderFeedback,summary,sync,leaveRest,quietFinish,replay:record=>{replayRecord=record}};
 }

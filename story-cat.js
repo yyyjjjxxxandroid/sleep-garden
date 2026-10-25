@@ -70,8 +70,6 @@ export function createStoryCat({random=Math.random,clock=()=>performance.now()/1
   const nose=new T.Mesh(new T.SphereGeometry(1,16,12),noseMat);nose.scale.set(.046,.032,.023);nose.position.set(0,-.122,.55);head.add(nose);
   const curve=(points,r,material,parent)=>{const o=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p))),16,r,5,false),material);parent.add(o);return o};
   curve([[0,-.151,.544],[0,-.19,.536],[-.038,-.205,.523]],.004,noseMat,head);curve([[0,-.19,.536],[.038,-.205,.523]],.004,noseMat,head);
-  const whisker=new T.MeshBasicMaterial({color:'#a99684',transparent:true,opacity:.7});
-  for(const side of [-1,1])for(let i=0;i<3;i++)curve([[side*.22,-.16+i*.025,.455],[side*.40,-.14+i*.04,.47],[side*.63,-.15+i*.065,.42]],.003,whisker,head);
   const legs=[];for(const side of [-1,1])for(const front of [true,false]){const hip=new T.Bone();hip.name=`hip-${front?'front':'back'}-${side}`;hip.position.set(side*.29,.48,front?.32:-.56);bodyRig.add(hip);const upper=ball(hip,fur,0,-.10,0,.16,.25,.17);upper.name=`upper-${front?'front':'back'}-${side}`;const foot=ball(hip,white,0,-.33,.045,.17,.13,.21);foot.name=`paw-${front?'front':'back'}-${side}`;legs.push({hip,side,front,foot,upper})}
   const tail=new T.Bone();tail.name='companion-tail';tail.position.set(0,.64,-.75);bodyRig.add(tail);
   const path=new T.CatmullRomCurve3([new T.Vector3(0,0,0),new T.Vector3(.10,.05,-.25),new T.Vector3(.24,.35,-.43),new T.Vector3(.22,.68,-.45),new T.Vector3(.02,.86,-.40)]);
@@ -241,7 +239,11 @@ export function createStoryCat({random=Math.random,clock=()=>performance.now()/1
       else if(context.listening&&!listeningSettled&&listeningSince!==null&&now-listeningSince>14&&!moving){companionAt=now;restBaseSit=restSit;restBaseLie=restLie;listeningSettled=true}
     }
     const companionAge=companionAt===null?0:now-companionAt;
-    if(exploring){companionAt=null;restSit=T.MathUtils.damp(restSit,0,8,dt);restLie=T.MathUtils.damp(restLie,0,8,dt);restBaseSit=restSit;restBaseLie=restLie;idleKind='';nextIdle=t+3;}
+    if(exploring){
+      const restingProp=['box','cushion'].includes(interaction.action),a=interaction.time||0,d=interaction.duration||15;
+      const propRest=restingProp?ease(a,.2,1.8)*(1-ease(a,d-2,d)):0;
+      companionAt=null;restSit=T.MathUtils.damp(restSit,propRest,8,dt);restLie=T.MathUtils.damp(restLie,interaction.action==='cushion'?propRest:0,8,dt);restBaseSit=restSit;restBaseLie=restLie;idleKind='';nextIdle=t+3;
+    }
     else if(reduced){companionAt=null;restSit=restLie=restBaseSit=restBaseLie=0}
     else if(held){
       // Petting a seated or resting cat keeps that posture. A new release
@@ -365,6 +367,46 @@ export function createStoryCat({random=Math.random,clock=()=>performance.now()/1
       else{head.position.x+=Math.sin(ageOfAction*4)*.09*weight;head.rotation.z+=Math.sin(ageOfAction*4)*.20*weight;head.rotation.y+=.26*weight;}
     }
     root.userData.flowerAction=weight?action:null;
+    // Continuous bone poses for actual objects in the garden. The envelope
+    // returns every limb to its ordinary gait before the route can resume.
+    const duration=interaction?.duration||0;
+    const careWeight=duration?ease(ageOfAction,0,.8)*(1-ease(ageOfAction,duration-.9,duration)):0;
+    root.userData.careAction=careWeight?action:null;
+    if(careWeight){
+      const cycle=reduced?0:Math.sin(ageOfAction*(action==='water'?8:5));
+      if(['meal','treat','water'].includes(action)){
+        head.rotation.x+=careWeight*(.52+cycle*.025);head.position.y-=careWeight*.28;head.position.z+=careWeight*.10;
+        if(!reduced&&action==='water'){tongue.visible=cycle>.1;tongue.position.z=.56+Math.max(0,cycle)*.035}
+        else{mouth.visible=true;mouth.scale.y=.01+Math.max(0,cycle)*.012}
+      }
+      if(action==='scratch'&&interaction.board){
+        head.rotation.x+=careWeight*.20;
+        // Lift before reaching across the near edge; withdraw before lowering.
+        // Targets are in world space so terrain, actor scale and facing agree with the board.
+        const a=ageOfAction,d=duration,b=interaction.board;
+        const reach=ease(a,.35,.95)*(1-ease(a,d-1.1,d-.45));
+        const raised=ease(a,0,.32)*(1-ease(a,d-.40,d));
+        root.updateMatrixWorld(true);
+        for(const l of legs.filter(l=>l.front)){
+          const phase=a*5+(l.side>0?Math.PI:0),stroke=reduced?0:Math.sin(phase),lift=reduced?0:Math.max(0,Math.cos(phase))*.045;
+          const rest=l.foot.getWorldPosition(new T.Vector3()),z=b.z+.56+stroke*.07;
+          const target=new T.Vector3(b.x-l.side*.16,b.y+.095+(z-b.z)*.06+.012+.10+lift,z);
+          target.x=T.MathUtils.lerp(rest.x,target.x,reach);target.z=T.MathUtils.lerp(rest.z,target.z,reach);
+          target.y=T.MathUtils.lerp(rest.y,target.y,raised);
+          l.foot.position.copy(l.hip.worldToLocal(target));
+          l.foot.quaternion.copy(l.hip.getWorldQuaternion(new T.Quaternion()).invert());
+        }
+      }
+      if(action==='ball'||action==='scratch'&&!interaction.board){
+        head.rotation.x+=careWeight*.25;
+        for(const l of legs.filter(l=>l.front)){
+          const phase=ageOfAction*5+(l.side>0?Math.PI:0),lift=(reduced?.5:(1+Math.sin(phase))/2)*careWeight;
+          if(action==='ball'&&l.side<0)continue;
+          l.foot.position.y+=lift*.10;l.foot.position.z+=lift*.20;l.hip.rotation.x-=lift*.14;
+        }
+      }
+      if(action==='box')head.rotation.y+=cycle*.12*careWeight;
+    }
     coat.update();
   }
   return {root,head,reaction,animate,pet,touch,release,look,wantsRest,setContext,notice};

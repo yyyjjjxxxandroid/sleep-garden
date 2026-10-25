@@ -15,7 +15,9 @@ test('cozy landmarks extend the existing garden and respond to dusk',async()=>{
   assert.equal(content.root.getObjectsByProperty('name','garden-birdhouse').length,5);
   assert.equal(content.root.getObjectsByProperty('name','garden-cairn').length,5);
   assert.equal(content.root.getObjectsByProperty('name','garden-low-fence').length,4);
-  assert.equal(world.walkObstacles.length,9,'cat routes avoid all major landmarks');
+  assert.equal(world.walkObstacles.length,8,'removed moon gate leaves no invisible collision');
+  assert.equal(content.root.getObjectByName('moon-gate'),undefined);
+  assert.equal(content.root.getObjectsByProperty('name','garden-lantern').length,10,'lamps only mark key resting areas');
   assert.equal(content.lamps.length,2,'keep real-time lights intentionally limited');
   content.update(1,0);assert.equal(content.lamps[0].intensity,0);
   content.update(1,1);assert.ok(content.lamps[0].intensity>1);

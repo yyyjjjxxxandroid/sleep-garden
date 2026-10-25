@@ -73,3 +73,14 @@ test('pausing ends an active plant cue before context suspension so it cannot re
   stoppedAt=undefined;engine.ctx.state='suspended';GardenAudio.prototype.pause.call(engine);clearTimeout(engine.suspendTimer);
   assert.equal(stoppedAt,12,'an already interrupted context must not replay the cue on resume');
 });
+test('scene sounds follow motion, wind and independent volume switches',()=>{
+  const state={playing:true,catMoving:false,catDistance:0,chimeContact:0,wind:35,mix:{footsteps:22,chime:18}};
+  const calls=[],engine={ctx:{state:'running'},readMix:()=>state,lastStepDistance:null,lastChimeContact:null,pawStep:v=>calls.push(['step',v]),chimeStrike:v=>calls.push(['chime',v])};
+  const tick=()=>GardenAudio.prototype.sceneTick.call(engine);
+  tick();state.catDistance=.3;tick();assert.equal(calls.length,0,'stationary cat stays silent');
+  state.catMoving=true;state.catDistance=.6;tick();assert.equal(calls[0][0],'step');
+  state.chimeContact=1;tick();assert.equal(calls[1][0],'chime');
+  state.mix.footsteps=0;state.mix.chime=0;state.catDistance=.9;state.chimeContact=2;tick();assert.equal(calls.length,2,'muted channels stay silent');
+  state.mix.chime=20;state.wind=0;state.chimeContact=3;tick();assert.equal(calls.length,2,'no wind means no chime');
+  state.playing=false;state.mix.footsteps=20;state.wind=60;state.chimeContact=4;state.catDistance=2;tick();assert.equal(calls.length,2,'pause stops all new scene sounds');
+});

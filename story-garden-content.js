@@ -145,16 +145,13 @@ export function installGardenContent(world,T){
     const cap=add(grove,new T.ConeGeometry(.13+(i%2)*.035,.12,7),i%3?cushion:roof,x,.27+(i%3)*.03,z);cap.rotation.x=Math.PI;
   }
 
-  // North moon garden: a stone ring and pale planting give the far end its own silhouette.
+  // A quiet patch of pale flowers; the oversized stone ring has been removed.
   const moonGarden=new T.Group();moonGarden.name='moon-garden';
   const mx=1,mz=-31;moonGarden.position.set(mx,world.groundHeight(mx,mz),mz);root.add(moonGarden);
-  const gate=add(moonGarden,new T.TorusGeometry(2.25,.20,8,32),stone,0,2.28,0,'moon-gate');gate.rotation.y=0;
-  for(const x of [-2.25,2.25])add(moonGarden,new T.BoxGeometry(.58,.42,.72),stone,x,.21,0);
   for(let i=0;i<11;i++){
     const a=i/11*Math.PI*2,r=3.2+(i%2)*.55;
     const flower=add(moonGarden,new T.SphereGeometry(.13,7,5),linen,Math.sin(a)*r,.35+(i%3)*.08,Math.cos(a)*r);flower.scale.set(1,.52,1);
   }
-  makeLantern(mx-3.15,mz+1.2,.64,false);makeLantern(mx+3.15,mz+1.2,.64,false);
 
   // Distributed lived-in vignettes fill the broad lawn without introducing more buildings.
   const teaNook=new T.Group();teaNook.name='meadow-tea-nook';
@@ -205,7 +202,7 @@ export function installGardenContent(world,T){
   // Taller accents and low fences make the midground readable from the default overview.
   const birdhouses=[[-17,6,.25],[-8,15,-.35],[12,7,.18],[21,-4,-.2],[-14,-18,.4]];
   birdhouses.forEach(args=>makeBirdhouse(...args));
-  [[-18,-1,.9],[10,-1,.85],[19,9,.75],[-7,-16,.8],[24,-13,.85]].forEach(args=>makeCairn(...args));
+  [[-18,-1,.9],[13,-4,.85],[19,9,.75],[-7,-16,.8],[24,-13,.85]].forEach(args=>makeCairn(...args));
   const fenceLines=[[-18,9,5.5,.05],[11,16,6,-.08],[21,-16,5.5,.15],[-16,-23,5,-.12]];
   for(const[cx,cz,length,angle]of fenceLines){
     const fence=new T.Group();fence.name='garden-low-fence';fence.position.set(cx,world.groundHeight(cx,cz),cz);fence.rotation.y=angle;root.add(fence);
@@ -229,15 +226,14 @@ export function installGardenContent(world,T){
 
   world.walkObstacles?.push(
     {x:hx,z:hz,radius:3.45},{x:bx,z:bz,radius:1.5},
-    {x:px,z:pz,radius:2.65},{x:gx,z:gz,radius:2.7},{x:mx,z:mz,radius:2.55},
+    {x:px,z:pz,radius:2.65},{x:gx,z:gz,radius:2.7},
     {x:tx,z:tz,radius:2.0},{x:qx,z:qz,radius:1.2},{x:sx,z:sz,radius:2.0},{x:wx,z:wz,radius:1.7}
   );
 
   // Lanterns trace the existing path and bridge without changing navigation.
-  [[3.7,10.6],[5.9,7.6],[5.2,3.5],[-.2,.8],[-7.8,-9.8],[-10.0,-12.1]].forEach(([x,z],i)=>makeLantern(x,z,i<2?.62:.72,i===2||i===5));
-  makeLantern(bx-1.25,bz+.65,.55,false);
+  [[5.2,3.5],[-10.0,-12.1]].forEach(([x,z])=>makeLantern(x,z,.62,true));
   // A loose ring of warm markers connects the outer map instead of concentrating light at the pond.
-  [[-24,13],[-19,17],[-9,18],[11,18],[21,14],[29,8],[29,-4],[24,-18],[14,-25],[-9,-27],[-19,-24],[-28,-12],[-29,1]].forEach(([x,z],i)=>makeLantern(x,z,.52+(i%3)*.08,false));
+  // Keep the distant lawn open instead of outlining the entire map with lamps.
 
   // Small forest-floor details reuse the shipped plant assets and remain batched.
   const plant=(name,x,z,height,angle=0)=>world.place?.(name,x,z,height,angle);
