@@ -1,7 +1,7 @@
 (()=>{
   const $=id=>document.getElementById(id),overlay=$('cityOverlay'),experience=$('cityExperience'),location=$('cityLocationCard'),app=$('app');
   if(!overlay||!experience||!location)return;
-  const city={world:null,loading:null,loadToken:null,playing:false,accumulated:0,started:0,timer:null,sound:null,water:true,wind:true,music:false,moods:{quanzhou:'dusk',guangzhou:'dusk',shenzhen:'night'},version:0,id:'quanzhou'};
+  const city={world:null,loading:null,loadToken:null,playing:false,accumulated:0,started:0,timer:null,sound:null,water:true,wind:true,music:false,moods:{quanzhou:'dusk',guangzhou:'dusk',shenzhen:'night'},mix:{water:52,wind:24,music:16},version:0,id:'quanzhou'};
   const cities={quanzhou:{title:'泉州 · 洛阳桥',name:'泉州',place:'洛阳桥',enter:'进入洛阳桥',walk:'走上桥 →',loading:'石桥与树荫正在醒来…',description:'潮汐快照<br>石桥、树荫与一只愿意陪你的小猫',welcome:'一段石板路，一只小猫，和此刻的你。',views:{entrance:['潮汐快照 · 桥头树荫','先在桥头站一会儿，让风慢慢经过。'],courtyard:['桥头庭院 · 红砖石亭','树荫落在石阶上，坐一会儿也很好。'],bridge:['石板路 · 桥上漫游','慢慢走，不需要急着抵达哪里。'],left:['向左看 · 潮水与远岸','水从桥下经过，风也轻轻经过你。'],right:['向右看 · 石桥与水面','把目光放远一点，把呼吸放慢一点。'],follow:['跟随人物 · 一起慢慢走','小猫会在你身旁，陪你走过这一段石板路。'],free:['自由视角 · 桥头漫游','拖动看看四周，点一下石板路，让我们走过去。']}},guangzhou:{title:'广州 · 珠江边',name:'广州',place:'珠江边',enter:'进入珠江边',walk:'沿江慢走 →',loading:'珠江与城市天际线正在醒来…',description:'江风快照<br>珠江、榕树与一只愿意陪你的小猫',welcome:'一段滨江步道，一只小猫，和此刻的你。',views:{entrance:['江畔快照 · 城市天际线','先在江边站一会儿，让风慢慢经过。'],courtyard:['榕树广场 · 江畔休憩','树荫落在石阶上，坐一会儿也很好。'],bridge:['滨江步道 · 慢慢前行','沿着珠江慢慢走，不需要急着抵达哪里。'],left:['向左看 · 江面与塔影','把目光放远一点，让呼吸跟着江面舒展开。'],right:['向右看 · 树影与城市','水从身边经过，风也轻轻经过你。'],follow:['跟随人物 · 一起慢慢走','小猫会在你身旁，陪你走过这一段江边。'],free:['自由视角 · 珠江漫游','拖动看看四周，点一下步道，让我们走过去。']}},shenzhen:{title:'深圳 · 深圳湾',name:'深圳',place:'深圳湾',enter:'进入深圳湾',walk:'沿湾慢走 →',loading:'深圳湾、红树林与城市灯带正在醒来…',description:'海湾快照<br>红树林、城市灯带与一只愿意陪你的小猫',welcome:'一段海湾栈道，一只小猫，和此刻的你。',views:{entrance:['湾畔快照 · 海风与灯带','先在海湾边站一会儿，让风慢慢经过。'],courtyard:['红树林下 · 静静停留','树影落在木栈道上，坐一会儿也很好。'],bridge:['海湾栈道 · 慢慢前行','沿着深圳湾慢慢走，不需要急着抵达哪里。'],left:['向左看 · 红树林与海面','把目光交给海湾，让呼吸慢一点。'],right:['向右看 · 城市与塔尖','城市灯光很远，海风就在身边。'],follow:['跟随人物 · 一起慢慢走','小猫会在你身旁，陪你走过这一段海湾。'],free:['自由视角 · 深圳湾漫游','拖动看看四周，点一下木栈道，让我们走过去。']}}};
   const current=()=>cities[city.id];
   function selectCity(id){
@@ -37,7 +37,7 @@
   }
   function elapsed(){return city.accumulated+(city.playing?(performance.now()-city.started)/1000:0);}
   function updateTime(){const seconds=Math.floor(elapsed());$('cityElapsed').textContent=String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');}
-  function updateMix(){city.sound?.setMix({water:city.water?1:0,wind:city.wind?1:0,music:city.music?1:0});}
+  function updateMix(){if(!city.sound)return;const profile=city.sound.profile;city.sound.setMix(Object.fromEntries(['water','wind','music'].map(key=>[key,city[key]?city.mix[key]/((key==='music'?.16:profile[key])*100):0])));}
   function pause(){
     if(city.playing)city.accumulated=elapsed();city.playing=false;city.version++;
     if(city.timer)clearInterval(city.timer);city.timer=null;
@@ -86,7 +86,13 @@
   function close(){pause();city.world?.deactivate();overlay.hidden=true;app.classList.remove('city-open');$('cityButton').focus({preventScroll:true});}
   $('cityButton').addEventListener('click',open);$('cityCloseButton').addEventListener('click',close);$('cityExitButton').addEventListener('click',close);
   $('cityBackButton').addEventListener('click',()=>{pause();city.world?.deactivate();experience.hidden=true;location.hidden=false;$('cityLocateButton').focus({preventScroll:true});});
-  document.querySelectorAll('[data-city-choice]').forEach(button=>button.addEventListener('click',()=>{if(city.id===button.dataset.cityChoice)return;pause();city.world?.dispose();city.world=null;city.loadToken=null;city.loading=null;city.sound?.close();city.sound=null;city.accumulated=0;updateTime();city.id=button.dataset.cityChoice;selectCity(city.id);}));
+  function chooseCity(id){
+    if(!cities[id]||city.id===id)return;
+    pause();city.world?.dispose();city.world=null;city.loadToken=null;city.loading=null;city.sound?.close();city.sound=null;city.accumulated=0;
+    city.mix={water:id==='guangzhou'?58:id==='shenzhen'?43:52,wind:id==='guangzhou'?18:id==='shenzhen'?30:24,music:16};
+    updateTime();city.id=id;selectCity(id);
+  }
+  document.querySelectorAll('[data-city-choice]').forEach(button=>button.addEventListener('click',()=>chooseCity(button.dataset.cityChoice)));
   $('cityLocateButton').addEventListener('click',enter);
   $('cityWalkButton').addEventListener('click',()=>city.world?.walkBridge());
   $('cityFollowButton').addEventListener('click',()=>{if(city.world?.follow)city.world.setView('entrance');else city.world?.focusPerson();});
@@ -102,5 +108,22 @@
   overlay.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();if(experience.dataset.quiet==='true'){setQuiet(false);quietButton.focus();}else close();}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&city.playing){pause();message('回来后，再继续听这段声音。');}});
   window.addEventListener('pagehide',()=>{pause();city.world?.dispose();city.world=null;city.sound?.close();city.sound=null;});
-  window.CityPrototype={open,close,get world(){return city.world;}};
+  window.CityPrototype={open,close,get world(){return city.world;},
+    get snapshot(){return {active:!overlay.hidden&&!experience.hidden,scene:city.id,mood:city.moods[city.id],playing:city.playing,mix:Object.fromEntries(['water','wind','music'].map(key=>[key,city[key]?city.mix[key]:0]))};},
+    play(){if(!overlay.hidden&&!experience.hidden&&!city.playing)return togglePlaying();},
+    async prepare(plan){
+      if(overlay.hidden||experience.hidden||city.id!==plan.scene){open();chooseCity(plan.scene);await enter();}
+      if(!city.world||overlay.hidden||experience.hidden)throw Error('City unavailable');
+      if(plan.mood!=='keep'){city.moods[city.id]=plan.mood;experience.dataset.mood=plan.mood;city.world.setMood(plan.mood);syncMood();}
+      for(const [key,label]of [['water','水声'],['wind','风声'],['music','轻音乐']]){
+        if(Number.isFinite(plan.mix[key])){city[key]=plan.mix[key]>0;if(city[key])city.mix[key]=plan.mix[key];const button=$('city'+key[0].toUpperCase()+key.slice(1)+'Button');button.dataset.on=String(city[key]);button.setAttribute('aria-pressed',String(city[key]));button.textContent=label+' · '+(city[key]?'开':'关');}
+      }
+      updateMix();if(plan.playback==='pause')pause();
+      if(plan.catAction==='approach')city.world.focusPerson();
+      if(plan.catAction==='pet')city.world.actors.pet();
+      if(plan.catAction==='rest')city.world.actors.rest();
+      if(plan.interaction==='quiet')setQuiet(true);else if(plan.interaction==='talk')setQuiet(false);
+      return {playing:city.playing,summary:current().title+'的声音与小猫已按这段安排调整。'};
+    }
+  };
 })();

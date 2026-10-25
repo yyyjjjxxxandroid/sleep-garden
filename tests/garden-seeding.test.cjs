@@ -5,10 +5,10 @@ const fs=require('node:fs');
 const {SessionClock}=require('../session-clock.js');
 const html=fs.readFileSync(require('node:path').join(__dirname,'../source.html'),'utf8');
 function fixture({records=[],timer=0,quiet=false}={}){
-  let now=0,resting=false;const plants=[],results=[],beginnings=[],cues=[],elements=new Map(),storage=new Map();
+  let now=0,resting=false;const events=[],plants=[],results=[],beginnings=[],cues=[],elements=new Map(),storage=new Map();
   const state={mode:'home',playing:false,starting:false,records,seedChoice:'fern',elapsed:0,mix:{rain:80},replayPending:false};
   const clock=new SessionClock(timer);
-  const context=vm.createContext({state,clock,performance:{now:()=>now},window:{GARDEN_PLOT_COUNT:6},
+  const context=vm.createContext({state,clock,performance:{now:()=>now},Event,window:{GARDEN_PLOT_COUNT:6,dispatchEvent:event=>events.push(event.type)},
     $:id=>{if(!elements.has(id))elements.set(id,{hidden:false,dataset:{},style:{},textContent:'',focus(){},setAttribute(){},removeAttribute(){},querySelectorAll:()=>[]});return elements.get(id)},localStorage:{setItem:(key,value)=>storage.set(key,value),getItem:key=>storage.get(key)||null},
     app:{dataset:{},classList:{contains:()=>resting}},document:{hidden:false,querySelectorAll:()=>[]},flowerCatalog:{fern:{name:'雨蕨'},bellflower:{name:'铃花'},waterleaf:{name:'水叶草'}},
     experience:{begin:mix=>beginnings.push(mix),attach(){},quietFinish:()=>quiet},
@@ -32,7 +32,7 @@ function fixture({records=[],timer=0,quiet=false}={}){
   const progress=html.slice(html.indexOf('function updateProgress(){'),html.indexOf('function setTimer('));
   const select=html.slice(html.indexOf('function selectSeed(type)'),html.indexOf("document.querySelectorAll('[data-seed]').forEach(b=>b.onclick"));
   vm.runInContext(helpers+'\n'+flow+'\n'+progress+'\n'+select,context);
-  return {state,clock,plants,results,beginnings,cues,storage,stats:(records,seedPlanted)=>context.gardenStats(records,seedPlanted),restore:snapshot=>context.restorePendingPlant(snapshot),recover:(records,snapshot)=>context.recoverPendingPlant(records,snapshot),select:type=>context.selectSeed(type),start:()=>context.start(),pause:()=>context.pause(),reset:()=>context.resetSession(),finish:()=>context.finish(),progress:()=>context.updateProgress(),tick:()=>{clock.tick(now);context.syncClock()},time:ms=>{now=ms},rest:value=>{resting=value},hide:value=>{context.document.hidden=value}};
+  return {state,clock,plants,results,beginnings,cues,storage,events,stats:(records,seedPlanted)=>context.gardenStats(records,seedPlanted),restore:snapshot=>context.restorePendingPlant(snapshot),recover:(records,snapshot)=>context.recoverPendingPlant(records,snapshot),select:type=>context.selectSeed(type),start:()=>context.start(),pause:()=>context.pause(),reset:()=>context.resetSession(),finish:()=>context.finish(),progress:()=>context.updateProgress(),tick:()=>{clock.tick(now);context.syncClock()},time:ms=>{now=ms},rest:value=>{resting=value},hide:value=>{context.document.hidden=value}};
 }
 test('garden stats show planted seeds and completed healing sessions separately',()=>{
   const f=fixture({records:[{id:1,complete:true},{id:2,complete:false},{id:3}]});
@@ -48,6 +48,7 @@ test('choosing a flower previews it; repeated start, pause, resume and reset pla
 });
 test('finishing keeps flower choice, independent sound, partial growth and one record',async()=>{
   const f=fixture();f.select('waterleaf');await f.start();f.time(45000);f.finish();f.finish();
+  assert.deepEqual(f.events,['garden:session-ended']);
   assert.equal(f.state.records.length,1);const r=f.state.records[0];assert.equal(r.type,'waterleaf');assert.equal(r.soundType,'rain');assert.equal(r.plantSize,.56);assert.equal(r.duration,45);assert.equal(r.complete,false);assert.equal(f.results.length,1);assert.equal(f.state.seedPlanted,false);
 });
 test('full gardens reserve the sixth slot and timed completion can retain quiet rest',async()=>{
