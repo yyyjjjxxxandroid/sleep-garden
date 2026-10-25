@@ -76,7 +76,7 @@ function paintCloudTexture(T) {
   return texture;
 }
 
-function placeForest(world) {
+export function placeForest(world) {
   const random = makeRandom(0x5f3759df);
   const names = ['CommonTree_1', 'CommonTree_2', 'CommonTree_3', 'CommonTree_5'];
   const trees = [];
@@ -88,9 +88,13 @@ function placeForest(world) {
   const add = (x, z, layer) => {
     if (!safe(x, z)) return false;
     const height = 8.0 + random() * 5.8 - layer * .42;
-    const root = world.place(names[Math.floor(random() * names.length)], x, z, height, random() * Math.PI * 2, {
-      width: .88 + random() * .35,
-    });
+    const name=names[Math.floor(random()*names.length)],width=.88+random()*.35;
+    // Background trees must obey the same river-bank clearance as foreground
+    // trees, including the long upstream bends and the full crown footprint.
+    const root=world.placeGardenTree
+      ?world.placeGardenTree(name,x,z,height,width)
+      :world.place(name,x,z,height,random()*Math.PI*2,{width});
+    if(!root)return false;
     trees.push(root);
     return true;
   };

@@ -56,6 +56,7 @@ for name in ['garden-personalization.js','garden-experience.js','garden-environm
     html=html.replace('<script src="'+name+'"></script>','<script>'+ (root/name).read_text()+'</script>')
 html=html.replace('<link rel="stylesheet" href="garden-experience.css">','<style>'+ (root/'garden-experience.css').read_text()+'</style>')
 html=html.replace('<link rel="stylesheet" href="city-world.css">','<style>'+ (root/'city-world.css').read_text()+'</style>')
+html=html.replace('<link rel="stylesheet" href="pet-care.css">','<style>'+ (root/'pet-care.css').read_text()+'</style>')
 html=html.replace('<script src="city-experience.js"></script>','<script>'+ (root/'city-experience.js').read_text()+'</script>')
 (root/'index.html').write_text(html)
 print('Built offline 3D HTML',round(len(html.encode())/1024/1024,2),'MB')

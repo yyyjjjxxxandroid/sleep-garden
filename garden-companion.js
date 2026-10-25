@@ -5,9 +5,14 @@ export class GardenCompanion{
   constructor(world){this.world=world;this.route=[];this.managed=false;this.phase='roaming';this.elapsed=0;this.flower=null;this.action=null;this.autonomous=false;this.showMarker=false;}
   walkable(x,z){
     const w=this.world;
-    if(Math.abs(x)>35||Math.abs(z)>35||w.inPond(x,z))return false;
+    // One connected activity area covers the pond, bridge, lower creek and
+    // flower hill. Every route segment uses it, preventing cumulative drift.
+    const inArea=((x-1)/14)**2+((z-2)/13)**2<=1
+      ||((x-14)/9)**2+((z+9)/9)**2<=1
+      ||((x+2)/7)**2+((z+10)/7)**2<=1;
+    if(!inArea||z<-18||w.inPond(x,z))return false;
     // The narrow decorative bridge has no walk surface; keep the cat on the banks.
-    if(z<-5.5&&z>-34.5&&Math.abs(x-(-2.5+Math.sin(z*.18)*1.2))<1.12)return false;
+    if(w.onStream?w.onStream(x,z,.48):z<-5.5&&z>-34.5&&Math.abs(x-(-2.5+Math.sin(z*.18)*1.2))<1.12)return false;
     return !(w.walkObstacles||[]).some(o=>Math.hypot(x-o.x,z-o.z)<o.radius+.32);
   }
   resetFlower(){this.flower?.userData.sway?.(0);this.flower=null;this.action=null;}
@@ -68,7 +73,9 @@ export class GardenCompanion{
       while(budget>0&&this.route.length){
         const next=this.route[0],dx=next.x-cat.position.x,dz=next.z-cat.position.z,distance=Math.hypot(dx,dz);
         if(distance<.001){this.route.shift();continue;}
-        const step=Math.min(distance,budget);cat.position.x+=dx/distance*step;cat.position.z+=dz/distance*step;budget-=step;
+        const step=Math.min(distance,budget),x=cat.position.x+dx/distance*step,z=cat.position.z+dz/distance*step;
+        if(!this.walkable(x,z)){this.route=[];this.resetFlower();budget=0;break;}
+        cat.position.x=x;cat.position.z=z;budget-=step;
         const yaw=Math.atan2(dx,dz),difference=Math.atan2(Math.sin(yaw-cat.rotation.y),Math.cos(yaw-cat.rotation.y));cat.rotation.y+=difference*Math.min(1,dt*12);
         w.catMoving=true;if(step>=distance)this.route.shift();
       }

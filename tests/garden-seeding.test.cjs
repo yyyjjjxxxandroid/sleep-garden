@@ -9,9 +9,9 @@ function fixture({records=[],timer=0,quiet=false}={}){
   const state={mode:'home',playing:false,starting:false,records,seedChoice:'fern',elapsed:0,mix:{rain:80},replayPending:false};
   const clock=new SessionClock(timer);
   const context=vm.createContext({state,clock,performance:{now:()=>now},window:{GARDEN_PLOT_COUNT:6},
-    $:id=>{if(!elements.has(id))elements.set(id,{hidden:false,dataset:{},style:{},textContent:'',focus(){},setAttribute(){},removeAttribute(){},querySelectorAll:()=>[]});return elements.get(id)},localStorage:{setItem:(key,value)=>storage.set(key,value),getItem:key=>storage.get(key)||null},
+    $:id=>{if(!elements.has(id))elements.set(id,{hidden:false,dataset:{},style:{},textContent:'',classList:{remove(){}},firstElementChild:{textContent:''},focus(){},setAttribute(){},removeAttribute(){},querySelectorAll:()=>[]});return elements.get(id)},localStorage:{setItem:(key,value)=>storage.set(key,value),getItem:key=>storage.get(key)||null},
     app:{dataset:{},classList:{contains:()=>resting}},document:{hidden:false,querySelectorAll:()=>[]},flowerCatalog:{fern:{name:'雨蕨'},bellflower:{name:'铃花'},waterleaf:{name:'水叶草'}},
-    experience:{begin:mix=>beginnings.push(mix),attach(){},quietFinish:()=>quiet},
+    experience:{begin:mix=>beginnings.push(mix),attach(){},leaveRest(){},quietFinish:()=>quiet},
     worldEngine:{plantSeed:(...args)=>plants.push(args),clearSeedFeedback(){},updateGrowth(){}},
     syncClock:()=>{state.elapsed=clock.elapsed},normalizeMix:mix=>({...mix}),dominant:()=> 'rain',
     format:s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0'),
@@ -50,9 +50,9 @@ test('finishing keeps flower choice, independent sound, partial growth and one r
   const f=fixture();f.select('waterleaf');await f.start();f.time(45000);f.finish();f.finish();
   assert.equal(f.state.records.length,1);const r=f.state.records[0];assert.equal(r.type,'waterleaf');assert.equal(r.soundType,'rain');assert.equal(r.plantSize,.56);assert.equal(r.duration,45);assert.equal(r.complete,false);assert.equal(f.results.length,1);assert.equal(f.state.seedPlanted,false);
 });
-test('full gardens reserve the sixth slot and timed completion can retain quiet rest',async()=>{
+test('full gardens reserve the sixth slot and timed completion shows the plant result',async()=>{
   const f=fixture({records:Array.from({length:8},(_,id)=>({id,type:id%2?'rain':'bellflower'})),timer:60,quiet:true});
-  await f.start();assert.equal(f.plants[0][1],5);f.time(70000);f.finish();assert.equal(f.state.records.length,9);assert.equal(f.state.records.at(-1).complete,true);assert.equal(f.state.records.at(-1).duration,60);assert.equal(f.results.length,0);
+  await f.start();assert.equal(f.plants[0][1],5);f.time(70000);f.finish();assert.equal(f.state.records.length,9);assert.equal(f.state.records.at(-1).complete,true);assert.equal(f.state.records.at(-1).duration,60);assert.equal(f.results.length,1);assert.equal(f.state.mode,'home');
 });
 test('prepared replay still begins with replay metadata only after explicit start',async()=>{
   const f=fixture();f.state.replayPending=true;f.state.mix={water:41};assert.equal(f.plants.length,0);await f.start();assert.equal(f.beginnings[0].water,41);assert.equal(f.state.replayPending,false);assert.equal(f.plants.length,1);
