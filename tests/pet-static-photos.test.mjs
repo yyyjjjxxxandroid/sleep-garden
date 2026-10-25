@@ -24,3 +24,9 @@ test('the detached cushion is absent from layout, objects, UI and autonomous des
   assert.equal(PET_LAYOUT.cushion,undefined);const src=readFileSync(new URL('../pet-care.js',import.meta.url),'utf8');assert.doesNotMatch(src,/this\.prop\('cushion'/);assert.doesNotMatch(src,/for\(const key of \['box','scratch','cushion'\]/);
   const care=Object.create(PetCare.prototype);assert.equal(care.command('cushion'),false);
 });
+
+test('saved memories join the horizontal gallery with no second vertical list',()=>{
+  const src=readFileSync(new URL('../pet-care.js',import.meta.url),'utf8'),memories=src.slice(src.indexOf('  renderMemories(){'),src.indexOf('  inviteUser('));
+  assert.match(memories,/card\.append\(text\);gallery\.append\(card\)/);
+  assert.doesNotMatch(memories,/this\.body\.append\(card\)/);
+});

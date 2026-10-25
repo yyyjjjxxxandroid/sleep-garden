@@ -291,7 +291,7 @@ export function createStoryCat({random=Math.random,clock=()=>performance.now()/1
       const washing=l.front&&l.side===1?groomPaw:0;
       const angle=walk*Math.sin(step)*.30-washing*.8+(l.front?-lying*1.05:-seated*.90-lying*1.30),lift=walk*Math.max(0,Math.sin(step))**2*.09;
       const reaching=l.front?(stretch+backStretch):0;
-      l.hip.rotation.x=angle;l.hip.position.x=l.side*(.29+(l.front?0:seated*.025))-washing*.06;l.hip.position.y=.48+washing*.16-reaching*.06+(l.front?lying*.04:-seated*.18+lying*.06);l.hip.position.z=(l.front?.32:-.56)+washing*.10+(l.front?0:seated*.14);
+      l.hip.rotation.set(angle,0,0);l.hip.position.x=l.side*(.29+(l.front?0:seated*.025))-washing*.06;l.hip.position.y=.48+washing*.16-reaching*.06+(l.front?lying*.04:-seated*.18+lying*.06);l.hip.position.z=(l.front?.32:-.56)+washing*.10+(l.front?0:seated*.14);
       const cycle=((step%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
       // Hermite swing shares the stance velocity at both ends, avoiding the
       // old zero-speed swing / constant-speed stance discontinuity.
@@ -302,7 +302,7 @@ export function createStoryCat({random=Math.random,clock=()=>performance.now()/1
       if(washing>.001)l.foot.position.lerp(washingPaw,washing);
       // A small toe-down relaxation in the airborne half returns to level
       // with zero angular velocity at contact. The continuous wrist blends it.
-      l.foot.rotation.x=-angle+walk*Math.max(0,Math.sin(step))**2*.10;
+      l.foot.rotation.set(-angle+walk*Math.max(0,Math.sin(step))**2*.10,0,0);
     }
     const lean=response*(zone==='head'?.05:zone==='chin'?.02:.012),chin=zone==='chin';
     head.position.set(lean*hand.x+poseSide*(tilt*.04+nuzzle*.025*approach)+response*hand.x*(back?.012:.045)+groom*.06,1.07+breath+chinLift*.085+bliss*.025+nuzzle*.025*approach-bow*.065-groom*.22-doze*.04-(stretch+backStretch)*.09+seated*.12-lying*.10,.49+lean*.5+chinLift*.075+nuzzle*(.105*approach+.025*nuzzlePress)-groom*.06+(stretch+backStretch)*.10-seated*.12+lying*.07);
@@ -389,12 +389,20 @@ export function createStoryCat({random=Math.random,clock=()=>performance.now()/1
         root.updateMatrixWorld(true);
         for(const l of legs.filter(l=>l.front)){
           const phase=a*5+(l.side>0?Math.PI:0),stroke=reduced?0:Math.sin(phase),lift=reduced?0:Math.max(0,Math.cos(phase))*.045;
-          const rest=l.foot.getWorldPosition(new T.Vector3()),z=b.z+.56+stroke*.07;
+          const rest=l.foot.getWorldPosition(new T.Vector3()),z=b.z+.62+stroke*.035;
           const target=new T.Vector3(b.x-l.side*.16,b.y+.095+(z-b.z)*.06+.012+.10+lift,z);
           target.x=T.MathUtils.lerp(rest.x,target.x,reach);target.z=T.MathUtils.lerp(rest.z,target.z,reach);
           target.y=T.MathUtils.lerp(rest.y,target.y,raised);
-          l.foot.position.copy(l.hip.worldToLocal(target));
-          l.foot.quaternion.copy(l.hip.getWorldQuaternion(new T.Quaternion()).invert());
+          // Move the shoulder with the reach, then rotate the whole short leg.
+          // Moving only the paw stretched the skin and inverted the wrist at a 180° heading.
+          l.hip.position.z+=reach*.18;
+          const local=bodyRig.worldToLocal(target).sub(l.hip.position),restAxis=new T.Vector3(0,-.33,.045).normalize();
+          const length=Math.min(local.length(),.37);
+          l.hip.quaternion.setFromUnitVectors(restAxis,local.normalize());
+          l.foot.position.copy(restAxis).multiplyScalar(length);
+          // Level with the actor's feet, not with the world's absolute heading.
+          l.foot.quaternion.copy(l.hip.quaternion).invert();
+          l.foot.quaternion.multiply(bodyRig.quaternion.clone().invert());
         }
       }
       if(action==='ball'||action==='scratch'&&!interaction.board){
