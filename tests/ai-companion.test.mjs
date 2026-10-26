@@ -82,3 +82,56 @@ test('an AI rest request keeps both garden and city cats still until a direct in
  assert.ok(city.cat.position.equals(position));assert.equal(city.action,null);
  city.goTo({x:0,z:4});assert.equal(city.resting,false);
 });
+
+test('environment and timer plans are bounded deltas, special skies choose a compatible time',()=>{
+ const p=Plan.normalizePlan({reply:'试试雨夜。',environment:{weather:'rain',wind:999,light:-2,fireflies:false,reduced:true,windLink:'true',evil:'script'},timerMinutes:20,delivery:{voice:'soft'}});
+ assert.deepEqual(p.environment,{weather:'rain',wind:100,light:0,fireflies:false,reduced:true,windLink:false});
+ assert.deepEqual(p.mix,{rain:35});assert.equal(p.timerMinutes,20);assert.equal('delivery' in p,false);
+ for(const weather of ['aurora','meteor'])assert.equal(Plan.normalizePlan({reply:'夜空',mood:'day',environment:{weather}}).mood,'night');
+ assert.equal(Plan.normalizePlan({reply:'彩虹',mood:'night',environment:{weather:'rainbow'}}).mood,'day');
+ assert.equal(Plan.normalizePlan({reply:'晴夜',mood:'night',environment:{weather:'clear'}}).mood,'night');
+ for(const timerMinutes of [-1,721,1.5,'20',Infinity])assert.equal(Plan.normalizePlan({reply:'好',timerMinutes}).timerMinutes,null);
+ assert.equal(Plan.normalizePlan({reply:'好',timerMinutes:0}).timerMinutes,0);
+ const local=Plan.normalizePlan({reply:'跟随本地',mood:'night',environment:{followLocal:true,weather:'snow',light:10}});assert.deepEqual(local.environment,{followLocal:true});assert.equal(local.mood,'keep');assert.deepEqual(local.mix,{});
+ assert.deepEqual(Plan.normalizePlan({reply:'聊天',environment:{weather:'storm',light:'20',fireflies:'false'}}).environment,{});
+});
+
+test('adopting garden controls preserves unspecified settings and handles linked wind and rain overrides',()=>{
+ const current={weather:'aurora',mood:'night',wind:35,windLink:true,light:40,fireflies:true,reduced:false,mix:{rain:0,wind:35,water:25,music:15}};
+ const resolve=p=>Plan.resolveGardenSettings(current,Plan.normalizePlan({reply:'好',...p}));
+ const untouched=resolve({});assert.deepEqual(untouched,current);assert.notEqual(untouched.mix,current.mix);
+ assert.equal(resolve({mood:'day'}).weather,'clear');
+ const rain=resolve({environment:{weather:'rain',wind:15,light:20},mix:{rain:0}});
+ assert.equal(rain.mood,'night');assert.equal(rain.mix.rain,0);assert.equal(rain.wind,15);assert.equal(rain.windLink,false);assert.equal(rain.mix.wind,35);assert.equal(rain.mix.water,25);
+ const linked=resolve({environment:{wind:100,windLink:true}});assert.equal(linked.wind,60);assert.equal(linked.mix.wind,60);
+ const sound=resolve({mix:{wind:8},environment:{windLink:true}});assert.equal(sound.wind,8);assert.equal(sound.mix.wind,8);
+ assert.deepEqual(current.mix,{rain:0,wind:35,water:25,music:15});
+});
+
+test('preview lists weather side effects, timing, motion and every executable sound channel',()=>{
+ const p=Plan.normalizePlan({reply:'好',environment:{weather:'rain',light:25,fireflies:false,reduced:true},timerMinutes:20,mix:{footsteps:0,chime:10}});
+ const label=Plan.describePlan(p);
+ for(const fragment of ['细雨','细雨 35%','光照 25%','萤火虫关闭','减少动态','20 分钟','猫咪脚步 0%','风铃 10%'])assert.ok(label.includes(fragment),fragment);
+});
+
+test('model sees only allowlisted current controls and can return a real executable garden plan',async()=>{
+ let context;
+ const fetcher=async(_url,options)=>{const sent=JSON.parse(options.body);context=JSON.parse(sent.input[0].content.split('当前状态和用户已确认的偏好：')[1]).context;return upstream({reply:'把光线放柔些。',environment:{weather:'rain',light:20},mood:'night',timerMinutes:20})()};
+ const {plan}=await askCompanion({message:'雨夜20分钟',context:{scene:'garden',mood:'day',playing:true,timerMinutes:30,environment:{weather:'clear',light:65,wind:35,windLink:true,fireflies:true,reduced:false,token:'PRIVATE'}}},settings,{fetcher});
+ assert.equal(context.mood,'day');assert.equal(context.environment.light,65);assert.equal(context.environment.token,undefined);assert.equal(context.timerMinutes,30);assert.equal(plan.environment.weather,'rain');assert.equal(plan.timerMinutes,20);
+});
+
+test('city plans cannot claim to apply garden-only environment, day, or countdown controls',async()=>{
+ for(const controls of [{environment:{weather:'rain'}},{environment:{light:20}},{timerMinutes:20},{mood:'day'},{mix:{chime:15}},{mix:{footsteps:10}}]){
+  await assert.rejects(askCompanion({message:'调一下',context:{scene:'shenzhen'}},settings,{fetcher:upstream({reply:'好',scene:'keep',...controls})}),/invalid_response/);
+  const {plan}=await askCompanion({message:'回花园调一下',context:{scene:'shenzhen'}},settings,{fetcher:upstream({reply:'回花园安排。',scene:'garden',...controls})});assert.equal(plan.scene,'garden');
+ }
+});
+
+test('removed speech API is unavailable; text service remains usable',async t=>{
+ const server=createGardenServer({settings:async()=>settings,fetcher:upstream({reply:'文字陪着你。'})});server.listen(0,'127.0.0.1');await once(server,'listening');t.after(()=>{server.closeAllConnections();server.close()});
+ const base='http://127.0.0.1:'+server.address().port;
+ assert.equal((await fetch(base+'/api/companion/speech/status')).status,404);
+ assert.equal((await fetch(base+'/api/companion/speech',{method:'POST',body:'{}'})).status,405);
+ const res=await fetch(base+'/api/companion',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'你好'})});assert.equal(res.status,200);assert.equal((await res.json()).plan.reply,'文字陪着你。');
+});

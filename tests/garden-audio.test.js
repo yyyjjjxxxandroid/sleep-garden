@@ -10,15 +10,6 @@ class Param {
   exponentialRampToValueAtTime(value,time){this.calls.push(['exponential',value,time]);this.value=value}
 }
 
-test('speech ducking preserves countdown and paused audio cannot be restarted by voice ending',()=>{
-  const state={playing:true},endEnvelope=new GardenEnvelope(new Param(),1);
-  const engine={closed:false,ctx:{state:'running',currentTime:10},readMix:()=>state,masterEnvelope:new GardenEnvelope(new Param(),.68),endEnvelope};
-  endEnvelope.to(0,20);const deadline=JSON.stringify(endEnvelope.points);
-  GardenAudio.prototype.setSpeechDucking.call(engine,true);assert.equal(engine.masterEnvelope.valueAt(10.2),.22);
-  engine.ctx.currentTime=11;GardenAudio.prototype.setSpeechDucking.call(engine,false);assert.equal(engine.masterEnvelope.valueAt(11.6),.68);assert.equal(JSON.stringify(endEnvelope.points),deadline);
-  state.playing=false;const levels=JSON.stringify(engine.masterEnvelope.points);GardenAudio.prototype.setSpeechDucking.call(engine,false);assert.equal(JSON.stringify(engine.masterEnvelope.points),levels);assert.equal(state.playing,false);
-});
-
 test('interrupted fades continue from their instantaneous level',()=>{
   const param=new Param(),envelope=new GardenEnvelope(param,0);
   envelope.to(1,10);

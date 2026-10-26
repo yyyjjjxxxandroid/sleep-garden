@@ -72,12 +72,8 @@ class GardenAudio {
     await resumed; await this.ready;
     if(this.closed||!shouldPlay())return false;
     if(this.ctx.state!=='running')throw Error('Audio unavailable');
-    this.mix(); this.masterEnvelope.ramp(this.speechDucking?.22:.68,this.ctx.currentTime,.8);
+    this.mix(); this.masterEnvelope.ramp(.68,this.ctx.currentTime,.8);
     return true;
-  }
-  setSpeechDucking(active){
-    this.speechDucking=!!active;
-    if(!this.closed&&this.readMix().playing&&this.ctx.state==='running')this.masterEnvelope.ramp(active?.22:.68,this.ctx.currentTime,active?.2:.6);
   }
   pause() {
     if(this.closed)return;
