@@ -482,6 +482,7 @@ body{display:flex;justify-content:center}
 .companion-overlay[hidden],.companion-overlay [hidden]{display:none!important}
 .companion-sheet{display:flex;flex-direction:column;width:min(440px,100%);max-height:calc(100% - 12px);padding:20px;border:1px solid #ffffe7a8;border-radius:28px;background:#f1f2e8f7;box-shadow:0 14px 65px #142b3240;overflow:auto;overscroll-behavior:contain}
 .companion-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.companion-head h2{margin:0;font-family:'Songti SC',serif;font-size:23px;font-weight:400;letter-spacing:2px}.companion-head small{display:block;margin-top:5px;font-size:10px;letter-spacing:1px;color:#7b8774}.companion-head button{min-width:44px;min-height:44px;border:1px solid #a7b79b66;border-radius:50%;font-size:23px;color:#4f6552}
+.companion-speech-controls{display:flex;align-items:center;gap:8px;flex:none;margin-top:12px;padding:9px 11px;border:1px solid #9bac8960;border-radius:17px;background:#e3e9db}.companion-sound-label{flex:1;min-width:0}.companion-sound-label strong{display:block;font-size:12px;font-weight:500}.companion-sound-label small{display:block;margin-top:3px;font-size:10px;color:#788970}.companion-speech-controls button{flex:none;min-height:44px;padding:5px 10px;border:1px solid #8a9d7c55;border-radius:18px;color:#4e6b55;font-size:11px}.companion-speech-controls button:disabled{opacity:.45}.companion-speech-controls .companion-sound-switch{display:flex;align-items:center;gap:7px;border:0;padding:5px;background:transparent}.companion-sound-switch i{position:relative;width:34px;height:20px;border-radius:12px;background:#a4b09a}.companion-sound-switch i:after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fffef4;transition:transform .16s}.companion-sound-switch[aria-checked="true"] i{background:#45614f}.companion-sound-switch[aria-checked="true"] i:after{transform:translateX(14px)}.companion-speech-status{flex:none;min-height:15px;margin:4px 0 0;font-size:10px;line-height:1.6;color:#788970}@media(prefers-reduced-motion:reduce){.companion-sound-switch i:after{transition:none}}
 .companion-status{margin:12px 0 8px;min-height:17px;font-size:11px;line-height:1.6;color:#68806a}
 .companion-log{overflow:auto;min-height:100px;max-height:230px;flex:1 1 auto;padding:3px 2px;overscroll-behavior:contain}
 .companion-bubble{width:fit-content;max-width:94%;margin:9px 0;padding:11px 14px;border-radius:17px;background:#e0e7d7;font-size:13px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere}.companion-bubble.user{margin-left:auto;background:#45614f;color:#f8f5e9;border-bottom-right-radius:4px}.companion-bubble.assistant{border-bottom-left-radius:4px}.companion-bubble.notice{padding:5px 8px;background:transparent;color:#7c806e;font-size:11px}
@@ -639,6 +640,8 @@ body{display:flex;justify-content:center}
  <div class="companion-overlay" id="companionOverlay" hidden>
   <section class="companion-sheet" role="dialog" aria-modal="true" aria-labelledby="companionHeading">
    <div class="companion-head"><div><h2 id="companionHeading">和小猫说说</h2><small>用一点音乐，回应此刻的你</small></div><button type="button" id="companionClose" aria-label="收起小猫对话">×</button></div>
+   <div class="companion-speech-controls" aria-label="小猫的声音"><div class="companion-sound-label"><strong>小猫声音</strong><small>打开后朗读回复</small></div><button type="button" id="companionSpeakToggle" class="companion-sound-switch" role="switch" aria-label="小猫声音" aria-checked="false" aria-describedby="companionSpeechStatus"><span id="companionSpeakLabel">关闭</span><i aria-hidden="true"></i></button><button type="button" id="companionSpeakReplay" disabled>听这句</button><button type="button" id="companionSpeakStop" hidden>停一下</button></div>
+   <p class="companion-speech-status" id="companionSpeechStatus" role="status">声音已关闭，只显示文字。</p>
    <p class="companion-status" id="companionStatus" role="status">小猫在这里</p>
    <p class="companion-connection" id="companionConnection" hidden>小猫暂时没连上，你可以先听听音乐、逛逛花园，稍后再来聊聊。</p>
    <div class="companion-log" id="companionLog" role="log" aria-label="与小猫的对话" aria-live="polite" aria-relevant="additions"></div>
@@ -853,8 +856,12 @@ class GardenAudio {
     await resumed; await this.ready;
     if(this.closed||!shouldPlay())return false;
     if(this.ctx.state!=='running')throw Error('Audio unavailable');
-    this.mix(); this.masterEnvelope.ramp(.68,this.ctx.currentTime,.8);
+    this.mix(); this.masterEnvelope.ramp(this.speechDucking?.22:.68,this.ctx.currentTime,.8);
     return true;
+  }
+  setSpeechDucking(active){
+    this.speechDucking=!!active;
+    if(!this.closed&&this.readMix().playing&&this.ctx.state==='running')this.masterEnvelope.ramp(active?.22:.68,this.ctx.currentTime,active?.2:.6);
   }
   pause() {
     if(this.closed)return;
@@ -962,7 +969,10 @@ if(typeof module!=='undefined')module.exports={GardenAudio,GardenEnvelope,garden
       const music=typeof value.memory.music==='boolean'?value.memory.music:null;
       if(muted.length||scene||music!==null)memory={muted,scene,music};
     }
-    return {reply:text(value.reply,240),reason:text(value.reason,160),scene:pick(value.scene,scenes,'keep'),mood:pick(value.mood,['keep','dusk','night'],'keep'),mix,
+    const delivery={voice:pick(value.delivery?.voice,['soft','quiet'],'soft'),cue:pick(value.delivery?.cue,['none','meow','purr'],'none')};
+    if(value.interaction==='quiet')delivery.voice='quiet';
+    if(delivery.voice==='quiet')delivery.cue='none';
+    return {reply:text(value.reply,240),reason:text(value.reason,160),delivery,scene:pick(value.scene,scenes,'keep'),mood:pick(value.mood,['keep','dusk','night'],'keep'),mix,
       catAction:pick(value.catAction,['keep','rest','approach','pet'],'keep'),interaction:pick(value.interaction,['keep','quiet','talk'],'keep'),playback:pick(value.playback,['keep','pause'],'keep'),memory};
   }
   function normalizeMemory(value){
@@ -1050,10 +1060,73 @@ if(typeof module!=='undefined')module.exports={GardenAudio,GardenEnvelope,garden
   if(typeof module!=='undefined')module.exports={createCompanionVoice};else root.createCompanionVoice=createCompanionVoice;
 })(typeof window==='undefined'?globalThis:window);
 </script>
+<script>(function(root){
+  'use strict';
+  function createCompanionSpeech({Context=root.AudioContext||root.webkitAudioContext,fetcher=(...args)=>fetch(...args),onState=()=>{},duck=()=>{}}={}){
+    let context=null,source=null,gain=null,controller=null,version=0,phase='idle',lastCueAt=-Infinity;
+    const emit=(next,message='')=>{phase=next;onState({phase:next,message});};
+    async function unlock(){
+      if(!Context)throw Error('这台设备暂时不能播放小猫的声音。');
+      if(!context||context.state==='closed')context=new Context();
+      await context.resume();
+      if(context.state!=='running')throw Error('请再点一下“听这句”，让小猫轻声说给你听。');
+    }
+    function stop(){
+      version++;controller?.abort();controller=null;
+      const old=source,oldGain=gain;source=null;gain=null;
+      if(old){old.onended=null;try{const now=context.currentTime;oldGain.gain.cancelScheduledValues(now);oldGain.gain.setValueAtTime(oldGain.gain.value,now);oldGain.gain.linearRampToValueAtTime(0,now+.06);old.stop(now+.07);}catch{}setTimeout(()=>{old.disconnect();oldGain.disconnect();},100);}
+      duck(false);emit('idle');
+    }
+    async function play(text,{cue='none'}={}){
+      stop();if(typeof text!=='string'||!text.trim())return false;
+      const current=version;controller=new AbortController();const abort=controller;
+      emit('loading','小猫正在准备轻声回应…');
+      const timeout=setTimeout(()=>abort.abort(),48000);
+      try{
+        // Run resume synchronously inside the user gesture, before network I/O.
+        await unlock();if(current!==version)return false;
+        // A cat sound is an occasional accent, including when replay is tapped.
+        const accent=Date.now()-lastCueAt<60000?'none':cue;
+        const response=await fetcher('/api/companion/speech',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,cue:accent}),signal:abort.signal});
+        if(!response.ok){
+          let code;try{code=(await response.json()).error;}catch{}
+          throw Error(code==='speech_unavailable'?'这台设备的小猫声音还没准备好，文字会继续陪你。':'小猫这次没能说出声音，稍后可以再听这句。');
+        }
+        const bytes=await response.arrayBuffer();if(current!==version)return false;
+        const buffer=await context.decodeAudioData(bytes);if(current!==version)return false;
+        if(context.state!=='running')throw Error('点“听这句”，让小猫轻声说给你听。');
+        const node=context.createBufferSource(),envelope=context.createGain();source=node;gain=envelope;node.buffer=buffer;
+        const now=context.currentTime;envelope.gain.setValueAtTime(0,now);envelope.gain.linearRampToValueAtTime(.64,now+.10);envelope.gain.setValueAtTime(.64,now+Math.max(.10,buffer.duration-.09));envelope.gain.linearRampToValueAtTime(0,now+buffer.duration);
+        node.connect(envelope).connect(context.destination);node.onended=()=>{if(current!==version)return;source=null;gain=null;node.disconnect();envelope.disconnect();duck(false);emit('idle');};
+        duck(true);emit('playing','小猫正轻声说给你听');node.start();if(accent!=='none')lastCueAt=Date.now();return true;
+      }catch(error){if(current===version){duck(false);emit('error',error.name==='AbortError'?'小猫的声音等得有些久，文字已经留在这里。':error.message);}return false;}
+      finally{clearTimeout(timeout);if(current===version)controller=null;}
+    }
+    return {play,stop,unlock,get phase(){return phase;}};
+  }
+  if(typeof module!=='undefined')module.exports={createCompanionSpeech};else root.createCompanionSpeech=createCompanionSpeech;
+})(typeof window==='undefined'?globalThis:window);
+</script>
 <script>function createAiCompanion(hooks){
   const $=id=>document.getElementById(id),P=window.CompanionPlan,app=$('app'),panel=$('companionOverlay'),log=$('companionLog'),form=$('companionForm'),input=$('companionInput');
   const memoryKey='sleepGarden.companion.preferences.v1';
   let memory={muted:[],scene:null,music:null},history=[],plan=null,planContext=null,controller=null,busy=false,applying=false,version=0,returnFocus=null,inert=[];
+  let autoSpeak=false,lastSpeech=null;
+  // Sound is opt-in for this page visit; never restore an old enabled flag.
+  const speakToggle=$('companionSpeakToggle'),speakReplay=$('companionSpeakReplay'),speakStop=$('companionSpeakStop'),speechStatus=$('companionSpeechStatus');
+  const speech=window.createCompanionSpeech({duck:active=>hooks.duck?.(active),onState:s=>{
+    const active=['loading','playing'].includes(s.phase);speakStop.hidden=!active;speakReplay.hidden=active;
+    speechStatus.textContent=s.message||(autoSpeak?'声音已开启，下一句回复会读给你听。':'声音已关闭，只显示文字。');
+  }});
+  function syncSpeech(){speakToggle.setAttribute('aria-checked',String(autoSpeak));$('companionSpeakLabel').textContent=autoSpeak?'开启':'关闭';speakReplay.disabled=!autoSpeak||!lastSpeech||busy||applying;}
+  function speakLast(){
+    if(!autoSpeak||!lastSpeech||busy||applying)return;cancelVoice();speech.play(lastSpeech.reply,{cue:lastSpeech.delivery.cue});
+  }
+  speakToggle.onclick=()=>{
+    autoSpeak=!autoSpeak;
+    syncSpeech();speech.stop();if(autoSpeak)speech.unlock().catch(()=>{});
+  };
+  speakReplay.onclick=speakLast;speakStop.onclick=()=>speech.stop();syncSpeech();
   const hold=$('companionHold'),toggle=$('companionInputToggle'),voiceHint=$('companionVoiceHint'),transcript=$('companionVoiceTranscript');
   const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition,voiceSupported=!!Recognition&&window.isSecureContext;
   let voiceMode=voiceSupported,pointer=null,heldKey=null;
@@ -1070,6 +1143,7 @@ if(typeof module!=='undefined')module.exports={GardenAudio,GardenEnvelope,garden
     onSend:message=>{if(!panel.hidden)send(message);},
     onDraft:text=>{if(panel.hidden)return;input.value=text;voiceMode=false;const hint=voiceHint.textContent;syncVoiceMode(true);voiceHint.hidden=false;voiceHint.textContent=hint;},
     onState:s=>{
+      if(s.phase==='starting'){speech.stop();if(autoSpeak)speech.unlock().catch(()=>{});}
       const active=s.phase!=='idle';hold.dataset.phase=s.phase;hold.dataset.cancel=String(s.cancelling);hold.setAttribute('aria-pressed',String(active));
       $('companionHoldLabel').textContent=s.phase==='starting'?'正在开启麦克风…':s.phase==='finishing'?'正在识别…':s.phase==='listening'?(s.cancelling?'松开取消':'松开发送 · '+s.seconds+' 秒'):'按住说话';
       transcript.hidden=!s.text;transcript.textContent=s.text;
@@ -1107,7 +1181,10 @@ if(typeof module!=='undefined')module.exports={GardenAudio,GardenEnvelope,garden
   hold.addEventListener('blur',()=>{if(voice.active)cancelVoice();});
   window.addEventListener('blur',cancelVoice);
   window.addEventListener('pagehide',cancelVoice);
+  window.addEventListener('pagehide',()=>speech.stop());
+  window.addEventListener('blur',()=>speech.stop());
   document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelVoice();});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)speech.stop();});
   try{memory=P.normalizeMemory(JSON.parse(localStorage.getItem(memoryKey)||'null'))}catch{}
   const snapshot=()=>hooks.snapshot();
   function bubble(role,text){const item=document.createElement('p');item.className='companion-bubble '+role;item.textContent=text;log.append(item);while(log.children.length>16)log.firstElementChild.remove();log.scrollTop=log.scrollHeight;return item;}
@@ -1131,7 +1208,7 @@ if(typeof module!=='undefined')module.exports={GardenAudio,GardenEnvelope,garden
   }
   function close(){
     if(applying)return;
-    cancelVoice();version++;controller?.abort();controller=null;busy=false;form.removeAttribute('aria-busy');syncBusy();
+    cancelVoice();speech.stop();version++;controller?.abort();controller=null;busy=false;form.removeAttribute('aria-busy');syncBusy();syncSpeech();
     panel.hidden=true;for(const[node,value]of inert)node.inert=value;inert=[];returnFocus?.isConnected&&returnFocus.focus({preventScroll:true});
   }
   function describe(p){
@@ -1139,7 +1216,7 @@ if(typeof module!=='undefined')module.exports={GardenAudio,GardenEnvelope,garden
     return [p.scene!=='keep'?scenes[p.scene]:null,p.mood==='night'?'夜色':p.mood==='dusk'?'黄昏':null,...Object.entries(p.mix).map(([k,v])=>names[k]+' '+v+'%'),p.catAction==='rest'?'小猫静静休息':p.catAction==='approach'?'靠近小猫':p.catAction==='pet'?'摸摸小猫':null,p.playback==='pause'?'暂停声音':null].filter(Boolean).join(' · ');
   }
   function renderPlan(){
-    const summary=plan&&describe(plan);$('companionPlan').hidden=!plan;
+    const summary=plan&&describe(plan);$('companionPlan').hidden=!plan||(!summary&&!plan.memory&&plan.interaction==='keep');
     if(!plan)return;
     $('companionReason').textContent=plan.reason||'按你刚才说的，留一段舒服的声音。';
     $('companionChanges').textContent=summary||'保持当前声音，继续陪你聊聊。';
@@ -1150,8 +1227,10 @@ if(typeof module!=='undefined')module.exports={GardenAudio,GardenEnvelope,garden
   async function send(message){
     if(busy||applying||!message.trim())return;
     cancelVoice();
+    speech.stop();
+    if(autoSpeak)speech.unlock().catch(()=>{});
     if(message.length>600){status('这句话有点长，缩短到 600 字以内吧。');return;}
-    const myVersion=++version;busy=true;plan=null;renderPlan();bubble('user',message);input.value='';
+    const myVersion=++version;busy=true;plan=null;lastSpeech=null;syncSpeech();renderPlan();bubble('user',message);input.value='';
     controller=new AbortController();form.setAttribute('aria-busy','true');syncBusy();status('小猫正在听，也在想怎么陪你…');
     const timeout=setTimeout(()=>controller?.abort(),50000);
     try{
@@ -1159,21 +1238,24 @@ if(typeof module!=='undefined')module.exports={GardenAudio,GardenEnvelope,garden
       const data=await res.json();if(!res.ok)throw Error(data.message||'小猫暂时没收到回应，稍后再试试。');
       if(myVersion!==version)return;
       plan=P.normalizePlan(data.plan);planContext=context.scene;bubble('assistant',plan.reply);history=[...history,{role:'user',content:message},{role:'assistant',content:plan.reply}].slice(-8);renderPlan();
-      status('小猫的回应 · 采用后才会调整声音与风景');
+      lastSpeech=plan;
+      status(describe(plan)||plan.interaction!=='keep'?'小猫的回应 · 采用后才会调整声音与风景':'小猫在听，你可以慢慢说。');
+      if(plan.delivery.voice==='quiet')speechStatus.textContent='这句只留文字，小猫安静陪着你。';
+      else if(autoSpeak&&!document.hidden&&document.hasFocus())speech.play(plan.reply,{cue:plan.delivery.cue});
     }catch(error){if(myVersion!==version)return;const text=error.name==='AbortError'?'这次回应等得有点久，原来的声音保持不变。':error.message;status(text);bubble('notice',text);input.value=message;voiceMode=false;syncVoiceMode();}
-    finally{clearTimeout(timeout);if(myVersion===version){busy=false;controller=null;form.removeAttribute('aria-busy');syncBusy();}}
+    finally{clearTimeout(timeout);if(myVersion===version){busy=false;controller=null;form.removeAttribute('aria-busy');syncBusy();syncSpeech();}}
   }
   async function apply(){
     if(!plan||applying||busy)return;
     if(snapshot().scene!==planContext){status('风景已经变了，再告诉我一次现在想怎么陪你吧。');return;}
-    cancelVoice();applying=true;syncBusy();$('companionApply').disabled=true;
+    cancelVoice();speech.stop();applying=true;syncBusy();syncSpeech();$('companionApply').disabled=true;
     // Release the dialog's inert state before a city transition adds controls.
     for(const[node,value]of inert)node.inert=value;inert=[];
     try{
       const result=await hooks.apply(plan);$('companionApply').hidden=true;$('companionListen').hidden=result.playing;$('companionListen').textContent=plan.playback==='pause'?'想继续时再听':'听听这段';status(plan.playback==='pause'?'声音和计时已暂停，小猫还在这里。':result.playing?'安排已采用，声音继续陪你。':'安排已采用，点击“听听这段”开始声音。');
       bubble('notice',result.summary||'声音与风景已按这段安排调整。');planContext=snapshot().scene;
     }catch{status('这次没能完成调整，可以再试一次。');$('companionApply').disabled=false;}
-    finally{applying=false;syncBusy();if(!panel.hidden){inert=[...app.children].filter(x=>x!==panel).map(x=>[x,x.inert]);for(const[node]of inert)node.inert=true;}}
+    finally{applying=false;syncBusy();syncSpeech();if(!panel.hidden){inert=[...app.children].filter(x=>x!==panel).map(x=>[x,x.inert]);for(const[node]of inert)node.inert=true;}}
   }
   form.addEventListener('submit',e=>{e.preventDefault();send(input.value.trim())});
   $('companionApply').onclick=apply;
@@ -1185,7 +1267,7 @@ if(typeof module!=='undefined')module.exports={GardenAudio,GardenEnvelope,garden
     catch{status('这台设备暂时无法保存，下次可以再告诉我。');}
   };
   $('companionForget').onclick=()=>{try{localStorage.removeItem(memoryKey);memory={muted:[],scene:null,music:null};showMemory();status('偏好已清除。');}catch{status('暂时无法清除，请检查浏览器存储权限。');}};
-  $('companionClear').onclick=()=>{cancelVoice();version++;controller?.abort();busy=false;history=[];plan=null;log.replaceChildren();bubble('assistant','我们从现在开始。想怎么待一会儿？');renderPlan();syncBusy();form.removeAttribute('aria-busy');};
+  $('companionClear').onclick=()=>{cancelVoice();speech.stop();lastSpeech=null;version++;controller?.abort();busy=false;history=[];plan=null;log.replaceChildren();bubble('assistant','我们从现在开始。想怎么待一会儿？');renderPlan();syncBusy();syncSpeech();form.removeAttribute('aria-busy');};
   $('companionClose').onclick=close;$('companionButton').onclick=open;$('homeCompanionButton').onclick=open;
   for(const b of document.querySelectorAll('[data-companion-prompt]'))b.onclick=()=>{if(busy||applying)return;cancelVoice();voiceMode=false;input.value=b.dataset.companionPrompt;syncVoiceMode(true);};
   panel.addEventListener('click',e=>{if(e.target===panel)close()});
@@ -5878,6 +5960,7 @@ $('followLocal').onclick=()=>localEnvironment.follow();
 localEnvironment.start();
 
 const aiCompanion=createAiCompanion({
+ duck:active=>{audio?.setSpeechDucking(active);window.CityPrototype?.duckSpeech?.(active);},
  leaveRest:()=>experience?.leaveRest(),
  snapshot:()=>window.CityPrototype?.snapshot?.active?window.CityPrototype.snapshot:{scene:'garden',mood:state.night?'night':'dusk',mix:{...state.mix},playing:state.playing},
  apply:async plan=>{
@@ -6017,6 +6100,7 @@ function animate(now){if(!localNoticeReady&&(worldEngine?.canvas?.dataset.ready=
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&city.playing){pause();message('回来后，再继续听这段声音。');}});
   window.addEventListener('pagehide',()=>{pause();city.world?.dispose();city.world=null;city.sound?.close();city.sound=null;});
   window.CityPrototype={open,close,get world(){return city.world;},
+    duckSpeech(active){city.sound?.audio?.setSpeechDucking(active);},
     get snapshot(){return {active:!overlay.hidden&&!experience.hidden,scene:city.id,mood:city.moods[city.id],playing:city.playing,mix:Object.fromEntries(['water','wind','music'].map(key=>[key,city[key]?city.mix[key]:0]))};},
     play(){if(!overlay.hidden&&!experience.hidden&&!city.playing)return togglePlaying();},
     async prepare(plan){
@@ -6096,6 +6180,22 @@ CC0-1.0
 Zambian ( Lo-fi Loop ) C#maj 70 BPM — holizna
 https://freesound.org/people/holizna/sounds/852235/
 CC0-1.0
+
+Mavis_cat-meow-soft_01 — TBMcQueen
+https://freesound.org/people/TBMcQueen/sounds/825631/
+CC0-1.0: https://creativecommons.org/publicdomain/zero/1.0/
+Mono 24 kHz PCM; 140–3200 Hz filtering, -30 LUFS target, quiet peak limit and edge fades; 1.18 seconds.
+
+Cat Purring (long/clear/loud) — JamesBradford
+https://freesound.org/people/JamesBradford/sounds/579898/
+CC0-1.0: https://creativecommons.org/publicdomain/zero/1.0/
+1.8-second excerpt from existing licensed recording at 6 seconds; mono 24 kHz PCM, -32 LUFS target and edge fades.
+
+Optional local Chinese speech: Kokoro-82M v1.1-zh — hexgrad, Apache-2.0
+https://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh
+Inference: sherpa-onnx — k2-fsa, Apache-2.0
+https://github.com/k2-fsa/sherpa-onnx
+Model/runtime dependencies and their licenses are installed locally by setup:voice, not embedded in this HTML.
 
 Weather data by Open-Meteo: https://open-meteo.com/
 CC BY 4.0: https://creativecommons.org/licenses/by/4.0/

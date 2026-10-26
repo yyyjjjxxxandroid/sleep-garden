@@ -322,6 +322,8 @@ body{display:flex;justify-content:center}
  <div class="companion-overlay" id="companionOverlay" hidden>
   <section class="companion-sheet" role="dialog" aria-modal="true" aria-labelledby="companionHeading">
    <div class="companion-head"><div><h2 id="companionHeading">和小猫说说</h2><small>用一点音乐，回应此刻的你</small></div><button type="button" id="companionClose" aria-label="收起小猫对话">×</button></div>
+   <div class="companion-speech-controls" aria-label="小猫的声音"><div class="companion-sound-label"><strong>小猫声音</strong><small>打开后朗读回复</small></div><button type="button" id="companionSpeakToggle" class="companion-sound-switch" role="switch" aria-label="小猫声音" aria-checked="false" aria-describedby="companionSpeechStatus"><span id="companionSpeakLabel">关闭</span><i aria-hidden="true"></i></button><button type="button" id="companionSpeakReplay" disabled>听这句</button><button type="button" id="companionSpeakStop" hidden>停一下</button></div>
+   <p class="companion-speech-status" id="companionSpeechStatus" role="status">声音已关闭，只显示文字。</p>
    <p class="companion-status" id="companionStatus" role="status">小猫在这里</p>
    <p class="companion-connection" id="companionConnection" hidden>小猫暂时没连上，你可以先听听音乐、逛逛花园，稍后再来聊聊。</p>
    <div class="companion-log" id="companionLog" role="log" aria-label="与小猫的对话" aria-live="polite" aria-relevant="additions"></div>
@@ -346,6 +348,7 @@ body{display:flex;justify-content:center}
 <script src="garden-audio.js"></script>
 <script src="companion-plan.js"></script>
 <script src="companion-voice.js"></script>
+<script src="companion-speech.js"></script>
 <script src="ai-companion.js"></script>
 <script src="garden-personalization.js"></script>
 <script src="garden-experience.js"></script>
@@ -654,6 +657,7 @@ $('followLocal').onclick=()=>localEnvironment.follow();
 localEnvironment.start();
 
 const aiCompanion=createAiCompanion({
+ duck:active=>{audio?.setSpeechDucking(active);window.CityPrototype?.duckSpeech?.(active);},
  leaveRest:()=>experience?.leaveRest(),
  snapshot:()=>window.CityPrototype?.snapshot?.active?window.CityPrototype.snapshot:{scene:'garden',mood:state.night?'night':'dusk',mix:{...state.mix},playing:state.playing},
  apply:async plan=>{

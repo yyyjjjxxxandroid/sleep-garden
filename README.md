@@ -7,13 +7,14 @@
 ## 启动 AI 小猫
 
 ```bash
-# 项目负责人私下提供 .env 后，放在项目根目录
+cp .env.example .env
+# 在本机 .env 填写自己的 AI_API_KEY
 npm start
 ```
 
 需要 Node.js 20 或更新版本。打开 <http://127.0.0.1:8766/index.html>，点击“和小猫说说”。项目现在通过服务端直连 YLS 的 `https://code.ylsagi.com/codex`，选择 `gpt-5.6-sol`；队友不需要安装 Codex 或启动本机模型转发服务。已提交的 `index.html` 可直接运行，仅修改源码并重新构建时需要安装开发依赖。
 
-Git 仓库不包含真实 Key。团队成员拉取 `main` 分支后，从负责人处私下接收 `.env`，放到和 `package.json` 相同的目录（确认文件名不是 `.env.txt`），再运行 `npm start` 即可共用项目凭证；请勿把 `.env` 上传到仓库。若自行配置，执行 `cp .env.example .env` 后填写 `AI_API_KEY`。修改配置后重启服务；新 Key 的模型权限、余额与并发额度由全体使用者共享。
+Git 仓库不包含真实 Key。团队成员拉取 `main` 分支后，复制 `.env.example` 为 `.env`，填写**各自的 API Key**（确认文件名不是 `.env.txt`），再运行 `npm start`。请勿把 `.env` 上传到仓库。修改配置后重启服务；每人的模型权限、余额与额度取决于自己的账号。
 
 Responses 接口用 `AI_WIRE_API=responses`；兼容 Chat Completions 的平台用 `AI_WIRE_API=chat`。更换平台时一起修改 `AI_BASE_URL`、`AI_API_KEY` 和 `AI_MODEL`。凭证仅在服务端读取，不进入浏览器和构建产物，`.env` 已被 Git 忽略。开发者仍可显式设置 `AI_USE_CODEX_PROVIDER=true`，从本机 `~/.codex/config.toml` 读取所选 provider 的普通 API Token，不读取 ChatGPT/OAuth 登录凭证。
 
@@ -28,6 +29,23 @@ Responses 接口用 `AI_WIRE_API=responses`；兼容 Chat Completions 的平台�
 “和小猫说说”支持按住说话：松开发送识别文字，上滑 60px 取消，向下滑回可恢复发送，最长 60 秒。左侧键盘/麦克风按钮切换输入方式；电脑也可聚焦按钮后按住空格或回车，松键发送。首次授权麦克风后需重新按住。语音使用浏览器的中文 SpeechRecognition 服务，不需要额外配置模型 Key；需要支持该能力的浏览器、可用的识别服务和 HTTPS 或 localhost。内置浏览器不支持或服务不可用时会提示，可切回文字；未识别完整的内容留作可编辑草稿，不自动发送。项目不录制或上传音频文件，浏览器语音服务按其自身政策处理收音。关闭对话、切到后台或结束陪伴会取消当前识别。
 
 当前曲库只有一首已授权 Lo-fi 和六种自然/陪伴录音；AI 可以编排混音，不能检索或切换不存在的歌曲。没有 AI 作曲、自动情绪识别或睡眠检测。
+
+## 让小猫轻声回应（可选）
+
+```bash
+npm run setup:voice
+npm start
+```
+
+首次安装需要 Python 3.10–3.13 或 [uv](https://docs.astral.sh/uv/)（有 uv 时自动创建 Python 3.12 环境），下载约 147 MB 中文语音模型及依赖。已运行的服务请先停止再启动。每位队友在本机执行一次；模型和虚拟环境不进 Git。没有安装时仍可文字聊天，点击朗读会明确提示声音不可用。
+
+打开“和小猫说说”，对话顶部有“小猫声音”开关。**每次刷新页面默认关闭**，不会继承旧版本保存的开启状态；关闭时只显示文字，“听这句”也不可播放。用户主动开启后，新回复会朗读，已有回复可点“听这句”试听；开启开关本身不播放上一句。这个选择在当前页面有效。“停一下”、关闭对话、切到后台、开始录音或陪伴结束都会停止朗读，避免把朗读声收进下一句话。朗读时暂时压低已有声景，结束后恢复，不修改混音比例、计时器或暂停状态。
+
+语音使用 [Kokoro v1.1 中文开放权重](https://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh) 与 [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)（均 Apache-2.0），在服务端 CPU 本机合成真实 AI 回复，不需额外语音 Key，不把朗读文字送到语音云服务。使用 zf_026 中文预设声音、较慢语速和柔和音量；这是预设人声，尚无声音克隆、可精细控制的情绪韵律或实时流式朗读。本机测试短句合成约 5–10 秒，速度取决于设备，首次需要加载模型。
+
+轻松互动可在句末加入一声经降音量处理的 CC0 实录猫叫，寻求依靠时偶尔加入轻呼噜，两次猫声至少间隔一分钟。难过或严重困扰时不插猫叫；明确想安静时只留文字，不自动出声。素材来源及处理见 [声音来源](./audio/companion/sources.json)。回复先回应用户说出的具体经历，避免机械安慰、催促积极和每轮追问；这是陪伴设计，情绪缓解效果仍需真实用户评估。
+
+语音模型仅按需加载；`COMPANION_TTS_ENABLED=false` 可禁用，`COMPANION_TTS_SPEAKER` 可选择模型支持的其他声音。合成结果不写入磁盘，接口响应 `Cache-Control: no-store`，会话仍遵循上述 AI 文本服务的数据处理说明。
 
 ## 离线打开体验
 
@@ -44,6 +62,8 @@ Responses 接口用 `AI_WIRE_API=responses`；兼容 Chat Completions 的平台�
 - `companion-plan.js`：前后端共用的动作白名单与音量校验
 - `ai-companion.js` / `ai-companion.css`：小猫语音与文字输入、采用安排与确认偏好
 - `companion-voice.js`：语音识别生命周期、松开发送与取消，处理权限及延迟结果
+- `companion-speech.js` / `companion-tts.mjs`：朗读、打断、声景压低及本机语音进程
+- `scripts/setup_companion_tts.py` / `scripts/companion_tts_worker.py`：可选中文模型安装与 CPU 合成
 - `source.html`：页面结构和产品交互
 - `garden-personalization.js`：可解释推荐与有效反馈统计
 - `garden-experience.js` / `garden-experience.css`：今晚状态、低亮度听音、呼吸与感受回访

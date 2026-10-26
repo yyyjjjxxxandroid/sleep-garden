@@ -6,7 +6,8 @@
   "scripts": {
     "build": "python3 build3d.py",
     "test": "node --experimental-vm-modules --test tests/*.test.js tests/*.test.mjs tests/*.test.cjs",
-    "start": "node server.mjs"
+    "start": "node server.mjs",
+    "setup:voice": "python3 scripts/setup_companion_tts.py"
   },
   "devDependencies": {
     "esbuild": "0.25.10"
