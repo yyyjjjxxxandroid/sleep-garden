@@ -142,3 +142,13 @@ test('ground taps are separate from drags, multitouch, cancellation and wheel in
   send('pointerdown');send('wheel');send('pointerup');assert.equal(commands.length,1);
   assert.equal(f.world.controls.enabled,true);assert.equal(f.world.activePointers.size,0);
 });
+
+test('lost capture during a pinch clears each finger so the next touch can tap normally',async()=>{
+  const f=await fixture(),commands=[];f.world.pickDestination=(x,y)=>commands.push([x,y]);
+  const send=(type,id)=>{const event=new Event(type);Object.assign(event,{pointerId:id,pointerType:'touch',button:0,clientX:5,clientY:5});f.world.canvas.dispatchEvent(event);};
+  send('pointerdown',1);send('pointerdown',2);
+  send('lostpointercapture',1);send('pointerup',2);
+  assert.equal(f.world.activePointers.size,0);assert.equal(commands.length,0);
+  send('pointerdown',3);send('pointerup',3);
+  assert.equal(commands.length,1);assert.equal(f.world.controls.enabled,true);
+});

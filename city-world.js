@@ -11,6 +11,7 @@ import { buildShenzhenScene, shenzhenWalkable, SHENZHEN_FLOOR } from './shenzhen
 import { CITY_VIEWS, CITY_WATERFRONT_FOV } from './city-views.js';
 import { CITY_ATMOSPHERES, defaultCityMood } from './city-atmosphere.js';
 import { TapGesture, findRoute, clearSegment } from './garden-navigation.mjs';
+import { deviceRenderProfile, AdaptiveResolution, updateRenderBudget } from './render-performance.js';
 
 const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z);
 const turn=(object,heading,dt)=>{const difference=Math.atan2(Math.sin(heading-object.rotation.y),Math.cos(heading-object.rotation.y));object.rotation.y+=difference*(1-Math.exp(-dt*10));};
@@ -138,25 +139,30 @@ export class CityWorld {
     if(city==='guangzhou'){this.scene.fog=new T.Fog('#a7b1a6',52,188);this.scene.background=new T.Color('#c2c7bb');}
     if(city==='shenzhen'){this.scene.fog=new T.Fog('#aab5aa',52,192);this.scene.background=new T.Color('#c4cabd');}
     this.camera=new T.PerspectiveCamera(city==='quanzhou'?48:CITY_WATERFRONT_FOV,1,.1,220);
-    this.renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
+    this.renderProfile=deviceRenderProfile(this.reduced);this.adaptiveResolution=new AdaptiveResolution(this.renderProfile);
+    this.renderer=new T.WebGLRenderer({antialias:this.renderProfile.antialias,powerPreference:'high-performance'});
+    this.renderer.setPixelRatio(this.renderProfile.pixelRatio);
     this.renderer.outputColorSpace=T.SRGBColorSpace;this.renderer.toneMapping=T.ACESFilmicToneMapping;this.renderer.toneMappingExposure=.88;
     if(city==='guangzhou'||city==='shenzhen')this.renderer.toneMappingExposure=1.02;
-    this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=T.PCFSoftShadowMap;
+    this.renderer.shadowMap.enabled=this.renderProfile.shadows;this.renderer.shadowMap.autoUpdate=false;this.renderer.shadowMap.type=this.renderProfile.quality==='high'?T.PCFSoftShadowMap:T.PCFShadowMap;
     this.canvas=this.renderer.domElement;this.canvas.className='city-3d-canvas';this.canvas.tabIndex=0;
     this.canvas.setAttribute('aria-label',(city==='guangzhou'?'广州珠江边':city==='shenzhen'?'深圳湾':'洛阳桥')+'三维场景。拖动旋转、双指缩放。点击步道让人物行走，小猫会跟随。方向键旋转，WASD 行走，0 返回全景。');
     host.prepend(this.canvas);
     this.controls=new OrbitControls(this.camera,this.canvas);
     Object.assign(this.controls,{enableDamping:true,dampingFactor:.075,minDistance:3.5,maxDistance:54,minPolarAngle:.25,maxPolarAngle:Math.PI*.475,rotateSpeed:.55,zoomSpeed:.8,panSpeed:.65,screenSpacePanning:false});
+    this.controls.touches.ONE=T.TOUCH.ROTATE;this.controls.touches.TWO=T.TOUCH.DOLLY_PAN;
     if(city==='guangzhou'||city==='shenzhen')this.controls.maxDistance=124;
     this.controls.addEventListener('start',()=>{this.transition=null;this.follow=false;this.onView('free');});
     const hemi=this.hemi=new T.HemisphereLight('#c1d2d5','#46544c',1.55);this.scene.add(hemi);
-    this.sun=new T.DirectionalLight('#f3dec2',1.25);this.sun.position.set(-12,22,9);this.sun.castShadow=true;
+    this.sun=new T.DirectionalLight('#f3dec2',1.25);this.sun.position.set(-12,22,9);this.sun.castShadow=this.renderProfile.shadows;
     if(city==='guangzhou'){hemi.color.set('#e4e6d8');hemi.groundColor.set('#7b826f');hemi.intensity=1.62;this.sun.color.set('#f7e8cb');this.sun.intensity=1.12;this.sun.position.set(-12,24,11);}
     if(city==='shenzhen'){hemi.color.set('#e5e8dc');hemi.groundColor.set('#747f70');hemi.intensity=1.66;this.sun.color.set('#f8e7c8');this.sun.intensity=1.08;this.sun.position.set(-14,23,10);}
-    this.sun.shadow.mapSize.set(1024,1024);Object.assign(this.sun.shadow.camera,{left:-20,right:20,top:28,bottom:-27,near:1,far:80});this.sun.shadow.normalBias=.04;this.sun.shadow.bias=-.0002;this.sun.shadow.radius=3;this.scene.add(this.sun);
+    this.sun.shadow.mapSize.set(this.renderProfile.shadowSize,this.renderProfile.shadowSize);Object.assign(this.sun.shadow.camera,{left:-20,right:20,top:28,bottom:-27,near:1,far:80});this.sun.shadow.normalBias=.04;this.sun.shadow.bias=-.0002;this.sun.shadow.radius=3;this.scene.add(this.sun);
     const generator=new T.PMREMGenerator(this.renderer),room=new RoomEnvironment();this.environment=generator.fromScene(room,.06);this.scene.environment=this.environment.texture;this.scene.environmentIntensity=city==='quanzhou'?.20:.34;generator.dispose();room.dispose();
-    this.scenery=this.city.build();this.scene.add(this.scenery.root);this.setMood(defaultCityMood(city),true);this.hideProceduralNature();this.batchStonework();this.installDetailedNature();
+    this.scenery=this.city.build();this.scene.add(this.scenery.root);
+    this.scenery.water.getRenderTarget().setSize(this.renderProfile.reflectionSize,this.renderProfile.reflectionSize);
+    this.scenery.water.userData.reflectionInterval=this.renderProfile.reflectionInterval/1000;
+    this.setMood(defaultCityMood(city),true);this.hideProceduralNature();this.batchStonework();this.installDetailedNature();
     this.actors=new CityCompanions({onMessage,reduced:this.reduced,walkable:this.city.walkable,floor:this.city.floor,start:this.city.start,routeBound:city==='quanzhou'?70:44});this.scene.add(this.actors.human,this.actors.cat);
     this.marker=new T.Mesh(new T.RingGeometry(.25,.31,40),new T.MeshBasicMaterial({color:'#fff1b8',side:T.DoubleSide,transparent:true,opacity:.8,depthWrite:false}));this.marker.rotation.x=-Math.PI/2;this.marker.position.y=this.city.floor+.025;this.marker.visible=false;this.marker.userData.skipWaterReflection=true;this.scene.add(this.marker);
     this.ray=new T.Raycaster();this.pointer=new T.Vector2();this.gesture=new TapGesture();
@@ -242,11 +248,13 @@ export class CityWorld {
     this.marker.position.set(point.x,this.city.floor+.025,point.z);this.marker.visible=true;return true;
   }
   bindPicking(){
-    this.listen(this.canvas,'pointerdown',e=>this.gesture.down(e,performance.now()));
-    this.listen(this.canvas,'pointermove',e=>this.gesture.move(e));
-    this.listen(this.canvas,'pointercancel',e=>this.gesture.cancel(e.pointerId));
-    this.listen(this.canvas,'lostpointercapture',e=>this.gesture.cancel(e.pointerId));
-    this.listen(this.canvas,'pointerup',e=>{if(this.gesture.up(e,performance.now()))this.pick(e.clientX,e.clientY);});
+    // Classify the tap before OrbitControls releases pointer capture on up.
+    this.listen(this.canvas,'pointerdown',e=>this.gesture.down(e,performance.now()),true);
+    this.listen(this.canvas,'pointermove',e=>this.gesture.move(e),true);
+    this.listen(this.canvas,'pointercancel',e=>this.gesture.cancel(e.pointerId),true);
+    this.listen(this.canvas,'lostpointercapture',e=>this.gesture.cancel(e.pointerId),true);
+    this.listen(this.canvas,'pointerup',e=>{if(this.gesture.up(e,performance.now()))this.pick(e.clientX,e.clientY);},true);
+    this.listen(this.canvas,'wheel',()=>{this.gesture.tap=null;},{passive:true,capture:true});
     this.listen(this.canvas,'keydown',e=>{
       const key=e.key.toLowerCase();
       if(['w','a','s','d'].includes(key)){
@@ -276,7 +284,7 @@ export class CityWorld {
     if(this.scenery.walkSurfaces.includes(hit.object)||(hit.object.userData.cityStonework&&Math.abs(hit.point.y-this.city.floor)<.12&&this.city.walkable(hit.point.x,hit.point.z)))this.goTo(hit.point);
     else this.onMessage('这里是水面或岸边，试试可见的步道。');
   }
-  activate(){if(this.active||this.disposed)return;this.active=true;this.last=0;this.resize();this.frame=requestAnimationFrame(now=>this.update(now));}
+  activate(){if(this.active||this.disposed)return;this.active=true;this.last=0;this.adaptiveResolution.reset();this.resize();this.frame=requestAnimationFrame(now=>this.update(now));}
   deactivate(){this.active=false;cancelAnimationFrame(this.frame);this.frame=0;this.last=0;this.gesture?.active.clear();if(this.gesture)this.gesture.tap=null;}
   setPlaying(value){this.actors.playing=value;}
   reset(){this.actors.reset();this.marker.visible=false;this.setView('entrance');}
@@ -297,7 +305,7 @@ export class CityWorld {
     }
     this.controls.target.x=T.MathUtils.clamp(this.controls.target.x,-this.city.bounds.x,this.city.bounds.x);this.controls.target.z=T.MathUtils.clamp(this.controls.target.z,this.city.bounds.zMin,this.city.bounds.zMax);this.controls.target.y=T.MathUtils.clamp(this.controls.target.y,-.2,this.cityId==='quanzhou'?6:45);
     this.controls.update();this.marker.visible=this.actors.route.length>0;this.marker.material.opacity=.5+Math.sin(this.time*3)*.2;
-    this.renderer.render(this.scene,this.camera);
+    updateRenderBudget(this,now);this.renderer.render(this.scene,this.camera);
     this.canvas.dataset.personPosition=`${this.actors.human.position.x.toFixed(2)},${this.actors.human.position.z.toFixed(2)}`;
     this.canvas.dataset.catPosition=`${this.actors.cat.position.x.toFixed(2)},${this.actors.cat.position.z.toFixed(2)}`;
     this.canvas.dataset.personPose=this.actors.human.userData.pose;this.canvas.dataset.catAction=this.actors.cat.userData.cityAction;

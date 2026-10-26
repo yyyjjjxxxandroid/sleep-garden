@@ -3,8 +3,8 @@ import {normalizePetProfile} from './pet-photo-profile.mjs';
 
 // A single closed surface from shoulder to toe. Shared rings and normals
 // eliminate the intersecting ellipsoid seam at the wrist.
-function continuousLegGeometry(){
-  const geometry=new T.SphereGeometry(1,40,48),p=geometry.attributes.position;
+function continuousLegGeometry(detailed=true){
+  const geometry=new T.SphereGeometry(1,detailed?40:20,detailed?48:24),p=geometry.attributes.position;
   for(let i=0;i<p.count;i++){
     const y=-.155+.305*p.getY(i),angle=Math.atan2(p.getZ(i),p.getX(i));
     // One rounded profile, without the two separate ellipsoid lobes that
@@ -36,7 +36,8 @@ function undercoatTexture(){
 
 // Geometry, not camera-facing cards: the same bones deform the coat and fur.
 // Existing actor transforms remain the single owner of gestures and locomotion.
-export function installCatCoat(root, surfaces){
+export function installCatCoat(root, surfaces,{quality='high'}={}){
+  const detailed=quality==='high',density=detailed?1:quality==='low'?.22:.35;
   const drivers=[],skins=[];
   const furMaterial=new T.MeshPhysicalMaterial({color:'#fff4e6',roughness:.98,
     metalness:0,sheen:1,sheenColor:new T.Color('#fffaf2'),sheenRoughness:.85,
@@ -99,8 +100,8 @@ export function installCatCoat(root, surfaces){
     const bones=[bone];let footBone;
     if(paw){footBone=new T.Bone();footBone.name=source.name+'-paw-joint';footBone.position.copy(paw.position);parent.add(footBone);bones.push(footBone)}
     root.updateMatrixWorld(true);
-    const transform=source.matrix.clone(),geometry=paw?continuousLegGeometry():source.geometry.clone().applyMatrix4(transform);
-    const hairs=strandGeometry(geometry,count,length,groom);
+    const transform=source.matrix.clone(),geometry=paw?continuousLegGeometry(detailed):source.geometry.clone().applyMatrix4(transform);
+    const hairs=strandGeometry(geometry,Math.round(count*density),length,groom);
     const surfaceMaterial=source.material.clone();
     if(geometry.attributes.uv){surfaceMaterial.bumpMap=undercoatTexture();surfaceMaterial.bumpScale=.0007}
     const weightsFor=(g)=>{

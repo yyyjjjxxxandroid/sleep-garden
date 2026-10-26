@@ -14,6 +14,7 @@ else:
     (root/'world3d.bundle.js').write_text(bundle_modules(root))
     print('Built with browser-native offline modules (esbuild unavailable).')
 assets=json.loads((root/'assets3d-v2/embedded.json').read_text())
+assets['lod']=json.loads((root/'assets3d-v2/nature-lod.json').read_text())
 audio_manifest=json.loads((root/'audio/sources.json').read_text())
 audio_assets={key:'data:audio/mpeg;base64,'+base64.b64encode((root/'audio'/item['file']).read_bytes()).decode() for key,item in audio_manifest.items()}
 html=(root/'source.html').read_text()
