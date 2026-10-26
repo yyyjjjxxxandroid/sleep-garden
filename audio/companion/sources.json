@@ -1,0 +1,19 @@
+{
+  "meow": {
+    "file": "meow.wav",
+    "title": "Mavis_cat-meow-soft_01",
+    "creator": "TBMcQueen",
+    "sourcePage": "https://freesound.org/people/TBMcQueen/sounds/825631/",
+    "download": "https://cdn.freesound.org/previews/825/825631_478491-hq.mp3",
+    "license": "CC0-1.0: https://creativecommons.org/publicdomain/zero/1.0/",
+    "processing": "Mono 24 kHz PCM; 140–3200 Hz filtering, -30 LUFS target, quiet peak limit and edge fades; 1.18 seconds."
+  },
+  "purr": {
+    "file": "purr.wav",
+    "title": "Cat Purring (long/clear/loud)",
+    "creator": "JamesBradford",
+    "sourcePage": "https://freesound.org/people/JamesBradford/sounds/579898/",
+    "license": "CC0-1.0: https://creativecommons.org/publicdomain/zero/1.0/",
+    "processing": "1.8-second excerpt from existing licensed recording at 6 seconds; mono 24 kHz PCM, -32 LUFS target and edge fades."
+  }
+}

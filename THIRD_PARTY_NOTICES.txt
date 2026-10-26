@@ -57,6 +57,22 @@ Zambian ( Lo-fi Loop ) C#maj 70 BPM — holizna
 https://freesound.org/people/holizna/sounds/852235/
 CC0-1.0
 
+Mavis_cat-meow-soft_01 — TBMcQueen
+https://freesound.org/people/TBMcQueen/sounds/825631/
+CC0-1.0: https://creativecommons.org/publicdomain/zero/1.0/
+Mono 24 kHz PCM; 140–3200 Hz filtering, -30 LUFS target, quiet peak limit and edge fades; 1.18 seconds.
+
+Cat Purring (long/clear/loud) — JamesBradford
+https://freesound.org/people/JamesBradford/sounds/579898/
+CC0-1.0: https://creativecommons.org/publicdomain/zero/1.0/
+1.8-second excerpt from existing licensed recording at 6 seconds; mono 24 kHz PCM, -32 LUFS target and edge fades.
+
+Optional local Chinese speech: Kokoro-82M v1.1-zh — hexgrad, Apache-2.0
+https://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh
+Inference: sherpa-onnx — k2-fsa, Apache-2.0
+https://github.com/k2-fsa/sherpa-onnx
+Model/runtime dependencies and their licenses are installed locally by setup:voice, not embedded in this HTML.
+
 Weather data by Open-Meteo: https://open-meteo.com/
 CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
 Weather codes and solar times are mapped to stylized garden visuals.

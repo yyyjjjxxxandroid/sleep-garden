@@ -14,7 +14,10 @@
       const music=typeof value.memory.music==='boolean'?value.memory.music:null;
       if(muted.length||scene||music!==null)memory={muted,scene,music};
     }
-    return {reply:text(value.reply,240),reason:text(value.reason,160),scene:pick(value.scene,scenes,'keep'),mood:pick(value.mood,['keep','dusk','night'],'keep'),mix,
+    const delivery={voice:pick(value.delivery?.voice,['soft','quiet'],'soft'),cue:pick(value.delivery?.cue,['none','meow','purr'],'none')};
+    if(value.interaction==='quiet')delivery.voice='quiet';
+    if(delivery.voice==='quiet')delivery.cue='none';
+    return {reply:text(value.reply,240),reason:text(value.reason,160),delivery,scene:pick(value.scene,scenes,'keep'),mood:pick(value.mood,['keep','dusk','night'],'keep'),mix,
       catAction:pick(value.catAction,['keep','rest','approach','pet'],'keep'),interaction:pick(value.interaction,['keep','quiet','talk'],'keep'),playback:pick(value.playback,['keep','pause'],'keep'),memory};
   }
   function normalizeMemory(value){
