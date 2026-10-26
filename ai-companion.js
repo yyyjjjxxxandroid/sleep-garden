@@ -5,7 +5,7 @@ function createAiCompanion(hooks){
   let autoSpeak=false,lastSpeech=null;
   // Sound is opt-in for this page visit; never restore an old enabled flag.
   const speakToggle=$('companionSpeakToggle'),speakReplay=$('companionSpeakReplay'),speakStop=$('companionSpeakStop'),speechStatus=$('companionSpeechStatus');
-  const speech=window.createCompanionSpeech({readPetVoice:()=>hooks.petVoice?.(),duck:active=>hooks.duck?.(active),onState:s=>{
+  const speech=window.createCompanionSpeech({duck:active=>hooks.duck?.(active),onState:s=>{
     const active=['loading','playing'].includes(s.phase);speakStop.hidden=!active;speakReplay.hidden=active;
     speechStatus.textContent=s.message||(autoSpeak?'声音已开启，下一句回复会读给你听。':'声音已关闭，只显示文字。');
   }});

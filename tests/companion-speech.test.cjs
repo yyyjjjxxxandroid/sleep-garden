@@ -3,17 +3,16 @@ const assert=require('node:assert/strict');
 const {createCompanionSpeech}=require('../companion-speech.js');
 const deferred=()=>{let resolve;const promise=new Promise(r=>{resolve=r});return {promise,resolve};};
 const wave=()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(48)});
-function fixture(fetcher=async()=>wave(),decode,options={}){
+function fixture(fetcher=async()=>wave(),decode){
   const nodes=[],ducks=[],states=[],contexts=[];
   class Context{
     constructor(){this.state='suspended';this.currentTime=10;this.destination={};contexts.push(this);}
     async resume(){this.state='running';}
     async decodeAudioData(){return decode?decode():{duration:2};}
-    createBuffer(numberOfChannels,length,sampleRate){const channels=Array.from({length:numberOfChannels},()=>new Float32Array(length));return {numberOfChannels,length,sampleRate,duration:length/sampleRate,getChannelData:i=>channels[i]};}
     createGain(){return {gain:{value:0,setValueAtTime(){},linearRampToValueAtTime(){},cancelScheduledValues(){}},connect(){return this},disconnect(){}};}
     createBufferSource(){const node={connect(){return this},start(){this.started=true},stop(){this.stopped=true},disconnect(){}};nodes.push(node);return node;}
   }
-  const speech=createCompanionSpeech({Context,fetcher,onState:s=>states.push(s),duck:v=>ducks.push(v),...options});
+  const speech=createCompanionSpeech({Context,fetcher,onState:s=>states.push(s),duck:v=>ducks.push(v)});
   return {speech,nodes,ducks,states,contexts};
 }
 
@@ -47,15 +46,4 @@ test('unavailable speech leaves a readable status and a later retry can succeed'
   let available=false;const f=fixture(async()=>available?wave():{ok:false,json:async()=>({error:'speech_unavailable'})});
   assert.equal(await f.speech.play('文字还在。'),false);assert.equal(f.speech.phase,'error');assert.match(f.states.at(-1).message,/文字/);assert.ok(!f.ducks.includes(true));
   available=true;assert.equal(await f.speech.play('可以再试。'),true);f.speech.stop();
-});
-
-test('custom meow replaces the stock speech accent locally and honors cancellation',async()=>{
-  const data='data:audio/wav;base64,UklGRg==',calls=[],sample=()=>({sampleRate:24000,length:24000,numberOfChannels:1,duration:1,getChannelData:()=>new Float32Array(24000).fill(.5)});
-  const f=fixture(async(url,options)=>{calls.push({url,body:options.body});return wave()},sample,{readPetVoice:()=>({data})});
-  assert.equal(await f.speech.play('晚安。',{cue:'meow'}),true);
-  assert.deepEqual(JSON.parse(calls[0].body),{text:'晚安。',cue:'none'});assert.equal(calls[1].url,data);assert.equal(calls[1].body,undefined);
-  const buffer=f.nodes[0].buffer;assert.equal(buffer.duration,2.12);assert.equal(buffer.getChannelData(0)[0],.5);assert.ok(buffer.getChannelData(0)[30000]>.2);f.speech.stop();
-  const pending=deferred();let count=0;
-  const stopped=fixture(async()=>wave(),()=>++count===1?sample():pending.promise,{readPetVoice:()=>({data})});
-  const playing=stopped.speech.play('先歇一会。',{cue:'meow'});await new Promise(setImmediate);stopped.speech.stop();pending.resolve(sample());assert.equal(await playing,false);assert.equal(stopped.nodes.length,0);
 });

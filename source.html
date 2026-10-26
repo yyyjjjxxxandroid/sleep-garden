@@ -476,7 +476,7 @@ soundSheet.querySelectorAll('.sheet-drag-handle,.sheet-head h2').forEach(target=
 document.addEventListener('keydown',e=>{if(!$('companionOverlay').hidden)return;const m=[...document.querySelectorAll('.overlay')].find(x=>!x.hidden);if(e.key==='Escape'){if(m&&m.id==='restScreen')experience.leaveRest();else if(m&&m.id==='resultOverlay')returnGarden();else if(m)closeModal();else if(state.focused)focusCat()}if(e.key==='Tab'&&m){const all=[...m.querySelectorAll('button,input')].filter(x=>x.getClientRects().length&&!x.disabled),first=all[0],last=all[all.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
 // 七条经过响度与循环处理的 CC0 自然声与音乐；构建时嵌入 index.html，源码模式从 audio/ 读取。
 const audioSources={sun:'audio/01-林间晨鸟.mp3',wind:'audio/02-风拂树叶.mp3',rain:'audio/03-花园细雨.mp3',bugs:'audio/04-远处虫鸣.mp3',cat:'audio/05-猫咪呼噜.mp3',water:'audio/06-池塘流水.mp3',music:'audio/07-疗愈氛围音乐.mp3'};
-function createAudio(){return new GardenAudio({sources:window.GARDEN_AUDIO_ASSETS||audioSources,readMix:()=>({...state,catMoving:!!worldEngine?.catMoving,catDistance:worldEngine?.catDistance||0,chimeContact:worldEngine?.chimeContact||0}),readPetVoice:()=>worldEngine?.petCare?.voice?.saved,onInterruption:()=>{if(state.playing)pauseForInterruption()}})}
+function createAudio(){return new GardenAudio({sources:window.GARDEN_AUDIO_ASSETS||audioSources,readMix:()=>({...state,catMoving:!!worldEngine?.catMoving,catDistance:worldEngine?.catDistance||0,chimeContact:worldEngine?.chimeContact||0}),onInterruption:()=>{if(state.playing)pauseForInterruption()}})}
 function playPendingPlantCue(){
  if(!state.growthCuePending)return;
  state.growthCuePending=false;state.growthCueStage=0;
@@ -619,7 +619,7 @@ experience=createGardenExperience({state,clock,savedTimer:saved.timerSeconds,sav
 new ResizeObserver(()=>{app.style.setProperty('--dock-height',$('controls').getBoundingClientRect().height+'px')}).observe($('controls'));
 worldEngine=new GardenWorld({svg:$('world'),scene:document.querySelector('.scene'),state,onCatInteraction:kind=>{const messages={unreachable:'这里暂时走不到，试试附近的草地吧。',flower:'小猫去闻闻这朵花。',bite:'小猫轻轻咬了咬花瓣。',rub:'小猫用脸颊蹭了蹭花朵。'};if(messages[kind])toast(messages[kind]);},onExplore:()=>{$('worldHint').hidden=true;if(state.focused){state.focused=false;showMode();if(audio)audio.mix()}}});
 // Keep post-session navigation in the same layout flow as the summary and CTA.
-worldEngine.petServices={app,state,modal,closeModal,toast,petAudio:()=>{if(state.playing&&audio)audio.pet()},preparePetRecording:pauseForInterruption};
+worldEngine.petServices={app,state,modal,closeModal,toast,petAudio:()=>{if(state.playing&&audio)audio.pet()}};
 const gardenNavigation=app.querySelector('.region-nav');if(gardenNavigation)$('gardenSummary').after(gardenNavigation);
 setTimeout(()=>app.classList.add('world-ready'),8000);
 highlightTimerChips();
@@ -657,7 +657,6 @@ $('followLocal').onclick=()=>localEnvironment.follow();
 localEnvironment.start();
 
 const aiCompanion=createAiCompanion({
- petVoice:()=>worldEngine?.petCare?.voice?.saved,
  duck:active=>{audio?.setSpeechDucking(active);window.CityPrototype?.duckSpeech?.(active);},
  leaveRest:()=>experience?.leaveRest(),
  snapshot:()=>window.CityPrototype?.snapshot?.active?window.CityPrototype.snapshot:{scene:'garden',mood:state.night?'night':'dusk',mix:{...state.mix},playing:state.playing},
