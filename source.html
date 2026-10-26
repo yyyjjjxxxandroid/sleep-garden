@@ -325,8 +325,15 @@ body{display:flex;justify-content:center}
    <div class="companion-log" id="companionLog" role="log" aria-label="与小猫的对话" aria-live="polite" aria-relevant="additions"></div>
    <section class="companion-plan" id="companionPlan" hidden aria-label="小猫的陪伴安排"><p id="companionReason"></p><small id="companionChanges"></small><div class="companion-plan-actions"><button type="button" id="companionApply">就这样陪我</button><button type="button" id="companionListen" hidden>听听这段</button><button type="button" id="companionRemember" hidden>把这个偏好记住</button></div></section>
    <div class="companion-suggestions"><button type="button" data-companion-prompt="今天有点累，不想聊天，陪我去深圳湾坐一会儿，风声轻一点。">去海边，安静一会儿</button><button type="button" data-companion-prompt="我脑袋停不下来，帮我调一段轻音乐和流水，不要鸟鸣。">帮我调一段声音</button><button type="button" data-companion-prompt="以后睡前不要放鸟鸣，请记住这个偏好。">记住我的听音偏好</button></div>
-   <form class="companion-form" id="companionForm"><label for="companionInput">想对小猫说的话</label><input id="companionInput" name="message" maxlength="600" autocomplete="off" placeholder="今天，想怎么待一会儿？" required><button type="submit" id="companionSend">发送</button></form>
-   <p class="companion-privacy">发送后，本次对话与已确认偏好会交给 AI 服务生成回应。对话仅留在当前页面；偏好由你确认后保存在本机。</p>
+   <form class="companion-form" id="companionForm">
+    <button type="button" class="companion-input-toggle" id="companionInputToggle" aria-label="切换语音输入" title="切换语音输入"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 11v1a6 6 0 0 0 12 0v-1M12 18v3M9 21h6"/></svg></button>
+    <label for="companionInput">想对小猫说的话</label><input id="companionInput" name="message" maxlength="600" autocomplete="off" placeholder="今天，想怎么待一会儿？" required>
+    <button type="button" class="companion-hold" id="companionHold" aria-describedby="companionVoiceHint" aria-pressed="false" hidden><span class="companion-voice-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span id="companionHoldLabel">按住说话</span></button>
+    <button type="submit" id="companionSend">发送</button>
+   </form>
+   <p class="companion-voice-hint" id="companionVoiceHint" role="status" hidden>松开发送，上滑取消 · 最长 60 秒</p>
+   <p class="companion-voice-transcript" id="companionVoiceTranscript" hidden></p>
+   <p class="companion-privacy">发送后，本次对话与已确认偏好会交给 AI 服务生成回应。语音由浏览器的识别服务转成文字，再交给小猫。对话仅留在当前页面；偏好由你确认后保存在本机。</p>
    <div class="companion-memory"><span id="companionMemoryText"></span><button type="button" id="companionForget" hidden>清除偏好</button></div><button type="button" class="companion-clear" id="companionClear">清空这次对话</button>
   </section>
  </div>
@@ -336,6 +343,7 @@ body{display:flex;justify-content:center}
 <script src="session-clock.js"></script>
 <script src="garden-audio.js"></script>
 <script src="companion-plan.js"></script>
+<script src="companion-voice.js"></script>
 <script src="ai-companion.js"></script>
 <script src="garden-personalization.js"></script>
 <script src="garden-experience.js"></script>

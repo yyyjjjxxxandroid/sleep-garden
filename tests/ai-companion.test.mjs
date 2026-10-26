@@ -10,11 +10,20 @@ import * as T from '../vendor/three/build/three.module.js';
 import {GardenCompanion} from '../garden-companion.js';
 import {CityCompanions} from '../city-world.js';
 import {askCompanion,readSettings} from '../ai-service.mjs';
-import {createGardenServer} from '../server.mjs';
+import {createGardenServer,loadEnv} from '../server.mjs';
 
 const settings={configured:true,model:'gpt-5.6-sol',base:'https://test.invalid/v1',key:'PRIVATE_TEST_KEY',mode:'responses'};
 const upstream=plan=>async()=>new Response(JSON.stringify({output:[{type:'message',content:[{type:'output_text',text:JSON.stringify(plan)}]}]}));
 const reply={reply:'我陪你待一会儿。',reason:'留一点水声。',scene:'shenzhen',mix:{water:20,wind:8},memory:null};
+
+test('teammates can load a private project .env without Codex credentials, preserving host overrides',async t=>{
+ const root=await mkdtemp(join(tmpdir(),'garden-project-env-'));t.after(()=>rm(root,{recursive:true,force:true}));
+ const path=join(root,'.env');await writeFile(path,'AI_USE_CODEX_PROVIDER=false\nAI_BASE_URL=https://project.example/codex\nAI_MODEL=gpt-5.6-sol\nAI_WIRE_API=responses\nAI_API_KEY=PRIVATE_PROJECT_TEST_KEY\n');
+ const env={};await loadEnv(path,env);const config=await readSettings(env);
+ assert.deepEqual(config,{configured:true,base:'https://project.example/codex',model:'gpt-5.6-sol',mode:'responses',key:'PRIVATE_PROJECT_TEST_KEY'});
+ const host={AI_API_KEY:'HOST_OVERRIDE'};await loadEnv(path,host);assert.equal((await readSettings(host)).key,'HOST_OVERRIDE');
+ const absent={};await loadEnv(join(root,'missing.env'),absent);assert.equal((await readSettings(absent)).configured,false);
+});
 
 test('model plans cannot inject URLs, script, arbitrary actions, or excessive levels',()=>{
  const plan=Plan.normalizePlan({...reply,scene:'javascript:evil()',mood:'unknown',catAction:'eval',mix:{wind:999,water:-3,music:NaN,evil:50},memory:{muted:['sun','evil','sun'],scene:'remote',music:false}});

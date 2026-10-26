@@ -397,6 +397,11 @@ body{display:flex;justify-content:center}
 .companion-plan{flex:none;margin:10px 0;padding:13px;border:1px solid #b0bea066;border-radius:19px;background:#faf9ef}.companion-plan p{margin:0 0 7px;font-size:12px;line-height:1.7}.companion-plan small{display:block;font-size:10px;line-height:1.8;color:#7d8974;overflow-wrap:anywhere}.companion-plan-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.companion-plan-actions button{min-height:44px;padding:0 13px;border:1px solid #81977455;border-radius:24px;font-size:11px;color:#486047}.companion-plan-actions button:first-child,.companion-plan-actions #companionListen{background:#45614f;color:#fff7e9}
 .companion-suggestions{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0}.companion-suggestions button{min-height:36px;padding:5px 11px;border:1px solid #8a9d7c44;border-radius:18px;color:#6c7c63;font-size:10px}
 .companion-form{display:flex;align-items:center;gap:7px;flex:none;margin-top:3px}.companion-form label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.companion-form input{width:0;flex:1;min-height:48px;border:1px solid #a0b28e80;border-radius:24px;padding:0 15px;background:#fffef3;color:#344e42;font-size:16px}.companion-form button{min-width:58px;min-height:48px;border-radius:24px;background:#45614f;color:#fff8e8;font-size:12px}.companion-form button:disabled{opacity:.5}
+.companion-form .companion-input-toggle{display:grid;place-items:center;min-width:44px;width:44px;flex:none;border:1px solid #a0b28e80;background:transparent;color:#48634f}.companion-input-toggle svg{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.companion-form .companion-hold{display:flex;justify-content:center;align-items:center;gap:12px;flex:1;min-width:0;background:#dfe7d8;color:#3f5d48;border:1px solid #9caf8c;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;font-size:14px;font-weight:500}
+.companion-form .companion-hold[data-phase="listening"],.companion-form .companion-hold[data-phase="starting"]{background:#45614f;color:#fff8e8}.companion-form .companion-hold[data-cancel="true"]{background:#965d50;color:#fff8e8;border-color:#965d50}.companion-form .companion-hold[data-phase="finishing"]{background:#e7e8d8;color:#6c7b60}
+.companion-voice-hint{flex:none;margin:7px 0 0;font-size:10px;line-height:1.7;color:#6c8066;text-align:center}.companion-voice-transcript{flex:none;margin:7px 0 0;padding:8px 12px;max-height:70px;overflow:auto;border-radius:12px;background:#e4e9dc;color:#48614a;font-size:12px;line-height:1.7;overflow-wrap:anywhere}
+.companion-voice-bars{display:flex;align-items:center;gap:3px;height:18px}.companion-voice-bars i{width:3px;height:6px;border-radius:2px;background:currentColor}.companion-voice-bars i:nth-child(2),.companion-voice-bars i:nth-child(4){height:12px}.companion-voice-bars i:nth-child(3){height:18px}.companion-hold[data-phase="listening"] .companion-voice-bars i{animation:companion-voice-pulse .8s ease-in-out infinite alternate}.companion-voice-bars i:nth-child(even){animation-delay:-.4s!important}@keyframes companion-voice-pulse{to{transform:scaleY(.4)}}@media(prefers-reduced-motion:reduce){.companion-hold .companion-voice-bars i{animation:none!important}}
 .companion-privacy,.companion-memory{font-size:10px;line-height:1.7;color:#85907d;margin:10px 0 0}.companion-memory{display:flex;align-items:center;justify-content:space-between;gap:5px}.companion-memory button,.companion-clear{min-height:36px;flex:none;padding:0 5px;font-size:10px;color:#6e8067;text-decoration:underline;text-underline-offset:3px}.companion-clear{align-self:flex-start;margin-top:2px}.companion-connection{font-size:12px;line-height:1.8;padding:10px;background:#eee8cf;border-radius:13px;margin:5px 0}
 .companion-overlay button:focus-visible,.companion-form input:focus-visible{outline:2px solid #a68b52;outline-offset:3px}
 @media(max-width:600px){.companion-overlay{padding:10px;padding-bottom:max(10px,env(safe-area-inset-bottom))}.companion-sheet{padding:16px;border-radius:24px}.companion-launch{top:94px;left:20px}.home-companion small{display:none}}
@@ -547,8 +552,15 @@ body{display:flex;justify-content:center}
    <div class="companion-log" id="companionLog" role="log" aria-label="与小猫的对话" aria-live="polite" aria-relevant="additions"></div>
    <section class="companion-plan" id="companionPlan" hidden aria-label="小猫的陪伴安排"><p id="companionReason"></p><small id="companionChanges"></small><div class="companion-plan-actions"><button type="button" id="companionApply">就这样陪我</button><button type="button" id="companionListen" hidden>听听这段</button><button type="button" id="companionRemember" hidden>把这个偏好记住</button></div></section>
    <div class="companion-suggestions"><button type="button" data-companion-prompt="今天有点累，不想聊天，陪我去深圳湾坐一会儿，风声轻一点。">去海边，安静一会儿</button><button type="button" data-companion-prompt="我脑袋停不下来，帮我调一段轻音乐和流水，不要鸟鸣。">帮我调一段声音</button><button type="button" data-companion-prompt="以后睡前不要放鸟鸣，请记住这个偏好。">记住我的听音偏好</button></div>
-   <form class="companion-form" id="companionForm"><label for="companionInput">想对小猫说的话</label><input id="companionInput" name="message" maxlength="600" autocomplete="off" placeholder="今天，想怎么待一会儿？" required><button type="submit" id="companionSend">发送</button></form>
-   <p class="companion-privacy">发送后，本次对话与已确认偏好会交给 AI 服务生成回应。对话仅留在当前页面；偏好由你确认后保存在本机。</p>
+   <form class="companion-form" id="companionForm">
+    <button type="button" class="companion-input-toggle" id="companionInputToggle" aria-label="切换语音输入" title="切换语音输入"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 11v1a6 6 0 0 0 12 0v-1M12 18v3M9 21h6"/></svg></button>
+    <label for="companionInput">想对小猫说的话</label><input id="companionInput" name="message" maxlength="600" autocomplete="off" placeholder="今天，想怎么待一会儿？" required>
+    <button type="button" class="companion-hold" id="companionHold" aria-describedby="companionVoiceHint" aria-pressed="false" hidden><span class="companion-voice-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span id="companionHoldLabel">按住说话</span></button>
+    <button type="submit" id="companionSend">发送</button>
+   </form>
+   <p class="companion-voice-hint" id="companionVoiceHint" role="status" hidden>松开发送，上滑取消 · 最长 60 秒</p>
+   <p class="companion-voice-transcript" id="companionVoiceTranscript" hidden></p>
+   <p class="companion-privacy">发送后，本次对话与已确认偏好会交给 AI 服务生成回应。语音由浏览器的识别服务转成文字，再交给小猫。对话仅留在当前页面；偏好由你确认后保存在本机。</p>
    <div class="companion-memory"><span id="companionMemoryText"></span><button type="button" id="companionForget" hidden>清除偏好</button></div><button type="button" class="companion-clear" id="companionClear">清空这次对话</button>
   </section>
  </div>
@@ -834,10 +846,142 @@ if(typeof module!=='undefined')module.exports={GardenAudio,GardenEnvelope,garden
   if(typeof module!=='undefined')module.exports=api;else root.CompanionPlan=api;
 })(typeof window==='undefined'?globalThis:window);
 </script>
+<script>(function(root){
+  'use strict';
+  // A released gesture waits for final recognition results; a cancelled gesture
+  // invalidates its session immediately, including delayed permission callbacks.
+  function createCompanionVoice({Recognition,onState=()=>{},onSend=()=>{},onDraft=()=>{},now=()=>Date.now(),schedule=setTimeout,unschedule=clearTimeout}={}){
+    let session=null;
+    const idle=(message='')=>onState({phase:'idle',text:'',seconds:0,cancelling:false,message});
+    const current=s=>session===s;
+    function emit(s,message=''){
+      if(current(s))onState({phase:s.released?'finishing':s.started?'listening':'starting',text:s.text,seconds:s.started?Math.floor((now()-s.startedAt)/1000):0,cancelling:s.cancelling,message});
+    }
+    function dispose(s,abort=true){
+      if(!current(s))return;
+      session=null;unschedule(s.timer);unschedule(s.tick);unschedule(s.finishTimer);
+      if(abort)try{s.recognition.abort();}catch{}
+    }
+    function cancel(message='已取消，不会发送给小猫。'){
+      if(!session)return;dispose(session);idle(message);
+    }
+    function draft(s,message){
+      const text=s.text;dispose(s);idle(message);if(text)onDraft(text);
+    }
+    function settle(s){
+      if(!current(s)||!s.released)return;
+      if(s.interim){draft(s,'有些话还没听完整，已放入输入框，确认后再发送。');return;}
+      const text=s.final.trim();dispose(s);
+      if(!text){idle('没有听清，按住再说一次吧。');return;}
+      if(text.length>600){idle('这段话超过 600 字，已放入输入框，请缩短后发送。');onDraft(text);return;}
+      idle();onSend(text);
+    }
+    function release(){
+      const s=session;if(!s||s.released)return;
+      if(s.cancelling){cancel();return;}
+      if(!s.started){cancel('授权麦克风后，请再按住说话。');return;}
+      if(now()-s.startedAt<350){cancel('按住久一点，说完再松开。');return;}
+      s.released=true;unschedule(s.timer);unschedule(s.tick);emit(s);
+      if(s.ended){settle(s);return;}
+      // stop() produces the last final result before onend; never send interim
+      // words early or let a slow service send a second message later.
+      s.finishTimer=schedule(()=>{if(current(s))draft(s,'语音识别有些慢，已听到的内容可在输入框确认。');},4000);
+      try{s.recognition.stop();}catch{draft(s,'语音识别中断了，可以确认文字后发送。');}
+    }
+    function begin(){
+      if(session||!Recognition)return false;
+      let recognition;try{recognition=new Recognition();}catch{idle('暂时无法开启语音，请先打字告诉小猫。');return false;}
+      const s=session={recognition,started:false,startedAt:0,released:false,cancelling:false,ended:false,text:'',final:'',interim:''};
+      recognition.lang='zh-CN';recognition.continuous=true;recognition.interimResults=true;recognition.maxAlternatives=1;
+      recognition.onstart=()=>{
+        if(!current(s)){try{recognition.abort();}catch{}return;}
+        unschedule(s.timer);s.started=true;s.startedAt=now();emit(s);
+        const tick=()=>{if(!current(s)||s.released)return;emit(s);s.tick=schedule(tick,1000);};s.tick=schedule(tick,1000);
+        s.timer=schedule(()=>{if(current(s)){if(s.cancelling)cancel();else release();}},60000);
+      };
+      recognition.onresult=event=>{
+        if(!current(s))return;
+        const final=[],interim=[];
+        for(let i=0;i<event.results.length;i++){
+          const result=event.results[i],text=result[0]?.transcript||'';(result.isFinal?final:interim).push(text);
+        }
+        s.final=final.join('');s.interim=interim.join('');s.text=(s.final+s.interim).trim();emit(s);
+      };
+      recognition.onend=()=>{if(!current(s))return;s.ended=true;if(s.released)settle(s);else emit(s,'已听到，松开发送');};
+      recognition.onerror=event=>{
+        if(!current(s))return;
+        if(s.cancelling){cancel();return;}
+        const messages={'not-allowed':'麦克风或语音识别权限未开启，请在浏览器的网站设置中允许后重试。','service-not-allowed':'当前浏览器无法使用语音识别，请换用支持语音识别的 Chrome 或 Safari，或先打字。','audio-capture':'没有找到可用的麦克风，请检查设备后重试。','network':'语音识别服务未连上，可以重试，或先打字告诉小猫。','no-speech':'没有听到声音，按住再说一次吧。','language-not-supported':'当前浏览器暂不支持中文语音识别，可以先打字。'};
+        draft(s,messages[event.error]||'这次语音没有识别成功，可以重试或打字。');
+      };
+      emit(s);s.timer=schedule(()=>{if(current(s))cancel('开启麦克风等得有些久，请检查浏览器权限后重试。');},15000);
+      try{recognition.start();}catch{cancel('暂时无法开启语音，请检查麦克风权限或使用文字。');return false;}
+      return true;
+    }
+    function setCancelling(value){if(session&&!session.released){session.cancelling=!!value;emit(session);}}
+    return {begin,release,cancel,setCancelling,get active(){return !!session;}};
+  }
+  if(typeof module!=='undefined')module.exports={createCompanionVoice};else root.createCompanionVoice=createCompanionVoice;
+})(typeof window==='undefined'?globalThis:window);
+</script>
 <script>function createAiCompanion(hooks){
   const $=id=>document.getElementById(id),P=window.CompanionPlan,app=$('app'),panel=$('companionOverlay'),log=$('companionLog'),form=$('companionForm'),input=$('companionInput');
   const memoryKey='sleepGarden.companion.preferences.v1';
   let memory={muted:[],scene:null,music:null},history=[],plan=null,planContext=null,controller=null,busy=false,applying=false,version=0,returnFocus=null,inert=[];
+  const hold=$('companionHold'),toggle=$('companionInputToggle'),voiceHint=$('companionVoiceHint'),transcript=$('companionVoiceTranscript');
+  const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition,voiceSupported=!!Recognition&&window.isSecureContext;
+  let voiceMode=voiceSupported,pointer=null,heldKey=null;
+  const voiceIdleHint='松开发送，上滑取消 · 最长 60 秒';
+  function syncVoiceMode(focus=false){
+    input.hidden=voiceMode;input.required=!voiceMode;$('companionSend').hidden=voiceMode;hold.hidden=!voiceMode;
+    toggle.setAttribute('aria-label',voiceMode?'切换文字输入':'切换语音输入');toggle.title=voiceMode?'切换文字输入':'切换语音输入';
+    toggle.innerHTML=voiceMode?'<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M5 9h2m3 0h2m3 0h3M5 12h2m3 0h2m3 0h3M7 15h10"/></svg>':'<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 11v1a6 6 0 0 0 12 0v-1M12 18v3M9 21h6"/></svg>';
+    voiceHint.hidden=!voiceMode;if(voiceMode)voiceHint.textContent=voiceIdleHint;
+    if(focus)(voiceMode?hold:input).focus({preventScroll:true});
+  }
+  function syncBusy(){hold.disabled=busy||applying;$('companionSend').disabled=busy||applying;toggle.disabled=busy||applying;}
+  const voice=window.createCompanionVoice({Recognition:voiceSupported?Recognition:null,
+    onSend:message=>{if(!panel.hidden)send(message);},
+    onDraft:text=>{if(panel.hidden)return;input.value=text;voiceMode=false;const hint=voiceHint.textContent;syncVoiceMode(true);voiceHint.hidden=false;voiceHint.textContent=hint;},
+    onState:s=>{
+      const active=s.phase!=='idle';hold.dataset.phase=s.phase;hold.dataset.cancel=String(s.cancelling);hold.setAttribute('aria-pressed',String(active));
+      $('companionHoldLabel').textContent=s.phase==='starting'?'正在开启麦克风…':s.phase==='finishing'?'正在识别…':s.phase==='listening'?(s.cancelling?'松开取消':'松开发送 · '+s.seconds+' 秒'):'按住说话';
+      transcript.hidden=!s.text;transcript.textContent=s.text;
+      voiceHint.hidden=!voiceMode&&!s.message;
+      const hint=s.message||(s.cancelling?'松开手指，这句话不会发送':s.phase==='starting'?'首次使用请允许麦克风；授权后再按住说话':s.phase==='finishing'?'正在确认最后几个字…':voiceIdleHint);
+      if(voiceHint.textContent!==hint)voiceHint.textContent=hint;
+    }
+  });
+  function cancelVoice(){pointer=null;heldKey=null;voice.cancel();}
+  syncVoiceMode();
+  toggle.onclick=()=>{
+    cancelVoice();
+    if(!voiceSupported){voiceHint.hidden=false;voiceHint.textContent=window.isSecureContext?'当前浏览器不支持语音识别，请用支持语音识别的 Chrome 或 Safari 打开，或先打字。':'语音需要 HTTPS 或本机地址，请先用文字输入。';return;}
+    voiceMode=!voiceMode;syncVoiceMode(true);
+  };
+  hold.addEventListener('pointerdown',e=>{
+    if(!e.isPrimary||e.button!==0||busy||applying||voice.active)return;
+    e.preventDefault();hold.focus({preventScroll:true});pointer={id:e.pointerId,y:e.clientY};
+    try{hold.setPointerCapture(e.pointerId);}catch{}
+    if(!voice.begin())pointer=null;
+  });
+  hold.addEventListener('pointermove',e=>{if(pointer?.id===e.pointerId)voice.setCancelling(pointer.y-e.clientY>=60);});
+  hold.addEventListener('pointerup',e=>{if(pointer?.id!==e.pointerId)return;e.preventDefault();pointer=null;voice.release();});
+  hold.addEventListener('pointercancel',cancelVoice);
+  hold.addEventListener('lostpointercapture',()=>{if(pointer)cancelVoice();});
+  hold.addEventListener('contextmenu',e=>e.preventDefault());
+  hold.addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&voice.active){e.preventDefault();e.stopPropagation();cancelVoice();return;}
+    if(![' ','Enter'].includes(e.key))return;e.preventDefault();
+    if(!e.repeat&&!voice.active&&!busy&&!applying){heldKey=e.key;voice.begin();}
+  });
+  hold.addEventListener('keyup',e=>{if(e.key===heldKey){e.preventDefault();heldKey=null;voice.release();}});
+  // Assistive technology can activate the button without pointer/key events.
+  hold.addEventListener('click',e=>{if(e.detail===0&&!busy&&!applying){if(voice.active)voice.release();else voice.begin();}});
+  hold.addEventListener('blur',()=>{if(voice.active)cancelVoice();});
+  window.addEventListener('blur',cancelVoice);
+  window.addEventListener('pagehide',cancelVoice);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelVoice();});
   try{memory=P.normalizeMemory(JSON.parse(localStorage.getItem(memoryKey)||'null'))}catch{}
   const snapshot=()=>hooks.snapshot();
   function bubble(role,text){const item=document.createElement('p');item.className='companion-bubble '+role;item.textContent=text;log.append(item);while(log.children.length>16)log.firstElementChild.remove();log.scrollTop=log.scrollHeight;return item;}
@@ -857,11 +1001,11 @@ if(typeof module!=='undefined')module.exports={GardenAudio,GardenEnvelope,garden
     hooks.leaveRest?.();returnFocus=document.activeElement;panel.hidden=false;
     inert=[...app.children].filter(x=>x!==panel).map(x=>[x,x.inert]);for(const[node]of inert)node.inert=true;
     if(!log.children.length)bubble('assistant','我在。想聊聊，还是让我帮你调一段声音？');
-    showMemory();check();input.focus({preventScroll:true});
+    showMemory();check();syncVoiceMode(true);
   }
   function close(){
     if(applying)return;
-    version++;controller?.abort();controller=null;busy=false;form.removeAttribute('aria-busy');$('companionSend').disabled=false;
+    cancelVoice();version++;controller?.abort();controller=null;busy=false;form.removeAttribute('aria-busy');syncBusy();
     panel.hidden=true;for(const[node,value]of inert)node.inert=value;inert=[];returnFocus?.isConnected&&returnFocus.focus({preventScroll:true});
   }
   function describe(p){
@@ -879,9 +1023,10 @@ if(typeof module!=='undefined')module.exports={GardenAudio,GardenEnvelope,garden
   }
   async function send(message){
     if(busy||applying||!message.trim())return;
+    cancelVoice();
     if(message.length>600){status('这句话有点长，缩短到 600 字以内吧。');return;}
     const myVersion=++version;busy=true;plan=null;renderPlan();bubble('user',message);input.value='';
-    controller=new AbortController();form.setAttribute('aria-busy','true');$('companionSend').disabled=true;status('小猫正在听，也在想怎么陪你…');
+    controller=new AbortController();form.setAttribute('aria-busy','true');syncBusy();status('小猫正在听，也在想怎么陪你…');
     const timeout=setTimeout(()=>controller?.abort(),50000);
     try{
       const context=snapshot();const res=await fetch('/api/companion',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,history,context,memory}),signal:controller.signal});
@@ -889,20 +1034,20 @@ if(typeof module!=='undefined')module.exports={GardenAudio,GardenEnvelope,garden
       if(myVersion!==version)return;
       plan=P.normalizePlan(data.plan);planContext=context.scene;bubble('assistant',plan.reply);history=[...history,{role:'user',content:message},{role:'assistant',content:plan.reply}].slice(-8);renderPlan();
       status('小猫的回应 · 采用后才会调整声音与风景');
-    }catch(error){if(myVersion!==version)return;const text=error.name==='AbortError'?'这次回应等得有点久，原来的声音保持不变。':error.message;status(text);bubble('notice',text);input.value=message;}
-    finally{clearTimeout(timeout);if(myVersion===version){busy=false;controller=null;form.removeAttribute('aria-busy');$('companionSend').disabled=false;}}
+    }catch(error){if(myVersion!==version)return;const text=error.name==='AbortError'?'这次回应等得有点久，原来的声音保持不变。':error.message;status(text);bubble('notice',text);input.value=message;voiceMode=false;syncVoiceMode();}
+    finally{clearTimeout(timeout);if(myVersion===version){busy=false;controller=null;form.removeAttribute('aria-busy');syncBusy();}}
   }
   async function apply(){
     if(!plan||applying||busy)return;
     if(snapshot().scene!==planContext){status('风景已经变了，再告诉我一次现在想怎么陪你吧。');return;}
-    applying=true;$('companionApply').disabled=true;
+    cancelVoice();applying=true;syncBusy();$('companionApply').disabled=true;
     // Release the dialog's inert state before a city transition adds controls.
     for(const[node,value]of inert)node.inert=value;inert=[];
     try{
       const result=await hooks.apply(plan);$('companionApply').hidden=true;$('companionListen').hidden=result.playing;$('companionListen').textContent=plan.playback==='pause'?'想继续时再听':'听听这段';status(plan.playback==='pause'?'声音和计时已暂停，小猫还在这里。':result.playing?'安排已采用，声音继续陪你。':'安排已采用，点击“听听这段”开始声音。');
       bubble('notice',result.summary||'声音与风景已按这段安排调整。');planContext=snapshot().scene;
     }catch{status('这次没能完成调整，可以再试一次。');$('companionApply').disabled=false;}
-    finally{applying=false;if(!panel.hidden){inert=[...app.children].filter(x=>x!==panel).map(x=>[x,x.inert]);for(const[node]of inert)node.inert=true;}}
+    finally{applying=false;syncBusy();if(!panel.hidden){inert=[...app.children].filter(x=>x!==panel).map(x=>[x,x.inert]);for(const[node]of inert)node.inert=true;}}
   }
   form.addEventListener('submit',e=>{e.preventDefault();send(input.value.trim())});
   $('companionApply').onclick=apply;
@@ -914,9 +1059,9 @@ if(typeof module!=='undefined')module.exports={GardenAudio,GardenEnvelope,garden
     catch{status('这台设备暂时无法保存，下次可以再告诉我。');}
   };
   $('companionForget').onclick=()=>{try{localStorage.removeItem(memoryKey);memory={muted:[],scene:null,music:null};showMemory();status('偏好已清除。');}catch{status('暂时无法清除，请检查浏览器存储权限。');}};
-  $('companionClear').onclick=()=>{version++;controller?.abort();busy=false;history=[];plan=null;log.replaceChildren();bubble('assistant','我们从现在开始。想怎么待一会儿？');renderPlan();$('companionSend').disabled=false;form.removeAttribute('aria-busy');};
+  $('companionClear').onclick=()=>{cancelVoice();version++;controller?.abort();busy=false;history=[];plan=null;log.replaceChildren();bubble('assistant','我们从现在开始。想怎么待一会儿？');renderPlan();syncBusy();form.removeAttribute('aria-busy');};
   $('companionClose').onclick=close;$('companionButton').onclick=open;$('homeCompanionButton').onclick=open;
-  for(const b of document.querySelectorAll('[data-companion-prompt]'))b.onclick=()=>{input.value=b.dataset.companionPrompt;input.focus();};
+  for(const b of document.querySelectorAll('[data-companion-prompt]'))b.onclick=()=>{if(busy||applying)return;cancelVoice();voiceMode=false;input.value=b.dataset.companionPrompt;syncVoiceMode(true);};
   panel.addEventListener('click',e=>{if(e.target===panel)close()});
   panel.addEventListener('keydown',e=>{
     if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();}

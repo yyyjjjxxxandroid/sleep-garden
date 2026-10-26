@@ -7,19 +7,25 @@
 ## 启动 AI 小猫
 
 ```bash
-cp .env.example .env
+# 项目负责人私下提供 .env 后，放在项目根目录
 npm start
 ```
 
-打开 <http://127.0.0.1:8766/index.html>，点击“和小猫说说”。默认 `.env.example` 选择 `gpt-5.6-sol`，并在服务端读取本机 `~/.codex/config.toml` 当前选中 provider 的独立 API Token。需要该服务本身可访问且支持这个模型；不读取或复用 ChatGPT/OAuth 登录凭证。此方式适合本机演示，其他电脑需要自行配置服务。
+需要 Node.js 20 或更新版本。打开 <http://127.0.0.1:8766/index.html>，点击“和小猫说说”。项目现在通过服务端直连 YLS 的 `https://code.ylsagi.com/codex`，选择 `gpt-5.6-sol`；队友不需要安装 Codex 或启动本机模型转发服务。已提交的 `index.html` 可直接运行，仅修改源码并重新构建时需要安装开发依赖。
 
-也可设置 `AI_USE_CODEX_PROVIDER=false`，填写 `AI_BASE_URL`、`AI_API_KEY`、`AI_MODEL`。Responses 接口用 `AI_WIRE_API=responses`；兼容 Chat Completions 的平台用 `AI_WIRE_API=chat`。凭证不进入浏览器、不进入构建产物，`.env` 已被 Git 忽略。切勿把 Key 填进 HTML、截图或提交记录。
+Git 仓库不包含真实 Key。团队成员拉取 `codex/city-evening-polish` 分支后，从负责人处私下接收 `.env`，放到和 `package.json` 相同的目录（确认文件名不是 `.env.txt`），再运行 `npm start` 即可共用项目凭证；请勿把 `.env` 上传到仓库。若自行配置，执行 `cp .env.example .env` 后填写 `AI_API_KEY`。修改配置后重启服务；新 Key 的模型权限、余额与并发额度由全体使用者共享。
+
+Responses 接口用 `AI_WIRE_API=responses`；兼容 Chat Completions 的平台用 `AI_WIRE_API=chat`。更换平台时一起修改 `AI_BASE_URL`、`AI_API_KEY` 和 `AI_MODEL`。凭证仅在服务端读取，不进入浏览器和构建产物，`.env` 已被 Git 忽略。开发者仍可显式设置 `AI_USE_CODEX_PROVIDER=true`，从本机 `~/.codex/config.toml` 读取所选 provider 的普通 API Token，不读取 ChatGPT/OAuth 登录凭证。
+
+在浏览器访问 <http://127.0.0.1:8766/api/companion/status> 可检查配置；`configured:true` 只说明配置已读取，模型调用权限需要实际给小猫发送一句话验证。若只用静态文件预览或 Python 静态服务器，AI 接口不可用，请通过 `npm start` 启动。
 
 本地服务仅监听 loopback。独立部署需要另外接入服务端凭证、用户认证及额度管理，不要将当前开发服务直接暴露到公网。
 
 示例：“今天有点累，不想聊天，陪我去深圳湾坐一会儿，风声轻一点。”点击“就这样陪我”采用安排，再点“听听这段”开启播放，以满足手机浏览器的用户手势要求。已有播放中的同场景只调整混音，不重置计时。
 
 偏好只在点击“把这个偏好记住”后保存，可随时清除；对话仅留在当前页面，清空/刷新后移除。发送时，当前消息、最近 8 条成功对话、当前场景/声景与确认偏好会发送至配置的 AI 服务。服务端不存储对话，Responses 请求使用 `store:false`；上游服务仍遵循其自身数据政策。
+
+“和小猫说说”支持按住说话：松开发送识别文字，上滑 60px 取消，向下滑回可恢复发送，最长 60 秒。左侧键盘/麦克风按钮切换输入方式；电脑也可聚焦按钮后按住空格或回车，松键发送。首次授权麦克风后需重新按住。语音使用浏览器的中文 SpeechRecognition 服务，不需要额外配置模型 Key；需要支持该能力的浏览器、可用的识别服务和 HTTPS 或 localhost。内置浏览器不支持或服务不可用时会提示，可切回文字；未识别完整的内容留作可编辑草稿，不自动发送。项目不录制或上传音频文件，浏览器语音服务按其自身政策处理收音。关闭对话、切到后台或结束陪伴会取消当前识别。
 
 当前曲库只有一首已授权 Lo-fi 和六种自然/陪伴录音；AI 可以编排混音，不能检索或切换不存在的歌曲。没有 AI 作曲、自动情绪识别或睡眠检测。
 
@@ -36,7 +42,8 @@ npm start
 
 - `server.mjs` / `ai-service.mjs`：本地静态服务、服务端凭证读取与真实模型请求
 - `companion-plan.js`：前后端共用的动作白名单与音量校验
-- `ai-companion.js` / `ai-companion.css`：小猫文字对话、采用安排与确认偏好
+- `ai-companion.js` / `ai-companion.css`：小猫语音与文字输入、采用安排与确认偏好
+- `companion-voice.js`：语音识别生命周期、松开发送与取消，处理权限及延迟结果
 - `source.html`：页面结构和产品交互
 - `garden-personalization.js`：可解释推荐与有效反馈统计
 - `garden-experience.js` / `garden-experience.css`：今晚状态、低亮度听音、呼吸与感受回访
