@@ -417,5 +417,5 @@ export function createStoryCat({random=Math.random,clock=()=>performance.now()/1
     }
     coat.update();
   }
-  return {root,head,reaction,animate,pet,touch,release,look,wantsRest,setContext,notice};
+  return {root,head,reaction,animate,pet,touch,release,look,wantsRest,setContext,notice,setAppearance:coat.setAppearance};
 }

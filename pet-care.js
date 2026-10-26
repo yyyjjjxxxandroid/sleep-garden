@@ -5,6 +5,7 @@ import {linen,softBoxGeometry,ceramicBowlGeometry,buildTailoredClothes} from './
 import {DEMO_PHOTOS} from './pet-photo-pose.js';
 import {PET_LAYOUT,overlapsPetProp} from './pet-layout.mjs';
 import {findRoute} from './garden-navigation.mjs';
+import {PetCustomizer} from './pet-customizer.js';
 
 const names={meal:'猫粮',treat:'小鱼零食',water:'清水',box:'纸箱',scratch:'抓板',cushion:'软垫',pet:'摸摸头',chin:'挠下巴',ball:'滚球'};
 const outfits={collar:[['none','不佩戴'],['sage','鼠尾草项圈'],['rose','玫瑰项圈']],scarf:[['none','不佩戴'],['cream','奶油围巾'],['blue','雾蓝围巾']],head:[['none','不佩戴'],['flower','小雏菊'],['bow','蝴蝶结'],['rose','小玫瑰']]};
@@ -37,6 +38,7 @@ export class PetCare{
     this.data=readPetState(this.storage);this.data.visits++;this.save();
     this.elapsed=0;this.nextAutonomy=12;this.job=null;this.props={};this.idleIndex=0;this.pendingMemory=null;this.cooldown=0;
     this.buildProps();this.buildClothes();this.applyOutfit(this.data.outfit);this.buildUI();
+    this.customizer=new PetCustomizer(this);
     world.canvas.dataset.petLife='ready';
   }
   save(){const ok=savePetState(this.storage,this.data);if(!ok&&!this.storageWarned){this.storageWarned=true;this.services.toast('本次互动可以继续，浏览器暂时无法保存回忆。')}return ok}
@@ -142,16 +144,19 @@ export class PetCare{
     this.overlay.onclick=e=>{if(e.target===this.overlay)this.services.closeModal()};
     const expand=value=>{this.overlay.classList.toggle('pet-expanded',value);this.handle.setAttribute('aria-expanded',String(value));this.handle.setAttribute('aria-label',value?'收起宠物面板':'展开宠物面板')};
     let y=0,dragged=false;this.handle.onpointerdown=e=>{y=e.clientY;dragged=false;this.handle.setPointerCapture(e.pointerId)};this.handle.onpointerup=e=>{const dy=e.clientY-y;dragged=Math.abs(dy)>20;if(dy< -35)expand(true);if(dy>45){if(this.overlay.classList.contains('pet-expanded'))expand(false);else this.services.closeModal()}};this.handle.onclick=()=>{if(!dragged)expand(!this.overlay.classList.contains('pet-expanded'))};
-    new MutationObserver(()=>{if(this.overlay.hidden){this.applyOutfit(this.data.outfit);this.draft=null;this.services.app.classList.remove('pet-sheet-open');this.portraitImage=null}}).observe(this.overlay,{attributes:true,attributeFilter:['hidden']});
+    new MutationObserver(()=>{if(this.overlay.hidden){this.customizer?.leave();this.applyOutfit(this.data.outfit);this.draft=null;this.services.app.classList.remove('pet-sheet-open');this.portraitImage=null}}).observe(this.overlay,{attributes:true,attributeFilter:['hidden']});
     const positionInvite=()=>{let top=app.clientHeight-100;for(const id of ['homeDock','controls','gardenBottom']){const e=document.getElementById(id);if(e.getClientRects().length&&!e.closest('[hidden]'))top=Math.min(top,e.getBoundingClientRect().top-app.getBoundingClientRect().top)}app.style.setProperty('--pet-invite-bottom',`${app.clientHeight-top+12}px`)};
     const ro=new ResizeObserver(positionInvite);['homeDock','controls','gardenBottom'].forEach(id=>ro.observe(document.getElementById(id)));ro.observe(app);
   }
   open(page){
     if(this.w.state.mode!=='session')return;
+    this.customizer.leave();
+    if(page==='customize'){this.cancel();this.customizer.enter()}
     if(this.photoCacheVersion!==PORTRAIT_VERSION){this.lookThumbnails=[];this.demoPhotos={};this.legacyPortrait=null;this.photoCacheVersion=PORTRAIT_VERSION}
     if(page==='memories'){delete this.launcher.dataset.unread;this.legacyPortrait=null}
     this.page=page;this.invite.hidden=true;this.overlay.classList.remove('pet-expanded');this.handle.setAttribute('aria-expanded','false');
     this.overlay.classList.toggle('pet-dressing',page==='dress');this.portraitImage=null;
+    this.overlay.classList.toggle('pet-customizing',page==='customize');
     if(page==='dress'){this.cancel();this.lookIndex=Math.max(0,PET_LOOKS.findIndex(l=>Object.keys(l.outfit).every(k=>l.outfit[k]===this.data.outfit[k])));this.draft={...PET_LOOKS[this.lookIndex].outfit};this.services.app.classList.add('pet-interacting');this.applyOutfit(this.draft)}
     this.render();this.services.modal('petCareOverlay');this.services.app.classList.add('pet-sheet-open');
   }
@@ -167,16 +172,18 @@ export class PetCare{
     b.dataset.kind=key;b.append(visual,element('strong',null,title),element('small',null,sub||''));b.onclick=fn;if(selected!==null)b.setAttribute('aria-pressed',String(selected));grid.append(b);return b;
   }
   render(){
-    this.body.replaceChildren();this.footer.replaceChildren();this.title.textContent={home:'小猫的日常',feed:'小猫的餐桌',play:'陪它玩一会',dress:'小猫衣橱',memories:'共同回忆'}[this.page];
+    this.body.replaceChildren();this.footer.replaceChildren();this.title.textContent={home:this.customizer.saved?this.customizer.saved.name+'的日常':'小猫的日常',feed:'小猫的餐桌',play:'陪它玩一会',dress:'小猫衣橱',memories:'共同回忆',customize:'我的小猫'}[this.page];
     if(this.page!=='home'){const back=element('button','pet-panel-back','‹ 小猫');back.onclick=()=>{this.applyOutfit(this.data.outfit);this.open('home')};this.body.append(back)}
     const status=element('div','pet-status');status.append(element('i'),element('span',null,relationship(this.data.care)),element('span',null,`${this.data.memories.length} 张回忆`));this.body.append(status);
     if(this.page==='home'){
       const grid=element('div','pet-card-grid pet-hub-grid');this.body.append(grid);
       for(const [page,title,ico]of [['feed','喂养','meal'],['play','陪玩','ball'],['dress','装扮','collar'],['memories','回忆','album']])this.card(grid,ico,title,'',()=>this.open(page),null);
+      const custom=element('button','pet-custom-entry');custom.id='petCustomizeEntry';custom.append(element('span',null,'用照片定制我的小猫'),element('small',null,'毛色、花纹与名字 · 演示版'),element('b',null,'›'));custom.onclick=()=>this.open('customize');this.body.append(custom);
       return;
     }
     if(this.page==='memories'){this.renderMemories();return}
     if(this.page==='dress'){this.renderWardrobe();return}
+    if(this.page==='customize'){this.customizer.render();return}
     const grid=element('div','pet-card-grid');this.body.append(grid);
     if(this.page==='feed'){
       for(const key of ['meal','treat','water'])this.card(grid,key,names[key],key==='meal'?'放进食碗':key==='treat'?'递给小猫':'添满水碗',()=>this.command(key),null);

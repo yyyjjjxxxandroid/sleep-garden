@@ -1,4 +1,5 @@
 import * as T from './vendor/three/build/three.module.js';
+import {normalizePetProfile} from './pet-photo-profile.mjs';
 
 // A single closed surface from shoulder to toe. Shared rings and normals
 // eliminate the intersecting ellipsoid seam at the wrist.
@@ -132,6 +133,46 @@ export function installCatCoat(root, surfaces){
     }
     for(const skin of skins){skin.boundingSphere=null;skin.boundingBox=null}
   }
+  const originalMaterials=new Map(),originalColors=new Map();
+  function setAppearance(input){
+    const profile=normalizePetProfile(input);
+    const base=new T.Color(profile?.base||'#fff4e6'),accent=new T.Color(profile?.accent||'#fff7ee'),dark=base.clone().multiplyScalar(.40),color=new T.Color();
+    for(const mesh of skins){
+      const mat=mesh.material,g=mesh.geometry,p=g.attributes.position;
+      if(!originalMaterials.has(mat))originalMaterials.set(mat,{color:mat.color.clone(),vertexColors:mat.vertexColors});
+      if(!originalColors.has(mesh))originalColors.set(mesh,g.attributes.color||null);
+      const original=originalColors.get(mesh),defaults=originalMaterials.get(mat);
+      if(!profile){
+        mat.color.copy(defaults.color);mat.vertexColors=defaults.vertexColors;
+        if(original)g.setAttribute('color',original);else g.deleteAttribute('color');
+      }else{
+        mat.color.set('#ffffff');mat.vertexColors=true;
+        let colors=g.attributes.color;
+        if(!colors||colors===original){colors=new T.Float32BufferAttribute(new Float32Array(p.count*3),3);g.setAttribute('color',colors)}
+        const face=mesh.name.startsWith('kitten-round-face'),ear=mesh.userData.groom==='ear',leg=mesh.userData.groom==='leg',tail=mesh.userData.groom==='tail',chest=mesh.name.startsWith('companion-chest');
+        for(let i=0;i<p.count;i++){
+          const x=p.getX(i),y=p.getY(i),z=p.getZ(i);color.copy(base);
+          if(profile.pattern==='bicolor'||profile.pattern==='tabby'){
+            const bib=chest||leg&&y<-.24||mesh.name.startsWith('companion-tail-tip')||face&&z>.22&&y<.04&&Math.abs(x)<.11+Math.max(0,-y)*.9;
+            if(bib)color.copy(accent);
+            else if(profile.pattern==='tabby'){
+              const stripe=Math.sin((face?x*30+y*8:tail?y*32:leg?y*40:z*22+x*5)+Math.sin(y*14)*.7);
+              color.lerp(dark,T.MathUtils.smoothstep(stripe,.35,.88)*.65);
+            }
+          }else if(profile.pattern==='points'){
+            const amount=ear||tail?1:face?T.MathUtils.smoothstep(z,.0,.40):leg?1-T.MathUtils.smoothstep(y,-.26,.08):0;
+            color.lerp(accent,amount);
+          }
+          const shade=original?original.getX(i):1;
+          colors.setXYZ(i,color.r*shade,color.g*shade,color.b*shade);
+        }
+        colors.needsUpdate=true;
+      }
+      mat.needsUpdate=true;
+    }
+    root.userData.petAppearance=profile?{name:profile.name,base:profile.base,accent:profile.accent,pattern:profile.pattern}:null;
+    return root.userData.petAppearance;
+  }
   root.userData.model='rigged-fluffy-kitten';root.userData.skinning='weighted-bones';
-  return {update,skins};
+  return {update,skins,setAppearance};
 }
