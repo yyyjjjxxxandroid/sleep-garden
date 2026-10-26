@@ -92,5 +92,6 @@ function createGardenExperience(hooks){
  $('recordFeedback').onclick=()=>showPlantResult(state.selected);
  $('exportFeedback').onclick=()=>{const output={version:1,exportedAt:new Date().toISOString(),note:'本机自报体验。没有记录即没有测量，不推断睡眠或临床效果。',summary:P.summarize(state.records),records:state.records.map(({growth,...r})=>r)};const url=URL.createObjectURL(new Blob([JSON.stringify(output,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='眠境花园-本机体验记录.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
  refresh(false);pending();
- return {prepare,begin,attach,renderFeedback,summary,sync,leaveRest,quietFinish,replay:record=>{replayRecord=record}};
+ return {acceptCompanion:p=>{plan={...plan,title:"小猫为你安排",line:p.reply,mix:{...state.mix},reason:p.reason};updatePlanLabel();},prepare,begin,attach,renderFeedback,summary,sync,leaveRest,quietFinish,replay:record=>{replayRecord=record}};
+
 }

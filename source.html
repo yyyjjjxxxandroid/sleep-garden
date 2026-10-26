@@ -180,6 +180,7 @@ body{display:flex;justify-content:center}
 
 <link rel="stylesheet" href="city-world.css">
 <link rel="stylesheet" href="pet-care.css">
+<link rel="stylesheet" href="ai-companion.css">
 </head>
 <body>
 <main class="app" id="app">
@@ -240,8 +241,9 @@ body{display:flex;justify-content:center}
   <div class="sunwash" id="sunwash"></div><div class="vignette"></div>
   <svg class="grain" width="100%" height="100%" aria-hidden="true"><filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="100%" height="100%" filter="url(#grain)" opacity=".42"/></svg>
  </div>
+ <button type="button" class="companion-launch" id="companionButton" aria-label="和 AI 小猫说说" aria-haspopup="dialog">和小猫说说</button>
  <header class="topbar"><div class="brand"><svg viewBox="0 0 32 32"><path d="M9 28Q18 14 23 4M15 18Q3 18 6 8Q18 9 15 18ZM20 11Q20 1 29 4Q28 12 20 11Z"/></svg><div>眠境花园<small>A LITTLE PLACE TO REST</small></div></div><div class="top-actions"><button class="pill city-trigger" id="cityButton" aria-label="城市疗愈">城市疗愈</button><button class="round" id="dayToggle" aria-label="切换到夜晚" title="昼夜切换"></button><button class="pill" id="gardenButton" aria-label="我的花园"></button></div></header>
- <section class="home-copy" id="home"><p class="eyebrow">今晚，和音乐一起睡个好觉</p><h1>今晚，不用急着<br>让自己好起来。</h1><p class="description">一点音乐，一座花园，一只愿意等你的小猫。<br>从此刻的你开始，慢慢安静下来。</p><div class="theme-line"><span class="live-dot"></span><span id="recommendation">细雨 · 轻风 · 一点点呼噜</span></div><div class="home-dock" id="homeDock"><div class="tonight-choices"><p class="timer-kicker">此刻的你，更像哪一种？</p><div id="needChoices" class="choice-grid" role="group" aria-label="此刻的状态"><button data-need="busy" aria-pressed="true">思绪很多</button><button data-need="company" aria-pressed="false">想被陪伴</button><button data-need="sleepy" aria-pressed="false">有点困了</button></div><div class="plan-summary"><span id="planTitle">让思绪慢下来</span><button id="personalizeButton">为我调一点 ›</button></div><button id="pendingFeedback" class="text-action" hidden>补记上次听完的感受</button></div><div class="seed-picker" id="seedPicker"><p class="timer-kicker">选择要种的花</p><div class="seed-options" role="group" aria-label="选择要种的花"><button class="seed-option" data-seed="fern" aria-pressed="true"><svg viewBox="-40 -95 80 100" aria-hidden="true"><use href="#fern" x="-40" y="-95" width="80" height="100"/></svg><span>雨蕨</span></button><button class="seed-option" data-seed="bellflower" aria-pressed="false"><svg viewBox="-40 -95 80 100" aria-hidden="true"><use href="#bellflower" x="-40" y="-95" width="80" height="100"/></svg><span>铃花</span></button><button class="seed-option" data-seed="waterleaf" aria-pressed="false"><svg viewBox="-40 -95 80 100" aria-hidden="true"><use href="#waterleaf" x="-40" y="-95" width="80" height="100"/></svg><span>水叶草</span></button></div></div><div class="home-timer" id="homeTimer"><p class="timer-kicker">陪伴定时</p><div class="timer-chips" role="group" aria-label="选择陪伴时长"><button class="timer-chip" data-timer="15">15 分</button><button class="timer-chip" data-timer="30">30 分</button><button class="timer-chip" data-timer="60">60 分</button><button class="timer-chip" data-timer="0" aria-pressed="true">不限时</button></div></div><button class="primary" id="startButton">开始陪伴并播种 <span>→</span></button></div><p class="home-note">不想选择，直接开始就好 · 感受只存在这台设备</p></section>
+ <section class="home-copy" id="home"><p class="eyebrow">今晚，和音乐一起睡个好觉</p><h1>今晚，不用急着<br>让自己好起来。</h1><p class="description">一点音乐，一座花园，一只愿意等你的小猫。<br>从此刻的你开始，慢慢安静下来。</p><div class="theme-line"><span class="live-dot"></span><span id="recommendation">细雨 · 轻风 · 一点点呼噜</span></div><div class="home-dock" id="homeDock"><button type="button" class="home-companion" id="homeCompanionButton"><span>告诉小猫，你想怎样被陪伴</span><small>音乐 · 风景 · 一点回应 →</small></button><div class="tonight-choices"><p class="timer-kicker">此刻的你，更像哪一种？</p><div id="needChoices" class="choice-grid" role="group" aria-label="此刻的状态"><button data-need="busy" aria-pressed="true">思绪很多</button><button data-need="company" aria-pressed="false">想被陪伴</button><button data-need="sleepy" aria-pressed="false">有点困了</button></div><div class="plan-summary"><span id="planTitle">让思绪慢下来</span><button id="personalizeButton">为我调一点 ›</button></div><button id="pendingFeedback" class="text-action" hidden>补记上次听完的感受</button></div><div class="seed-picker" id="seedPicker"><p class="timer-kicker">选择要种的花</p><div class="seed-options" role="group" aria-label="选择要种的花"><button class="seed-option" data-seed="fern" aria-pressed="true"><svg viewBox="-40 -95 80 100" aria-hidden="true"><use href="#fern" x="-40" y="-95" width="80" height="100"/></svg><span>雨蕨</span></button><button class="seed-option" data-seed="bellflower" aria-pressed="false"><svg viewBox="-40 -95 80 100" aria-hidden="true"><use href="#bellflower" x="-40" y="-95" width="80" height="100"/></svg><span>铃花</span></button><button class="seed-option" data-seed="waterleaf" aria-pressed="false"><svg viewBox="-40 -95 80 100" aria-hidden="true"><use href="#waterleaf" x="-40" y="-95" width="80" height="100"/></svg><span>水叶草</span></button></div></div><div class="home-timer" id="homeTimer"><p class="timer-kicker">陪伴定时</p><div class="timer-chips" role="group" aria-label="选择陪伴时长"><button class="timer-chip" data-timer="15">15 分</button><button class="timer-chip" data-timer="30">30 分</button><button class="timer-chip" data-timer="60">60 分</button><button class="timer-chip" data-timer="0" aria-pressed="true">不限时</button></div></div><button class="primary" id="startButton">开始陪伴并播种 <span>→</span></button></div><p class="home-note">不想选择，直接开始就好 · 体验记录只存在这台设备</p></section>
  <div class="footer-note" id="footerNote">KUGOU · HEALING GARDEN / INTERACTIVE DEMO</div><div class="scene-caption" id="sceneCaption">风有风的节奏，<br>你也可以有自己的。</div>
  <section class="playing-title" id="playingTitle" hidden><h1 id="sceneTitle">细雨花园</h1><p id="stageText">不用急着睡着，先听一会儿。</p><span class="demo-label" id="demoLabel">陪伴中</span></section>
  <div class="completion-notice" id="completionNotice" role="status" aria-live="assertive" hidden><strong>本次疗愈已完成</strong><span>一颗种子正在落进花园</span></div>
@@ -317,10 +319,34 @@ body{display:flex;justify-content:center}
   </section>
  </div>
 
+ <div class="companion-overlay" id="companionOverlay" hidden>
+  <section class="companion-sheet" role="dialog" aria-modal="true" aria-labelledby="companionHeading">
+   <div class="companion-head"><div><h2 id="companionHeading">和小猫说说</h2><small>用一点音乐，回应此刻的你</small></div><button type="button" id="companionClose" aria-label="收起小猫对话">×</button></div>
+   <p class="companion-status" id="companionStatus" role="status">小猫在这里</p>
+   <p class="companion-connection" id="companionConnection" hidden>小猫暂时没连上，你可以先听听音乐、逛逛花园，稍后再来聊聊。</p>
+   <div class="companion-log" id="companionLog" role="log" aria-label="与小猫的对话" aria-live="polite" aria-relevant="additions"></div>
+   <section class="companion-plan" id="companionPlan" hidden aria-label="小猫的陪伴安排"><p id="companionReason"></p><small id="companionChanges"></small><div class="companion-plan-actions"><button type="button" id="companionApply">就这样陪我</button><button type="button" id="companionListen" hidden>听听这段</button><button type="button" id="companionRemember" hidden>把这个偏好记住</button></div></section>
+   <div class="companion-suggestions"><button type="button" data-companion-prompt="今天有点累，不想聊天，陪我去深圳湾坐一会儿，风声轻一点。">去海边，安静一会儿</button><button type="button" data-companion-prompt="我脑袋停不下来，帮我调一段轻音乐和流水，不要鸟鸣。">帮我调一段声音</button><button type="button" data-companion-prompt="以后睡前不要放鸟鸣，请记住这个偏好。">记住我的听音偏好</button></div>
+   <form class="companion-form" id="companionForm">
+    <button type="button" class="companion-input-toggle" id="companionInputToggle" aria-label="切换语音输入" title="切换语音输入"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 11v1a6 6 0 0 0 12 0v-1M12 18v3M9 21h6"/></svg></button>
+    <label for="companionInput">想对小猫说的话</label><input id="companionInput" name="message" maxlength="600" autocomplete="off" placeholder="今天，想怎么待一会儿？" required>
+    <button type="button" class="companion-hold" id="companionHold" aria-describedby="companionVoiceHint" aria-pressed="false" hidden><span class="companion-voice-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span id="companionHoldLabel">按住说话</span></button>
+    <button type="submit" id="companionSend">发送</button>
+   </form>
+   <p class="companion-voice-hint" id="companionVoiceHint" role="status" hidden>松开发送，上滑取消 · 最长 60 秒</p>
+   <p class="companion-voice-transcript" id="companionVoiceTranscript" hidden></p>
+   <p class="companion-privacy">发送后，本次对话与已确认偏好会交给 AI 服务生成回应。语音由浏览器的识别服务转成文字，再交给小猫。对话仅留在当前页面；偏好由你确认后保存在本机。</p>
+   <div class="companion-memory"><span id="companionMemoryText"></span><button type="button" id="companionForget" hidden>清除偏好</button></div><button type="button" class="companion-clear" id="companionClear">清空这次对话</button>
+  </section>
+ </div>
+
 </main>
 <script src="city-soundscape.js"></script>
 <script src="session-clock.js"></script>
 <script src="garden-audio.js"></script>
+<script src="companion-plan.js"></script>
+<script src="companion-voice.js"></script>
+<script src="ai-companion.js"></script>
 <script src="garden-personalization.js"></script>
 <script src="garden-experience.js"></script>
 <script src="garden-environment.js"></script>
@@ -444,7 +470,7 @@ sheetHandle.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();ex
 const dragStart=e=>{if(e.button!==undefined&&e.button!==0)return;dragStarts.set(e.pointerId,e.clientY);e.currentTarget.setPointerCapture?.(e.pointerId)};
 const dragEnd=e=>{const y=dragStarts.get(e.pointerId);dragStarts.delete(e.pointerId);if(y===undefined)return;const delta=e.clientY-y;if(Math.abs(delta)>12)sheetDraggedAt=performance.now();if(delta<-50)expandSoundSheet(true);else if(delta>60){if(soundSheet.classList.contains('sheet-expanded'))expandSoundSheet(false);else closeModal()}};
 soundSheet.querySelectorAll('.sheet-drag-handle,.sheet-head h2').forEach(target=>{target.addEventListener('pointerdown',dragStart);target.addEventListener('pointerup',dragEnd);target.addEventListener('pointercancel',e=>dragStarts.delete(e.pointerId))});
-document.addEventListener('keydown',e=>{const m=[...document.querySelectorAll('.overlay')].find(x=>!x.hidden);if(e.key==='Escape'){if(m&&m.id==='restScreen')experience.leaveRest();else if(m&&m.id==='resultOverlay')returnGarden();else if(m)closeModal();else if(state.focused)focusCat()}if(e.key==='Tab'&&m){const all=[...m.querySelectorAll('button,input')].filter(x=>x.getClientRects().length&&!x.disabled),first=all[0],last=all[all.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
+document.addEventListener('keydown',e=>{if(!$('companionOverlay').hidden)return;const m=[...document.querySelectorAll('.overlay')].find(x=>!x.hidden);if(e.key==='Escape'){if(m&&m.id==='restScreen')experience.leaveRest();else if(m&&m.id==='resultOverlay')returnGarden();else if(m)closeModal();else if(state.focused)focusCat()}if(e.key==='Tab'&&m){const all=[...m.querySelectorAll('button,input')].filter(x=>x.getClientRects().length&&!x.disabled),first=all[0],last=all[all.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
 // 七条经过响度与循环处理的 CC0 自然声与音乐；构建时嵌入 index.html，源码模式从 audio/ 读取。
 const audioSources={sun:'audio/01-林间晨鸟.mp3',wind:'audio/02-风拂树叶.mp3',rain:'audio/03-花园细雨.mp3',bugs:'audio/04-远处虫鸣.mp3',cat:'audio/05-猫咪呼噜.mp3',water:'audio/06-池塘流水.mp3',music:'audio/07-疗愈氛围音乐.mp3'};
 function createAudio(){return new GardenAudio({sources:window.GARDEN_AUDIO_ASSETS||audioSources,readMix:()=>({...state,catMoving:!!worldEngine?.catMoving,catDistance:worldEngine?.catDistance||0,chimeContact:worldEngine?.chimeContact||0}),onInterruption:()=>{if(state.playing)pauseForInterruption()}})}
@@ -499,6 +525,7 @@ function showPlantResult(record){state.selected=record;$('resultPlant').setAttri
 function finish(){
  if(state.mode!=='session'||sessionEnded||!clock.finish(performance.now()))return;
  const completed=clock.duration>0&&clock.elapsed>=clock.duration;
+ window.dispatchEvent(new Event('garden:session-ended'));
  sessionEnded=true;++playbackVersion;clearTimeout(sessionEndTimer);syncClock();state.starting=false;state.playing=false;state.focused=false;
  if(audio)audio.pause();app.dataset.audio='paused';
  const type=state.sessionSeed||state.seedChoice,soundType=dominant(),record={id:Date.now(),type,soundType,name:flowerCatalog[type].name,date:new Date().toISOString(),duration:Math.round(state.elapsed),complete:completed,mix:{...state.mix},feedback:null,plantSize:.12+Math.min(1,state.elapsed/90)*.88};
@@ -625,6 +652,30 @@ localEnvironment=GardenEnvironment.create({storage:environmentStorage,onChange:c
 }});
 $('followLocal').onclick=()=>localEnvironment.follow();
 localEnvironment.start();
+
+const aiCompanion=createAiCompanion({
+ leaveRest:()=>experience?.leaveRest(),
+ snapshot:()=>window.CityPrototype?.snapshot?.active?window.CityPrototype.snapshot:{scene:'garden',mood:state.night?'night':'dusk',mix:{...state.mix},playing:state.playing},
+ apply:async plan=>{
+  const current=window.CityPrototype?.snapshot;
+  const scene=plan.scene==='keep'?(current?.active?current.scene:'garden'):plan.scene;
+  if(scene!=='garden')return window.CityPrototype.prepare({...plan,scene});
+  if(current?.active)window.CityPrototype.close();
+  Object.assign(state.mix,plan.mix);if(state.windLink)state.wind=state.mix.wind;
+  if(plan.mood!=='keep'){
+    setNight(plan.mood==='night');const now=new Date();now.setUTCHours(plan.mood==='night'?22:18,0,0,0);
+    state.localSky=GardenEnvironment.daylight(now.getTime(),'UTC');state.light=state.localSky.light;
+  }
+  updateEnvironment();changedMix();experience?.acceptCompanion(plan);
+  if(plan.playback==='pause'&&state.playing)pauseForInterruption();
+  if(plan.catAction==='approach'){if(!state.focused)focusCat();}
+  else if(plan.catAction==='pet')petCat('head');
+  else if(plan.catAction==='rest'){worldEngine.petCare?.cancel();worldEngine.companion?.rest();worldEngine.stopCatForCamera?.();}
+  return {playing:state.playing,summary:'花园的声音与小猫已按这段安排调整。'};
+ },
+ play:()=>{if(window.CityPrototype?.snapshot?.active)window.CityPrototype.play();else if(state.mode!=='session')start();else if(!state.playing)pause();}
+});
+
 let localNoticeReady=false;
 
 function animate(now){if(!localNoticeReady&&(worldEngine?.canvas?.dataset.ready==='true'||app.classList.contains('world-ready'))){localNoticeReady=true;localEnvironment.tick()}const elapsedDt=lastTime?(now-lastTime)/1000:0,dt=Math.min(elapsedDt,1);lastTime=now;const paused=state.mode==='session'&&!state.playing;if(!paused)sceneTime+=dt;if(state.mode==='session'){clock.tick(now);syncClock();updateProgress();if(clock.expired)finish()}if(!worldEngine?.canvas){const t=sceneTime,motion=state.reduced?0:1,w=state.wind/100*motion;$('waterMarks').querySelectorAll('path').forEach((n,i)=>{n.setAttribute('transform',`translate(${Math.sin(t*.5+i)*w*4} ${Math.sin(t*.7+i)*w})`);n.style.opacity=.2+Math.sin(t*(.3+w*.4)+i)*.12});flies.forEach(f=>{f.n.setAttribute('cx',f.x+Math.sin(t*f.speed+f.p)*18*motion);f.n.setAttribute('cy',f.y+Math.cos(t*f.speed*.8+f.p)*14*motion);f.n.style.opacity=state.fireflies ? .25+.7*(.5+.5*Math.sin(t*.7+f.p)):0});rains.forEach(r=>{const yy=170+(r.y+t*r.speed*motion)%660;const xx=r.x+Math.sin(t*.3)*w*7;r.n.setAttribute('x1',xx);r.n.setAttribute('y1',yy);r.n.setAttribute('x2',xx-w*3);r.n.setAttribute('y2',yy+6)});$('rain').style.opacity=state.mode==='session'?state.mix.rain/100*.7:0}if(!document.hidden&&!app.classList.contains('resting')&&!app.classList.contains('city-open'))worldEngine.update(now);requestAnimationFrame(animate)}requestAnimationFrame(animate);

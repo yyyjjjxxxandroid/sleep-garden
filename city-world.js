@@ -52,6 +52,7 @@ export class CityCompanions {
     this.route=[];this.catRoute=[];this.distance=0;this.catDistance=0;this.followAt=0;this.action=null;this.performed=new Set();
   }
   goTo(point){
+    this.resting=false;
     const route=findRoute(this.human.position,point,(x,z)=>this.walkable(x,z,.34),{bound:44,step:.45});
     if(!route){this.onMessage('这里暂时走不到，试试可见的步道吧。');return false;}
     this.route=route;this.idle=0;this.action=null;this.performed.clear();this.kitten.release();
@@ -77,11 +78,12 @@ export class CityCompanions {
     }
     return {x:this.human.position.x,z:this.human.position.z};
   }
+  rest(){this.resting=true;this.route=[];this.catRoute=[];this.action=null;this.kitten.release();}
   pet(){
-    this.kitten.pet('head');this.action=null;this.onMessage('它眯起眼，轻轻靠了过来。');
+    this.resting=false;this.kitten.pet('head');this.action=null;this.onMessage('它眯起眼，轻轻靠了过来。');
   }
   reset(){
-    this.route=[];this.catRoute=[];this.idle=0;this.action=null;this.performed.clear();
+    this.resting=false;this.route=[];this.catRoute=[];this.idle=0;this.action=null;this.performed.clear();
     this.human.position.set(this.start.x,this.floor,this.start.z);this.cat.position.set(this.start.x-.85,this.floor,this.start.z+.5);
     this.human.rotation.y=this.cat.rotation.y=Math.PI;this.kitten.release();
   }
@@ -90,7 +92,7 @@ export class CityCompanions {
     this.distance+=humanMoved;this.idle=moving?0:this.idle+(this.playing?dt:0);
     if(moving){this.action=null;this.performed.clear();}
     const destination=this.followDestination();
-    if(!this.action&&this.time>=this.followAt){
+    if(!this.resting&&!this.action&&this.time>=this.followAt){
       this.followAt=this.time+.45;
       if(Math.hypot(destination.x-this.cat.position.x,destination.z-this.cat.position.z)>.5){
         this.catRoute=findRoute(this.cat.position,destination,(x,z)=>this.walkable(x,z,.22),{bound:44,step:.45})||[];
@@ -98,7 +100,7 @@ export class CityCompanions {
     }
     let catMoved=this.advance(this.cat,this.catRoute,2.0,dt,.22);this.catDistance+=catMoved;
     const nearby=this.cat.position.distanceTo(this.human.position)<1.5;
-    if(this.playing&&!moving&&!this.action&&nearby&&!this.reduced){
+    if(this.playing&&!this.resting&&!moving&&!this.action&&nearby&&!this.reduced){
       if(this.idle>12&&!this.performed.has('rub')){this.action={kind:'rub',start:this.time};this.performed.add('rub');this.catRoute=[];this.onMessage('你停下来时，小猫轻轻蹭了蹭你的腿。');}
       else if(this.idle>36&&!this.performed.has('hop')){this.action={kind:'hop',start:this.time};this.performed.add('hop');this.catRoute=[];this.onMessage('它轻轻跳了一下，又回到你身边。');}
     }

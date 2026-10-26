@@ -329,7 +329,7 @@ export class PetCare{
         if(j.kind==='meal'){const contents=this.props.meal.userData.contents;contents.children.forEach((m,i)=>m.visible=i/contents.children.length>j.time/j.duration*.9)}
         if(j.time>=j.duration)this.complete(j);
       }
-    }else if(this.elapsed>this.nextAutonomy&&!this.w.state.reduced&&c.phase==='idle'&&!this.w.follow&&!document.querySelector('.overlay:not([hidden])')&&!this.w.gesture&&!this.w.cat.userData.contact&&!this.w.cat.userData.petting){
+    }else if(this.elapsed>this.nextAutonomy&&!this.w.state.reduced&&!c.quiet&&c.phase==='idle'&&!this.w.follow&&!document.querySelector('.overlay:not([hidden]),.companion-overlay:not([hidden])')&&!this.w.gesture&&!this.w.cat.userData.contact&&!this.w.cat.userData.petting){
       this.nextAutonomy=this.elapsed+25;
       const choices=this.w.state.night||this.w.state.playing?['nook','box','scratch']:['box','scratch','nook'];
       this.command(choices[this.idleIndex++%choices.length],true);

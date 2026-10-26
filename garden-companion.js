@@ -16,7 +16,8 @@ export class GardenCompanion{
     return !(w.walkObstacles||[]).some(o=>Math.hypot(x-o.x,z-o.z)<o.radius+.32);
   }
   resetFlower(){this.flower?.userData.sway?.(0);this.flower=null;this.action=null;}
-  stop(){this.resetFlower();this.route=[];this.managed=true;this.phase='idle';this.elapsed=0;this.autonomous=false;this.showMarker=false;if(this.marker)this.marker.visible=false;}
+  stop(){this.quiet=false;this.resetFlower();this.route=[];this.managed=true;this.phase='idle';this.elapsed=0;this.autonomous=false;this.showMarker=false;if(this.marker)this.marker.visible=false;}
+  rest(){this.stop();this.quiet=true;}
   routeTo(point){return findRoute(this.world.cat.position,point,(x,z)=>this.walkable(x,z));}
   goTo(point){
     const route=this.routeTo(point);
@@ -36,7 +37,7 @@ export class GardenCompanion{
     this.world.onCatInteraction?.('unreachable');return false;
   }
   begin(route,flower){
-    this.resetFlower();this.route=route;this.flower=flower;this.action=flower?(Math.random()<.5?'bite':'rub'):null;
+    this.quiet=false;this.resetFlower();this.route=route;this.flower=flower;this.action=flower?(Math.random()<.5?'bite':'rub'):null;
     this.managed=true;this.phase='walking';this.elapsed=0;this.autonomous=false;this.showMarker=true;
     const w=this.world;w.storyCat?.release();w.follow=false;w.transition=null;w.onExplore();
     this.target=route[route.length-1];
@@ -67,7 +68,7 @@ export class GardenCompanion{
     w.catMoving=false;
     if(hold)return true;
     this.elapsed+=dt;
-    if(this.phase==='idle'&&this.elapsed>=5&&!w.state.reduced)this.startRoaming();
+    if(this.phase==='idle'&&!this.quiet&&this.elapsed>=5&&!w.state.reduced)this.startRoaming();
     if(this.phase==='walking'||this.phase==='roaming'){
       let budget=dt*(this.autonomous?(w.state.reduced?0:.64):1.65);
       while(budget>0&&this.route.length){

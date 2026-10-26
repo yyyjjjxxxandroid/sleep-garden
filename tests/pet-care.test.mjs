@@ -47,6 +47,16 @@ test('actual action completion, not button clicks, earns care and food records',
   const care=Object.create(PetCare.prototype);care.data=readPetState();care.elapsed=30;care.props={};care.treat={visible:true};care.w={companion:{stop(){}}};care.services={toast(){}};care.save=()=>{};care.queueMemory=(k)=>care.event=k;
   care.complete({kind:'meal',automatic:false});assert.equal(care.data.foods.meal,1);assert.equal(care.data.care,1);assert.equal(care.event,'meal');assert.equal(care.cooldown,42);
 });
+
+test('an AI quiet request also suppresses autonomous prop activities until direct interaction',()=>{
+  const care=Object.create(PetCare.prototype),cat=new T.Group();
+  const w={cat,state:{mode:'session',reduced:false},canvas:{dataset:{}}};w.companion=new GardenCompanion(w);w.companion.rest();
+  Object.assign(care,{w,services:{},launcher:{},overlay:{hidden:true},data:{care:0},elapsed:100,greeted:true,ball:{visible:false},props:{},nextAutonomy:0,job:null});
+  let commands=0;care.command=()=>commands++;
+  for(let i=0;i<1800;i++)care.update(1/30);
+  assert.equal(commands,0);assert.equal(w.companion.quiet,true);
+  w.companion.stop();assert.equal(w.companion.quiet,false);
+});
 test('accessories are attached to moving head/body bones and previews are reversible',()=>{
   const care=Object.create(PetCare.prototype);const cat=createStoryCat();care.w={cat:cat.root,storyCat:cat,canvas:{dataset:{}}};care.buildClothes();
   care.applyOutfit({collar:'sage',scarf:'blue',head:'flower'});assert.equal(care.hair.parent,cat.head);assert.equal(care.scarf.parent.name,'companion-body');assert.ok(care.flower.visible);
