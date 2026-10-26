@@ -1,4 +1,4 @@
-.companion-launch{position:absolute;z-index:26;left:24px;top:108px;min-height:44px;padding:0 16px;border-radius:24px;border:1px solid #e8e9d8bb;background:#eef0dfd9;backdrop-filter:blur(12px);color:#3e5948;font-size:12px;box-shadow:0 4px 18px #19342610}
+.companion-launch{position:absolute;z-index:26;left:18px;top:82px;min-height:44px;padding:0 12px;border-radius:24px;border:1px solid #e8e9d8bb;background:#eef0dfd9;backdrop-filter:blur(12px);color:#3e5948;font-size:12px;box-shadow:0 4px 18px #19342610}
 .city-open>.companion-launch{top:88px;left:16px;min-width:44px;width:44px;padding:0;font-size:0}.city-open>.companion-launch:before{content:'聊聊';font-size:11px}
 
 .companion-overlay{position:absolute;inset:0;z-index:70;display:flex;align-items:flex-end;justify-content:center;padding:20px;background:#182e3469;backdrop-filter:blur(5px);color:#344e42}

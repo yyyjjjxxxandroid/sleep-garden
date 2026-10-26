@@ -6,7 +6,7 @@ function createAiCompanion(hooks){
   try{memory=P.normalizeMemory(JSON.parse(localStorage.getItem(memoryKey)||'null'))}catch{}
   const snapshot=()=>hooks.snapshot();
   function bubble(role,text){const item=document.createElement('p');item.className='companion-bubble '+role;item.textContent=text;log.append(item);while(log.children.length>16)log.firstElementChild.remove();log.scrollTop=log.scrollHeight;return item;}
-  function status(text){$('companionStatus').textContent=text;}
+  function status(text){$('companionStatus').textContent=text;$('companionStatus').hidden=!text;}
   function showMemory(){
     const names={sun:'鸟鸣',wind:'风声',rain:'雨声',bugs:'虫鸣',cat:'呼噜',water:'流水',footsteps:'猫咪脚步',chime:'风铃',music:'音乐'},scenes={garden:'花园',quanzhou:'泉州',guangzhou:'广州',shenzhen:'深圳'};
     const parts=[...memory.muted.map(k=>'不放'+names[k]),...(memory.scene?['偏爱'+scenes[memory.scene]]:[]),...(memory.music!==null?[memory.music?'喜欢轻音乐':'只听自然声']:[])];
@@ -14,8 +14,8 @@ function createAiCompanion(hooks){
   }
   async function check(){
     status('正在连接小猫…');
-    try{const res=await fetch('/api/companion/status',{cache:'no-store'}),data=await res.json();status(data.configured?'AI 小猫已连接，可以说说了':'AI 尚未连接 · 场景和音乐仍可使用');$('companionConnection').hidden=data.configured;}
-    catch{status('AI 暂时没有连接，花园仍在这里');$('companionConnection').hidden=false;}
+    try{const res=await fetch('/api/companion/status',{cache:'no-store'}),data=await res.json();status(data.configured?'':'AI 暂未连接，请稍后再试');$('companionConnection').hidden=true;}
+    catch{status('AI 暂未连接，请稍后再试');$('companionConnection').hidden=true;}
   }
   function open(){
     if(!panel.hidden)return;
@@ -36,7 +36,7 @@ function createAiCompanion(hooks){
     $('companionReason').textContent=plan.reason||'按你刚才说的，留一段舒服的声音。';
     $('companionChanges').textContent=summary||'保持当前声音，继续陪你聊聊。';
     $('companionApply').hidden=!summary&&plan.interaction==='keep';
-    $('companionApply').textContent='就这样陪我';$('companionApply').disabled=false;
+    $('companionApply').textContent='应用调整';$('companionApply').disabled=false;
     $('companionRemember').hidden=!plan.memory;$('companionListen').hidden=true;
   }
   async function send(message){
@@ -50,7 +50,7 @@ function createAiCompanion(hooks){
       const data=await res.json();if(!res.ok)throw Error(data.message||'小猫暂时没收到回应，稍后再试试。');
       if(myVersion!==version)return;
       plan=P.normalizePlan(data.plan);planContext=context.scene;bubble('assistant',plan.reply);history=[...history,{role:'user',content:message},{role:'assistant',content:plan.reply}].slice(-8);renderPlan();
-      status(describe(plan)||plan.interaction!=='keep'?'小猫的回应 · 采用后才会调整声音与风景':'小猫在听，你可以慢慢说。');
+      status('');
     }catch(error){if(myVersion!==version)return;const text=error.name==='AbortError'?'这次回应等得有点久，原来的声音保持不变。':error.message;status(text);bubble('notice',text);input.value=message;}
     finally{clearTimeout(timeout);if(myVersion===version){busy=false;controller=null;form.removeAttribute('aria-busy');syncBusy();}}
   }
@@ -82,7 +82,7 @@ function createAiCompanion(hooks){
   panel.addEventListener('click',e=>{if(e.target===panel)close()});
   panel.addEventListener('keydown',e=>{
     if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();}
-    if(e.key==='Tab'){const all=[...panel.querySelectorAll('button,input')].filter(x=>!x.disabled&&x.getClientRects().length),first=all[0],last=all.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}
+    if(e.key==='Tab'){const all=[...panel.querySelectorAll('button,input,summary')].filter(x=>!x.disabled&&x.getClientRects().length),first=all[0],last=all.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}
   });
   window.addEventListener('garden:talk-to-cat',open);
   window.addEventListener('garden:session-ended',()=>{if(!panel.hidden)close();});
