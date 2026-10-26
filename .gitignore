@@ -6,8 +6,6 @@ node_modules/
 *.log
 __pycache__/
 *.pyc
-.venv-tts/
-models/companion-tts/
 
 # Local/editor artifacts
 .idea/

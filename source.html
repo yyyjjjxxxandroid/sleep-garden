@@ -325,8 +325,6 @@ body{display:flex;justify-content:center}
    <p class="companion-status" id="companionStatus" role="status">小猫在这里</p>
    <p class="companion-connection" id="companionConnection" hidden>小猫暂时没连上，你可以先听听音乐、逛逛花园，稍后再来聊聊。</p>
    <div class="companion-log" id="companionLog" role="log" aria-label="与小猫的对话" aria-live="polite" aria-relevant="additions"></div>
-   <div class="companion-speech-controls" aria-label="小猫的声音"><button type="button" id="companionSpeakToggle" aria-pressed="false">自动轻声回应 · 关</button><button type="button" id="companionSpeakReplay" disabled>听这句</button><button type="button" id="companionSpeakStop" hidden>停一下</button></div>
-   <p class="companion-speech-status" id="companionSpeechStatus" role="status">想听小猫说话时，再轻轻打开。</p>
    <section class="companion-plan" id="companionPlan" hidden aria-label="小猫的陪伴安排"><p id="companionReason"></p><small id="companionChanges"></small><div class="companion-plan-actions"><button type="button" id="companionApply">就这样陪我</button><button type="button" id="companionListen" hidden>听听这段</button><button type="button" id="companionRemember" hidden>把这个偏好记住</button></div></section>
    <div class="companion-suggestions"><button type="button" data-companion-prompt="今天有点累，不想聊天，陪我去深圳湾坐一会儿，风声轻一点。">去海边，安静一会儿</button><button type="button" data-companion-prompt="我脑袋停不下来，帮我调一段轻音乐和流水，不要鸟鸣。">帮我调一段声音</button><button type="button" data-companion-prompt="以后睡前不要放鸟鸣，请记住这个偏好。">记住我的听音偏好</button></div>
    <form class="companion-form" id="companionForm">
@@ -348,7 +346,6 @@ body{display:flex;justify-content:center}
 <script src="garden-audio.js"></script>
 <script src="companion-plan.js"></script>
 <script src="companion-voice.js"></script>
-<script src="companion-speech.js"></script>
 <script src="ai-companion.js"></script>
 <script src="garden-personalization.js"></script>
 <script src="garden-experience.js"></script>
@@ -657,7 +654,6 @@ $('followLocal').onclick=()=>localEnvironment.follow();
 localEnvironment.start();
 
 const aiCompanion=createAiCompanion({
- duck:active=>{audio?.setSpeechDucking(active);window.CityPrototype?.duckSpeech?.(active);},
  leaveRest:()=>experience?.leaveRest(),
  snapshot:()=>window.CityPrototype?.snapshot?.active?window.CityPrototype.snapshot:{scene:'garden',mood:state.night?'night':'dusk',mix:{...state.mix},playing:state.playing},
  apply:async plan=>{

@@ -109,7 +109,6 @@
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&city.playing){pause();message('回来后，再继续听这段声音。');}});
   window.addEventListener('pagehide',()=>{pause();city.world?.dispose();city.world=null;city.sound?.close();city.sound=null;});
   window.CityPrototype={open,close,get world(){return city.world;},
-    duckSpeech(active){city.sound?.audio?.setSpeechDucking(active);},
     get snapshot(){return {active:!overlay.hidden&&!experience.hidden,scene:city.id,mood:city.moods[city.id],playing:city.playing,mix:Object.fromEntries(['water','wind','music'].map(key=>[key,city[key]?city.mix[key]:0]))};},
     play(){if(!overlay.hidden&&!experience.hidden&&!city.playing)return togglePlaying();},
     async prepare(plan){

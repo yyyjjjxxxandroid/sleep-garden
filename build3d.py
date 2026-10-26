@@ -46,16 +46,13 @@ notices+="Three.js — MIT\n"+(root/'vendor/three/LICENSE').read_text()+"\n\n"
 notices+="Audio — loop, filtering, crossfade and loudness processing applied.\n"
 for key,item in audio_manifest.items():
     notices+=item['title']+" — "+item['creator']+"\n"+item['sourcePage']+"\n"+item['license']+"\n\n"
-for item in json.loads((root/'audio/companion/sources.json').read_text()).values():
-    notices+=item['title']+" — "+item['creator']+"\n"+item['sourcePage']+"\n"+item['license']+"\n"+item['processing']+"\n\n"
-notices+="Optional local Chinese speech: Kokoro-82M v1.1-zh — hexgrad, Apache-2.0\nhttps://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh\nInference: sherpa-onnx — k2-fsa, Apache-2.0\nhttps://github.com/k2-fsa/sherpa-onnx\nModel/runtime dependencies and their licenses are installed locally by setup:voice, not embedded in this HTML.\n\n"
 notices+="Weather data by Open-Meteo: https://open-meteo.com/\nCC BY 4.0: https://creativecommons.org/licenses/by/4.0/\nWeather codes and solar times are mapped to stylized garden visuals.\n\nPlace names: BigDataCloud — https://www.bigdatacloud.com/\n"
 (root/'THIRD_PARTY_NOTICES.txt').write_text(notices)
 html=html.replace('</body>','<!--\n'+notices.replace('--','—')+'\n-->\n</body>')
 html=html.replace('<script src="session-clock.js"></script>','<script>'+ (root/'session-clock.js').read_text()+'</script>')
 html=html.replace('<script src="garden-audio.js"></script>','<script>'+ (root/'garden-audio.js').read_text()+'</script>')
 html=html.replace('<script src="city-soundscape.js"></script>','<script>'+ (root/'city-soundscape.js').read_text()+'</script>')
-for name in ['companion-plan.js','companion-voice.js','companion-speech.js','ai-companion.js','garden-personalization.js','garden-experience.js','garden-environment.js']:
+for name in ['companion-plan.js','companion-voice.js','ai-companion.js','garden-personalization.js','garden-experience.js','garden-environment.js']:
     html=html.replace('<script src="'+name+'"></script>','<script>'+ (root/name).read_text()+'</script>')
 html=html.replace('<link rel="stylesheet" href="garden-experience.css">','<style>'+ (root/'garden-experience.css').read_text()+'</style>')
 html=html.replace('<link rel="stylesheet" href="city-world.css">','<style>'+ (root/'city-world.css').read_text()+'</style>')
