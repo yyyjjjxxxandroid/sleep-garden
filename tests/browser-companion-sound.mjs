@@ -11,7 +11,7 @@ const point=async s=>evaluate(`(()=>{const e=document.querySelector(${JSON.strin
 const mouse=async(type,p)=>call('Input.dispatchMouseEvent',{type,button:'left',buttons:type==='mouseReleased'?0:1,clickCount:1,...p});
 const click=async s=>{const p=await point(s);await mouse('mousePressed',p);await mouse('mouseReleased',p);};
 const shot=async path=>{const s=await call('Page.captureScreenshot',{format:'png'});await writeFile(path,Buffer.from(s.data,'base64'));};
-await call('Runtime.enable');await call('Page.enable');
+await call('Runtime.enable');await call('Page.enable');await call('Page.bringToFront');
 // Fifteen seconds of valid silent PCM isolate interaction tests from the TTS model.
 const audio=Buffer.alloc(44+24000*2*15);audio.write('RIFF');audio.writeUInt32LE(audio.length-8,4);audio.write('WAVEfmt ',8);audio.writeUInt32LE(16,16);audio.writeUInt16LE(1,20);audio.writeUInt16LE(1,22);audio.writeUInt32LE(24000,24);audio.writeUInt32LE(48000,28);audio.writeUInt16LE(2,32);audio.writeUInt16LE(16,34);audio.write('data',36);audio.writeUInt32LE(audio.length-44,40);
 const injected=await call('Page.addScriptToEvaluateOnNewDocument',{source:`
@@ -31,7 +31,7 @@ const injected=await call('Page.addScriptToEvaluateOnNewDocument',{source:`
     return original(url,options);
   };
 `});
-await call('Page.navigate',{url:'http://127.0.0.1:8766/index.html?switch=qa'});await until("typeof document.querySelector('#homeCompanionButton')?.onclick==='function'");await click('#homeCompanionButton');
+await call('Page.navigate',{url:'http://127.0.0.1:8766/index.html?switch=qa'});await until("typeof document.querySelector('#companionButton')?.onclick==='function'");await click('#companionButton');
 const checked=()=>evaluate("document.querySelector('#companionSpeakToggle').getAttribute('aria-checked')");
 const send=async text=>{await evaluate(`document.querySelector('#companionInput').value=${JSON.stringify(text)};document.querySelector('#companionForm').requestSubmit()`);await until("!document.querySelector('#companionForm').hasAttribute('aria-busy')");};
 assert.equal(await checked(),'false','legacy saved enabled flag must not turn sound on');
@@ -51,6 +51,6 @@ for(const [width,height]of [[1100,850],[390,844],[320,568]]){
   assert.ok(layout.every(r=>r.x>=0&&r.x+r.w<=width&&r.y>=0&&r.y+r.h<=height),JSON.stringify(layout));assert.ok(layout[0].h>=44);assert.ok(layout[0].y<layout[2].y);assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'),true);await shot('/tmp/cat-sound-switch-'+width+'.png');console.log('LAYOUT',width,layout);
 }
 await click('#companionSpeakToggle');assert.equal(await checked(),'true');
-await call('Page.reload');await until("typeof document.querySelector('#homeCompanionButton')?.onclick==='function'");await click('#homeCompanionButton');assert.equal(await checked(),'false','a reload must always default to silent');
+await call('Page.reload');await until("typeof document.querySelector('#companionButton')?.onclick==='function'");await click('#companionButton');assert.equal(await checked(),'false','a reload must always default to silent');
 await call('Page.removeScriptToEvaluateOnNewDocument',{identifier:injected.identifier});
 assert.deepEqual(errors,[]);console.log('PASS default-off with legacy preference, replay guard, explicit opt-in, no old-reply autoplay, toggle stops playback/pending synthesis, quiet request, late AI reply, 3 layouts, reload reset; audio and AI mocked.');ws.close();

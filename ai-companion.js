@@ -159,7 +159,7 @@ function createAiCompanion(hooks){
   };
   $('companionForget').onclick=()=>{try{localStorage.removeItem(memoryKey);memory={muted:[],scene:null,music:null};showMemory();status('偏好已清除。');}catch{status('暂时无法清除，请检查浏览器存储权限。');}};
   $('companionClear').onclick=()=>{cancelVoice();speech.stop();lastSpeech=null;version++;controller?.abort();busy=false;history=[];plan=null;log.replaceChildren();bubble('assistant','我们从现在开始。想怎么待一会儿？');renderPlan();syncBusy();syncSpeech();form.removeAttribute('aria-busy');};
-  $('companionClose').onclick=close;$('companionButton').onclick=open;$('homeCompanionButton').onclick=open;
+  $('companionClose').onclick=close;$('companionButton').onclick=open;
   for(const b of document.querySelectorAll('[data-companion-prompt]'))b.onclick=()=>{if(busy||applying)return;cancelVoice();voiceMode=false;input.value=b.dataset.companionPrompt;syncVoiceMode(true);};
   panel.addEventListener('click',e=>{if(e.target===panel)close()});
   panel.addEventListener('keydown',e=>{
