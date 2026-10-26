@@ -6,7 +6,7 @@ export const CITY_ATMOSPHERES = {
   dusk: {top:'#53687d',horizon:'#e1ae88',fog:'#aa9e94',water:'#486f70',sky:'#e6c8ad',ground:'#695b51',sun:'#ffd0a1',hemi:1.5,key:1.35,exposure:.95,fogNear:52,fogFar:188},
   night: {top:'#0e1d2b',horizon:'#4a5864',fog:'#46545f',water:'#1f4650',sky:'#9aa9b3',ground:'#3a403d',sun:'#e4d7c2',hemi:1.25,key:.88,exposure:.94,fogNear:82,fogFar:218},
 };
-export const defaultCityMood = city => city==='shenzhen'?'night':'dusk';
+export const defaultCityMood = () => 'dusk';
 
 export function createCitySky(mood){
   const palette=CITY_ATMOSPHERES[mood];
