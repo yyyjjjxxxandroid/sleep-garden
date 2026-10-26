@@ -73,8 +73,8 @@ test('the shipped world adds thin ground snow and restores normal ground and fog
   for(let i=0;i<100;i++)world.beforeRender(.1);assert.ok(Math.abs(world.scene.fog.density-.007)<.001);assert.ok(world.snowCover.value<.001);
   state.localSky=E.daylight(Date.parse('2026-10-24T00:00:00Z'),'UTC');state.night=true;world.skyMat.uniforms.night.value=1;
   for(let i=0;i<100;i++)world.beforeRender(.1);
-  assert.ok(world.hemi.intensity<.55);assert.ok(world.sun.intensity<.4);assert.ok(world.scene.environmentIntensity<.1,'automatic midnight dims ambient fill as well as the sky');
+  assert.ok(world.hemi.intensity<.65);assert.ok(world.sun.intensity<.45);assert.ok(world.scene.environmentIntensity<.13,'automatic midnight remains darker while preserving readable fill');
   state.localSky=null;for(let i=0;i<100;i++)world.beforeRender(.1);
-  assert.ok(Math.abs(world.hemi.intensity-.68)<.001);assert.equal(world.scene.environmentIntensity,.22,'manual night keeps its existing fill lighting');
+  assert.ok(Math.abs(world.hemi.intensity-.74)<.001);assert.equal(world.scene.environmentIntensity,.26,'manual night keeps a readable fill light');
   world.scene.traverse(node=>{node.geometry?.dispose();node.material?.dispose()});
 });

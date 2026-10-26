@@ -10,7 +10,7 @@ import { clearSegment, findRoute } from '../garden-navigation.mjs';
 
 test('the city contains volumetric landmarks, a walkable bridge and water below its deck',()=>{
   const city=buildCityScene({text:false});
-  for(const name of ['luoyang-bridge-inscribed-stele','heritage-plaque-and-stone-frame','bridgehead-banyan','stone-bridge-railings','boat-shaped-granite-piers','granite-paving-slabs']){
+  for(const name of ['luoyang-bridge-inscribed-stele','heritage-plaque-and-stone-frame','bridgehead-banyan','stone-bridge-railings','boat-shaped-granite-piers','granite-paving-slabs','luoyang-bridge-connected-northern-bank','northern-stone-bridge-landing','northern-village-approach-path']){
     const model=city.root.getObjectByName(name);assert.ok(model,name);
     const size=new T.Box3().setFromObject(model).getSize(new T.Vector3());assert.ok(size.x>0&&size.y>0&&size.z>0,`${name} has actual depth`);
   }
@@ -76,12 +76,14 @@ test('moored boats retain their local meshes when static stonework is batched',(
 });
 
 test('city routes avoid the monument, tree roots, river and bridge railings',()=>{
-  for(const p of [[-4.25,2.2],[5.4,1.1],[3.35,-1],[8,5],[4,-15],[2.1,-20],[0,-41]])assert.equal(cityWalkable(...p),false,p.join(','));
+  for(const p of [[-4.25,2.2],[5.4,1.1],[3.35,-1],[8,5],[4,-15],[2.1,-20],[0,-66]])assert.equal(cityWalkable(...p),false,p.join(','));
   for(const p of [[0,6],[0,-3.5],[0,-4],[0,-20],[1.7,-30]])assert.ok(cityWalkable(...p),p.join(','));
   const start={x:-6.5,z:9.5},end={x:-3.0,z:.4},route=findRoute(start,end,cityWalkable,{bound:44,step:.45});
   assert.ok(route?.length>1,'must go around the stele rather than cut through it');let previous=start;
   for(const point of route){assert.ok(clearSegment(previous,point,cityWalkable));previous=point;}
   assert.ok(clearSegment({x:0,z:7},{x:0,z:-37},cityWalkable),'the plaza and bridge form one continuous route');
+  assert.ok(clearSegment({x:0,z:-37},{x:0,z:-43},cityWalkable),'the bridge continues onto its northern landing');
+  assert.ok(findRoute({x:0,z:-37},{x:0,z:-62},cityWalkable,{bound:70,step:.45})?.length,'the northern path remains walkable into the village');
 });
 
 test('entrance plaza is supported by land and routes avoid the stone portico and raised tree bed',()=>{

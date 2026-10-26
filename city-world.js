@@ -41,9 +41,9 @@ function detailedNatureAsset(template,height,width=1){
 // Movement is independent from the camera and audio clocks. Route clearance is
 // checked for the entire segment, so actors cannot cut through stones or water.
 export class CityCompanions {
-  constructor({onMessage=()=>{},reduced=false,walkable=cityWalkable,floor=CITY_FLOOR,start={x:.15,z:6.5}}={}){
+  constructor({onMessage=()=>{},reduced=false,walkable=cityWalkable,floor=CITY_FLOOR,start={x:.15,z:6.5},routeBound=44}={}){
     this.onMessage=onMessage;this.reduced=reduced;this.time=0;this.idle=0;this.playing=false;
-    this.walkable=walkable;this.floor=floor;this.start=start;
+    this.walkable=walkable;this.floor=floor;this.start=start;this.routeBound=routeBound;
     this.person=createCityPerson();this.kitten=createStoryCat({clock:()=>this.time});
     this.human=this.person.root;this.cat=this.kitten.root;this.cat.scale.setScalar(.38);
     this.human.name='city-person';this.cat.name='city-kitten';
@@ -53,7 +53,7 @@ export class CityCompanions {
   }
   goTo(point){
     this.resting=false;
-    const route=findRoute(this.human.position,point,(x,z)=>this.walkable(x,z,.34),{bound:44,step:.45});
+    const route=findRoute(this.human.position,point,(x,z)=>this.walkable(x,z,.34),{bound:this.routeBound,step:.45});
     if(!route){this.onMessage('这里暂时走不到，试试可见的步道吧。');return false;}
     this.route=route;this.idle=0;this.action=null;this.performed.clear();this.kitten.release();
     this.onMessage('慢慢走，小猫会跟着你。');return true;
@@ -95,7 +95,7 @@ export class CityCompanions {
     if(!this.resting&&!this.action&&this.time>=this.followAt){
       this.followAt=this.time+.45;
       if(Math.hypot(destination.x-this.cat.position.x,destination.z-this.cat.position.z)>.5){
-        this.catRoute=findRoute(this.cat.position,destination,(x,z)=>this.walkable(x,z,.22),{bound:44,step:.45})||[];
+        this.catRoute=findRoute(this.cat.position,destination,(x,z)=>this.walkable(x,z,.22),{bound:this.routeBound,step:.45})||[];
       }
     }
     let catMoved=this.advance(this.cat,this.catRoute,2.0,dt,.22);this.catDistance+=catMoved;
@@ -130,7 +130,7 @@ export class CityWorld {
     this.host=host;this.onMessage=onMessage;this.onView=onView;this.onError=onError;
     // 默认镜头以滨水步道为前景，让人物、小猫和城市地标同时进入画面。
     // 旧镜头从停车带后方俯拍，首屏会被大块空地占掉，地标也容易被截在屏幕边缘。
-    this.cityId=city;this.city=city==='shenzhen'?{build:buildShenzhenScene,walkable:shenzhenWalkable,floor:SHENZHEN_FLOOR,start:{x:0,z:7},destination:{x:0,z:-19},bounds:{x:32,zMin:-116,zMax:15},presets:CITY_VIEWS.shenzhen}:city==='guangzhou'?{build:buildGuangzhouScene,walkable:guangzhouWalkable,floor:GUANGZHOU_FLOOR,start:{x:0,z:7},destination:{x:0,z:-19},bounds:{x:34,zMin:-96,zMax:15},presets:CITY_VIEWS.guangzhou}:{build:buildCityScene,walkable:cityWalkable,floor:CITY_FLOOR,start:{x:.15,z:6.5},destination:{x:0,z:-12},bounds:{x:18,zMin:-43,zMax:15},presets:null};
+    this.cityId=city;this.city=city==='shenzhen'?{build:buildShenzhenScene,walkable:shenzhenWalkable,floor:SHENZHEN_FLOOR,start:{x:0,z:7},destination:{x:0,z:-19},bounds:{x:32,zMin:-116,zMax:15},presets:CITY_VIEWS.shenzhen}:city==='guangzhou'?{build:buildGuangzhouScene,walkable:guangzhouWalkable,floor:GUANGZHOU_FLOOR,start:{x:0,z:7},destination:{x:0,z:-19},bounds:{x:34,zMin:-96,zMax:15},presets:CITY_VIEWS.guangzhou}:{build:buildCityScene,walkable:cityWalkable,floor:CITY_FLOOR,start:{x:.15,z:6.5},destination:{x:0,z:-12},bounds:{x:18,zMin:-68,zMax:15},presets:null};
     this.active=false;this.last=0;this.time=0;this.frame=0;this.follow=false;this.disposed=false;this.listeners=[];
     this.reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches||false;
     // Keep stone close and tangible; let the town recede into estuary air.
@@ -157,7 +157,7 @@ export class CityWorld {
     this.sun.shadow.mapSize.set(1024,1024);Object.assign(this.sun.shadow.camera,{left:-20,right:20,top:28,bottom:-27,near:1,far:80});this.sun.shadow.normalBias=.04;this.sun.shadow.bias=-.0002;this.sun.shadow.radius=3;this.scene.add(this.sun);
     const generator=new T.PMREMGenerator(this.renderer),room=new RoomEnvironment();this.environment=generator.fromScene(room,.06);this.scene.environment=this.environment.texture;this.scene.environmentIntensity=city==='quanzhou'?.20:.34;generator.dispose();room.dispose();
     this.scenery=this.city.build();this.scene.add(this.scenery.root);this.setMood(defaultCityMood(city),true);this.hideProceduralNature();this.batchStonework();this.installDetailedNature();
-    this.actors=new CityCompanions({onMessage,reduced:this.reduced,walkable:this.city.walkable,floor:this.city.floor,start:this.city.start});this.scene.add(this.actors.human,this.actors.cat);
+    this.actors=new CityCompanions({onMessage,reduced:this.reduced,walkable:this.city.walkable,floor:this.city.floor,start:this.city.start,routeBound:city==='quanzhou'?70:44});this.scene.add(this.actors.human,this.actors.cat);
     this.marker=new T.Mesh(new T.RingGeometry(.25,.31,40),new T.MeshBasicMaterial({color:'#fff1b8',side:T.DoubleSide,transparent:true,opacity:.8,depthWrite:false}));this.marker.rotation.x=-Math.PI/2;this.marker.position.y=this.city.floor+.025;this.marker.visible=false;this.marker.userData.skipWaterReflection=true;this.scene.add(this.marker);
     this.ray=new T.Raycaster();this.pointer=new T.Vector2();this.gesture=new TapGesture();
     this.bindPicking();this.resizeObserver=new ResizeObserver(()=>this.resize());this.resizeObserver.observe(host);
@@ -166,7 +166,7 @@ export class CityWorld {
     this.listen(this.canvas,'webglcontextlost',event=>{event.preventDefault();this.deactivate();this.onError('三维画面暂时中断，请返回花园后重新进入。');});
   }
   setMood(mood,immediate=false){
-    if(this.cityId==='quanzhou'||!CITY_ATMOSPHERES[mood])return;
+    if(!CITY_ATMOSPHERES[mood])return;
     this.mood=mood;this.atmosphere=CITY_ATMOSPHERES[mood];
     this.atmosphereColors=Object.fromEntries(['top','horizon','fog','water','sky','ground','sun'].map(key=>[key,new T.Color(this.atmosphere[key])]));
     if(immediate||this.reduced)this.updateAtmosphere(1);

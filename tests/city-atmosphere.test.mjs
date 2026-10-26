@@ -5,6 +5,8 @@ import {buildGuangzhouScene} from '../guangzhou-scene.js';
 import {buildShenzhenScene} from '../shenzhen-scene.js';
 import {CityWorld} from '../city-world.js';
 import {CITY_VIEWS,CITY_WATERFRONT_FOV} from '../city-views.js';
+import {buildCityScene} from '../city-scene.js';
+import {defaultCityMood} from '../city-atmosphere.js';
 
 test('waterfront entrance cameras contain complete landmarks and both companions on wide and phone screens',()=>{
   for(const [id,build,landmark] of [['guangzhou',buildGuangzhouScene,'canton-tower-volumetric-landmark'],['shenzhen',buildShenzhenScene,'shenzhen-spring-bamboo-landmark']]){
@@ -30,5 +32,14 @@ test('switching atmosphere blends sky, fog, water and light together without mov
   world.updateAtmosphere(1);assert.ok(!middle.equals(scenery.water.material.uniforms.color.value));
   const sky=scenery.root.getObjectByName('infinite-garden-sky');assert.equal(sky.material.depthWrite,false);assert.equal(sky.frustumCulled,false);
   world.hideProceduralNature();assert.equal(scenery.root.getObjectByName('shenzhen-spring-bamboo-landmark').visible,true);
+  scenery.water.dispose();
+});
+
+test('Quanzhou opens in the same dusk atmosphere as Guangzhou',()=>{
+  assert.equal(defaultCityMood('quanzhou'),'dusk');assert.equal(defaultCityMood('guangzhou'),'dusk');
+  const scenery=buildCityScene({text:false}),world=Object.assign(Object.create(CityWorld.prototype),{cityId:'quanzhou',scenery,scene:{fog:new T.Fog('#ffffff')},hemi:new T.HemisphereLight(),sun:new T.DirectionalLight(),renderer:{toneMappingExposure:.88}});
+  world.setMood(defaultCityMood('quanzhou'),true);
+  assert.equal(world.mood,'dusk');assert.equal(world.renderer.toneMappingExposure,.95);
+  assert.equal(scenery.root.getObjectByName('infinite-garden-sky').material.uniforms.horizon.value.getHexString(),'e1ae88');
   scenery.water.dispose();
 });

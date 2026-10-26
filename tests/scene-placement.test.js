@@ -18,6 +18,17 @@ test('bridge crosses the stream with both ends on the banks',async()=>{
     const end=new T.Vector3(side*1.25,0,0).applyEuler(bridge.rotation).add(bridge.position);
     assert.ok(Math.abs(end.x-world.streamX(end.z))>.9,'bridge end reaches dry land');
   }
+  const approaches=world.scene.getObjectByName('garden-bridge-connected-approaches');
+  assert.ok(approaches,'bridge has visible paths beyond both landings');
+  assert.ok(approaches.getObjectByName('garden-bridge-path-to-main-trail'));
+  assert.ok(approaches.getObjectByName('garden-bridge-path-to-cottage'));
+  for(const path of approaches.children.filter(child=>child.name.startsWith('garden-bridge-path-'))){
+    path.geometry.computeVertexNormals();
+    assert.ok(path.geometry.attributes.normal.getY(0)>.8,'approach path faces upward and remains visible from the garden camera');
+  }
+  const routes=world.bridgeApproachRoutes(),main=routes[1].at(-1),cottage=routes[0].at(-1);
+  assert.ok(Math.abs(main.x-world.pathX(main.z))<.01,'right landing reconnects to the main garden trail');
+  assert.ok(cottage.x<-9,'left landing continues toward the cottage instead of stopping in grass');
 });
 
 test('creek extends into the distant woodland and clears terrain across its width',async()=>{

@@ -17,13 +17,18 @@ import { createSnowfall, updateSnowfall } from './world-weather.js';
 
 const seedModels={fern:'Grass_Common_Tall',bellflower:'Flower_4_Group',waterleaf:'Bush_Common_Flowers'};
 const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z),clamp=T.MathUtils.clamp;
+const segmentDistance=(p,a,b)=>{
+  const dx=b.x-a.x,dz=b.z-a.z,length=dx*dx+dz*dz;
+  const t=length?clamp(((p.x-a.x)*dx+(p.z-a.z)*dz)/length,0,1):0;
+  return Math.hypot(p.x-a.x-t*dx,p.z-a.z-t*dz);
+};
 let seed=973;const rand=()=>((seed=seed*16807%2147483647)-1)/2147483646;
 const nGLSL=`float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+1.),f.x),f.y);}float fbm(vec2 p){return noise(p)*.56+noise(p*2.03)*.27+noise(p*4.01)*.12+noise(p*8.1)*.05;}\n`;
 
 class StoryWorld extends BaseWorld{
   constructor(opts){
     super(opts);
-    this.renderer.toneMappingExposure=1.02;
+    this.renderer.toneMappingExposure=1.08;
     this.sun.position.set(-15,24,11);this.scene.fog.density=.007;
     if(this.quality!=='low'){Object.assign(this.sun.shadow.camera,{left:-24,right:24,top:24,bottom:-24,near:.1,far:90});this.sun.shadow.camera.updateProjectionMatrix();this.sun.shadow.normalBias=.035;this.sun.shadow.bias=-.00018;
       const pmrem=new T.PMREMGenerator(this.renderer);this.scene.environment=pmrem.fromScene(new RoomEnvironment(),.08).texture;pmrem.dispose();this.scene.environmentIntensity=.22;}
@@ -64,10 +69,19 @@ class StoryWorld extends BaseWorld{
     return false;
   }
   bridgeCentre(){const z=-12;return {x:this.streamX(z),z}}
+  bridgeApproachRoutes(){
+    const centre=this.bridgeCentre(),angle=Math.atan(this.streamSlope(centre.z)),dx=Math.cos(angle),dz=-Math.sin(angle),span=2.02;
+    const west={x:centre.x-dx*span,z:centre.z-dz*span},east={x:centre.x+dx*span,z:centre.z+dz*span};
+    return [
+      [west,{x:west.x-1.65,z:west.z-.5},{x:-9.8,z:-13.8}],
+      [east,{x:east.x+1.55,z:east.z+.7},{x:this.pathX(-8.4),z:-8.4}],
+    ];
+  }
   clearForScenery(x,z,margin=0){
     const pond=((x+3.5)/(6.4+margin))**2+((z+3.5)/(4.35+margin))**2>1;
     const bridge=this.bridgeCentre();
-    return pond&&!this.onStream(x,z,margin)&&Math.hypot(x-bridge.x,z-bridge.z)>1.9+margin;
+    const approaches=this.bridgeApproachRoutes().every(route=>route.slice(1).every((point,i)=>segmentDistance({x,z},route[i],point)>.9+margin));
+    return pond&&!this.onStream(x,z,margin)&&Math.hypot(x-bridge.x,z-bridge.z)>2.5+margin&&approaches;
   }
   clearForPlanting(x,z,margin=0){
     // Keep the six planting beds, their fence and the approach from the path open.
@@ -137,6 +151,9 @@ class StoryWorld extends BaseWorld{
       #include <colorspace_fragment>
     }`;this.rainbow.material.needsUpdate=true;
     configureSkyBackground(this.sky);
+    const sunMaterial=new T.ShaderMaterial({transparent:true,depthWrite:false,fog:false,uniforms:{opacity:{value:0}},vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:'varying vec2 vUv;uniform float opacity;void main(){float r=length(vUv-.5)*2.;float core=1.-smoothstep(.10,.28,r);float halo=1.-smoothstep(.18,1.,r);vec3 color=mix(vec3(1.,.72,.32),vec3(1.,.98,.78),core);gl_FragColor=vec4(color,(core*.78+halo*.30)*opacity);}' });
+    this.sunGlow=new T.Mesh(new T.PlaneGeometry(1,1),sunMaterial);
+    this.sunGlow.name='garden-visible-sunlight';this.sunGlow.position.set(-29,27,-66);this.sunGlow.scale.set(13,13,1);this.sunGlow.renderOrder=-1;this.scene.add(this.sunGlow);
     this.skyMat.uniforms.warmth={value:0};this.skyMat.uniforms.cloudCover={value:0};
     this.skyMat.uniforms.dawn={value:0};this.skyMat.uniforms.noon={value:0};this.skyMat.uniforms.deepNight={value:0};
     this.skyMat.fragmentShader=`varying vec3 d;uniform float night,time,rain,light,warmth,cloudCover,dawn,noon,deepNight;${nGLSL}void main(){vec3 v=normalize(d);float y=max(0.,v.y);vec3 day=mix(vec3(.79,.87,.81),mix(vec3(.42,.66,.76),vec3(.34,.63,.83),noon*(1.-cloudCover)),pow(y,.6));vec3 dusk=mix(vec3(.17,.25,.34),vec3(.025,.045,.105),pow(y,.5))*(1.-deepNight*.18);vec3 c=mix(day,dusk,night);c=mix(c,vec3(.94,.59,.38),warmth*exp(-y*3.5)*.72);c=mix(c,vec3(.84,.62,.70),dawn*exp(-y*4.)*.32);c=mix(c,mix(vec3(.59,.67,.67),vec3(.10,.16,.21),night),cloudCover*.48);float cl=fbm(v.xz/max(.18,v.y)*1.2+vec2(time*.003,0.));cl=smoothstep(mix(.56,.26,cloudCover),.77,cl)*smoothstep(0.,.12,v.y);c=mix(c,mix(vec3(.96,.97,.90),vec3(.16,.23,.29),night),cl*(.55+cloudCover*.25));gl_FragColor=vec4(c,1.);}`;this.skyMat.needsUpdate=true;
@@ -326,9 +343,17 @@ class StoryWorld extends BaseWorld{
     for(let i=0;i<count;i++){const x=(rand()-.5)*30,z=(rand()-.5)*30;d.position.set(x,this.groundHeight(x,z)+.025,z);d.scale.set(.027+rand()*.035,.007,.02+rand()*.04);d.rotation.y=rand()*6.28;d.updateMatrix();mesh.setMatrixAt(i,d.matrix);mesh.setColorAt(i,new T.Color(['#d9d7b3','#d9bcc7','#c4c9d2'][i%3]))}mesh.receiveShadow=false;mesh.frustumCulled=false;this.scene.add(mesh);
   }
   buildBridge(){
-    const {x,z}=this.bridgeCentre(),root=new T.Group();root.position.set(x,this.groundHeight(x,z)+.15,z);root.rotation.y=Math.atan(this.streamSlope(z));root.name='garden-bridge';this.scene.add(root);const wood=this.mat('#baa783'),dark=this.mat('#a39377');
-    for(let i=0;i<12;i++){const b=new T.Mesh(new T.BoxGeometry(.22,.09,1.5),wood);b.position.set((i-5.5)*.23,Math.sin(i/11*Math.PI)*.19,0);b.rotation.z=Math.cos(i/11*Math.PI)*.1;b.castShadow=this.quality!=='low';b.receiveShadow=this.quality!=='low';root.add(b)}
-    for(const side of [-1,1]){for(const x of [-1.3,0,1.3]){const p=new T.Mesh(new T.CylinderGeometry(.045,.05,.65,8),dark);p.position.set(x,.37,side*.72);p.castShadow=true;root.add(p)}const c=new T.CatmullRomCurve3([V(-1.4,.65,side*.72),V(0,.77,side*.72),V(1.4,.65,side*.72)]);const rail=new T.Mesh(new T.TubeGeometry(c,18,.03,6,false),dark);root.add(rail)}
+    const {x,z}=this.bridgeCentre(),root=new T.Group();root.position.set(x,this.groundHeight(x,z)+.15,z);root.rotation.y=Math.atan(this.streamSlope(z));root.name='garden-bridge';this.scene.add(root);const wood=this.mat('#c8b58e'),dark=this.mat('#8c7658'),stone=this.mat('#a99f88');
+    for(let i=0;i<18;i++){const b=new T.Mesh(new T.BoxGeometry(.235,.09,1.62),wood);b.position.set((i-8.5)*.225,Math.sin(i/17*Math.PI)*.20,0);b.rotation.z=Math.cos(i/17*Math.PI)*.075;b.castShadow=this.quality!=='low';b.receiveShadow=this.quality!=='low';root.add(b)}
+    for(const end of [-2.08,2.08]){const landing=new T.Mesh(new T.BoxGeometry(.72,.14,1.82),stone);landing.name='garden-bridge-stone-landing';landing.position.set(end,-.015,0);landing.castShadow=landing.receiveShadow=true;root.add(landing)}
+    for(const side of [-1,1]){for(const px of [-1.8,-.9,0,.9,1.8]){const p=new T.Mesh(new T.CylinderGeometry(.045,.055,.68,8),dark);p.position.set(px,.38,side*.77);p.castShadow=true;root.add(p)}const c=new T.CatmullRomCurve3([V(-1.94,.66,side*.77),V(0,.81,side*.77),V(1.94,.66,side*.77)]);const rail=new T.Mesh(new T.TubeGeometry(c,24,.032,6,false),dark);root.add(rail)}
+    const approaches=new T.Group();approaches.name='garden-bridge-connected-approaches';this.scene.add(approaches);
+    this.bridgeApproachRoutes().forEach((route,routeIndex)=>{
+      const curve=new T.CatmullRomCurve3(route.map(p=>V(p.x,0,p.z)),false,'catmullrom',.35),points=curve.getPoints(28),vertices=[],uv=[],indices=[];
+      points.forEach((point,i)=>{const tangent=curve.getTangent(i/(points.length-1)),length=Math.hypot(tangent.x,tangent.z)||1,nx=tangent.z/length,nz=-tangent.x/length,width=.52+.07*Math.sin(i*1.7);for(const side of [-1,1])vertices.push(point.x+nx*width*side,this.groundHeight(point.x+nx*width*side,point.z+nz*width*side)+.035,point.z+nz*width*side);uv.push(0,i/28,1,i/28);if(i<points.length-1){const a=i*2;indices.push(a,a+2,a+1,a+1,a+2,a+3)}});
+      const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.Float32BufferAttribute(vertices,3));geometry.setAttribute('uv',new T.Float32BufferAttribute(uv,2));geometry.setIndex(indices);geometry.computeVertexNormals();const path=new T.Mesh(geometry,this.mat(routeIndex?'#b8ab8b':'#a99d80'));path.name=routeIndex?'garden-bridge-path-to-main-trail':'garden-bridge-path-to-cottage';path.receiveShadow=true;approaches.add(path);
+      for(let i=3;i<points.length-2;i+=4){const point=points[i],mark=new T.Mesh(new T.BoxGeometry(.78,.028,.055),dark),tangent=curve.getTangent(i/(points.length-1));mark.position.set(point.x,this.groundHeight(point.x,point.z)+.065,point.z);mark.rotation.y=Math.atan2(tangent.x,tangent.z)+Math.PI/2;mark.castShadow=false;approaches.add(mark)}
+    });
   }
   addLilyPads(){
     const leafMat=this.mat('#819d6f'),petal=this.mat('#e9c5c6');
@@ -604,9 +629,10 @@ class StoryWorld extends BaseWorld{
     const u=this.skyMat.uniforms;u.warmth.value=approach(u.warmth.value,targets.warmth,dt);u.cloudCover.value=approach(u.cloudCover.value,targets.cloud,dt);
     for(const key of ['dawn','noon','deepNight'])u[key].value=approach(u[key].value,targets[key],dt);
     const warm=u.warmth.value,cloud=u.cloudCover.value,deep=u.deepNight.value;
-    this.hemi.intensity=T.MathUtils.lerp(1.1+light*.35,.68*(1-deep*.28),n);this.hemi.color.set('#e9f2ed').lerp(new T.Color('#aac1d0'),n);this.hemi.groundColor.set('#a1b282').lerp(new T.Color('#435856'),n);
-    this.sun.intensity=T.MathUtils.lerp((.22+light*2.7)*(1-cloud*.72),.55*(1-deep*.45),n);this.sun.color.set('#fff0d0').lerp(new T.Color('#fff7e9'),u.noon.value).lerp(new T.Color('#ffc18b'),warm).lerp(new T.Color('#b3cee8'),n);this.renderer.toneMappingExposure=T.MathUtils.lerp(1.02,1.0,n);this.scene.fog.color.set('#c5dcd3').lerp(new T.Color('#d9b5a0'),warm*.4).lerp(new T.Color('#283f50'),n);
-    this.scene.environmentIntensity=this.state.localSky?T.MathUtils.lerp(.22,.10,n)*(1-deep*.2):.22;
+    this.hemi.intensity=T.MathUtils.lerp(1.18+light*.38,.74*(1-deep*.18),n);this.hemi.color.set('#eef4e8').lerp(new T.Color('#b3c7d1'),n);this.hemi.groundColor.set('#a4b486').lerp(new T.Color('#4b605b'),n);
+    this.sun.intensity=T.MathUtils.lerp((.38+light*3)*(1-cloud*.65),.62*(1-deep*.35),n);this.sun.color.set('#fff0c4').lerp(new T.Color('#fff9e8'),u.noon.value).lerp(new T.Color('#ffc27f'),warm).lerp(new T.Color('#c5d8e8'),n);this.renderer.toneMappingExposure=T.MathUtils.lerp(1.08,1.04,n);this.scene.fog.color.set('#c9dcd3').lerp(new T.Color('#deb99c'),warm*.35).lerp(new T.Color('#324955'),n);
+    this.scene.environmentIntensity=this.state.localSky?T.MathUtils.lerp(.26,.14,n)*(1-deep*.12):.26;
+    if(this.sunGlow){this.sunGlow.material.uniforms.opacity.value=(1-n)*(.62-cloud*.38);this.sunGlow.position.x=T.MathUtils.lerp(targets.sunX*1.8,-29,.35);if(this.camera)this.sunGlow.quaternion.copy(this.camera.quaternion);}
     this.scene.fog.density=approach(this.scene.fog.density,.007+targets.fog*.018,dt);
     if(this.snowCover)this.snowCover.value=approach(this.snowCover.value,targets.snow*.85,dt*.5);
     if(this.snowfall)updateSnowfall(this.snowfall,dt,t,{snow:targets.snow,night:n},this.state.wind/100,this.state.reduced,this.camera?.position);

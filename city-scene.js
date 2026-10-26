@@ -1,8 +1,8 @@
 import * as T from './vendor/three/build/three.module.js';
-import { configureSkyBackground } from './world-sky.js';
 import { createCityWater } from './city-water.js';
 import { createGraniteTexture, createStoneMaterial, createWornStoneGeometry } from './city-stone.js';
 import { buildCityEntrance } from './city-entrance.js';
+import { createCitySky } from './city-atmosphere.js';
 
 export const CITY_FLOOR=.055;
 export const CITY_OBSTACLES=[
@@ -18,7 +18,9 @@ export const CITY_OBSTACLES=[
 export function cityWalkable(x,z,radius=.32){
   const plaza=x>-8+radius&&x<8-radius&&z>-4+radius&&z<12-radius;
   const bridge=Math.abs(x)<2.25-radius&&z>=-40+radius&&z<=-3.4;
-  if(!plaza&&!bridge)return false;
+  const farLanding=Math.abs(x)<5.7-radius&&z>=-43.5+radius&&z<-39.6;
+  const villageApproach=Math.abs(x)<2.25-radius&&z>=-65+radius&&z<-43.2;
+  if(!plaza&&!bridge&&!farLanding&&!villageApproach)return false;
   for(const o of CITY_OBSTACLES){
     if(o.r?Math.hypot(x-o.x,z-o.z)<o.r+radius:Math.abs(x-o.x)<o.hx+radius&&Math.abs(z-o.z)<o.hz+radius)return false;
   }
@@ -240,6 +242,20 @@ export function buildCityScene({text=true}={}){
   // Shore strips and the distant city give the orbit camera a complete world.
   const land=box(160,5.2,88,new T.MeshStandardMaterial({color:'#666c58',roughness:1}),0,-2.70,56);land.name='southern-riverbank';
   box(190,1,48,green,0,-1.5,-89);
+  // The historic span must visibly arrive somewhere. A solid northern bank,
+  // stone landing and narrow continuation toward the village replace the old
+  // stretch of open water between the last bridge slab and the distant shore.
+  const farShore=new T.Group();farShore.name='luoyang-bridge-connected-northern-bank';root.add(farShore);
+  const farEarth=box(150,4.8,29,new T.MeshStandardMaterial({color:'#626652',roughness:1}),0,-2.46,-54.3,farShore);farEarth.name='solid-northern-riverbank';
+  const farLanding=box(11.4,.22,8.6,lightStone,0,-.055,-43.9,farShore);farLanding.name='northern-stone-bridge-landing';walkSurfaces.push(farLanding);
+  const villagePath=box(4.5,.18,17.2,stone,0,-.035,-56.7,farShore);villagePath.name='northern-village-approach-path';
+  for(const side of [-1,1]){
+    box(69,1.72,.62,darkStone,side*40.2,-.91,-40.1,farShore);
+    box(69,.18,.82,lightStone,side*40.2,-.01,-40.1,farShore);
+  }
+  for(let z=-47.5;z>-64.8;z-=1.08){
+    const seam=box(4.22,.025,.045,darkStone,0,.066,z,farShore);seam.castShadow=false;
+  }
   const tidalFlat=new T.MeshStandardMaterial({color:'#8b9470',roughness:1});
   for(const side of [-1,1]){
     const flat=mesh(new T.SphereGeometry(1,36,12),tidalFlat,side*58,-1.70,-39);flat.scale.set(13,.35,23);
@@ -310,22 +326,9 @@ export function buildCityScene({text=true}={}){
   const roof=mesh(new T.ConeGeometry(2.05,.90,4),new T.MeshStandardMaterial({color:'#a07d64',roughness:1}),0,2.45,0,pavilion);roof.rotation.y=Math.PI/4;roof.scale.z=1.2;
 
   const water=createCityWater();root.add(water);
-  const skyTime={value:0};
-  const skyMaterial=new T.ShaderMaterial({side:T.BackSide,depthWrite:false,depthTest:false,uniforms:{time:skyTime},vertexShader:'',fragmentShader:`
-    varying vec3 d;uniform float time;
-    float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
-    float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+1.),f.x),f.y);}
-    void main(){vec3 direction=normalize(d);float h=clamp(direction.y,0.,1.);
-      vec3 c=mix(vec3(.40,.51,.52),vec3(.12,.23,.28),pow(h,.58));
-      vec2 p=direction.xz/max(.15,direction.y+.23)*2.3+vec2(time*.0012,-time*.0006);
-      float clouds=noise(p)*.48+noise(p*2.13)*.27+noise(p*4.3)*.16+noise(p*8.7)*.09;
-      c=mix(c,vec3(.64,.68,.65),smoothstep(.28,.80,clouds)*.68);
-      float opening=pow(max(0.,dot(direction,normalize(vec3(-.65,.28,.42)))),12.);
-      c+=vec3(.12,.10,.065)*opening;
-      gl_FragColor=vec4(c,1.);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>}`});
-  const sky=new T.Mesh(new T.SphereGeometry(100,32,16),skyMaterial);configureSkyBackground(sky);root.add(sky);
+  const sky=createCitySky('dusk');root.add(sky);
   return {root,walkSurfaces,water,stele,plaque,trees,update(time){
-    water.material.uniforms.time.value=time;foliageTime.value=time;skyTime.value=time;
+    water.material.uniforms.time.value=time;foliageTime.value=time;sky.material.uniforms.time.value=time;
     mooredBoats.forEach((boat,i)=>{boat.position.y=-1.16+Math.sin(time*.40+i*1.7)*.013;boat.rotation.z=Math.sin(time*.32+i)*.005;boat.rotation.x=Math.cos(time*.28+i)*.004;});
   }};
 }
