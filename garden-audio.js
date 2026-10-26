@@ -34,9 +34,10 @@ function gardenLoopBuffer(ctx,buffer) {
 }
 
 class GardenAudio {
-  constructor({sources,readMix,onInterruption=()=>{},Context=window.AudioContext||window.webkitAudioContext}) {
+  constructor({sources,readMix,readPetVoice=()=>null,onInterruption=()=>{},Context=window.AudioContext||window.webkitAudioContext}) {
     if(!Context) throw Error('Audio unavailable');
     this.ctx=new Context(); this.sources=sources; this.readMix=readMix; this.closed=false; this.tracks={};
+    this.readPetVoice=readPetVoice;this.petVoiceVersion=0;
     this.master=this.ctx.createGain(); this.masterEnvelope=new GardenEnvelope(this.master.gain,0);
     this.endGain=this.ctx.createGain(); this.endEnvelope=new GardenEnvelope(this.endGain.gain,1);
     const limiter=this.ctx.createDynamicsCompressor();
@@ -80,6 +81,7 @@ class GardenAudio {
   }
   pause() {
     if(this.closed)return;
+    this.stopPetVoice?.();
     const now=this.ctx.currentTime;
     this.endEnvelope.hold(now); this.masterEnvelope.ramp(0,now,.3);
     // 在挂起前结束短音效，继续播放时不恢复旧的尾音。
@@ -97,6 +99,7 @@ class GardenAudio {
   }
   mix() {
     const {mix,focused}=this.readMix(),now=this.ctx.currentTime;
+    if(!mix.cat)this.stopPetVoice?.();
     for(const[key,track]of Object.entries(this.tracks)) {
       let value=Math.max(0,Math.min(100,Number(mix[key])||0))/100;
       if(key==='cat')value*=focused?1.2:.8;
@@ -106,8 +109,32 @@ class GardenAudio {
   pet() {
     const {mix,focused,playing}=this.readMix();
     if(!playing||!mix.cat||this.ctx.state!=='running'||!this.tracks.cat)return;
+    const recording=this.readPetVoice();
+    if(recording?.data){this.playPetRecording(recording);return}
     const now=this.ctx.currentTime,base=mix.cat/100*(focused?1.2:.8);
     this.tracks.cat.envelope.hold(now).to(Math.min(.85,base*1.15),now+.3).to(base,now+2.4);
+  }
+  stopPetVoice(){
+    this.petVoiceVersion++;
+    if(this.petVoiceSource){try{this.petVoiceSource.stop()}catch{}this.petVoiceSource=null}
+  }
+  async playPetRecording(recording){
+    if(this.closed||this.petVoiceSource||this.petVoiceLoading||this.ctx.currentTime-(this.lastPetVoiceAt??-Infinity)<3)return false;
+    const version=++this.petVoiceVersion;this.petVoiceLoading=true;
+    try{
+      let buffer=this.petVoiceCache?.data===recording.data?this.petVoiceCache.buffer:null;
+      if(!buffer){
+        const response=await fetch(recording.data);const bytes=await response.arrayBuffer();
+        buffer=await this.ctx.decodeAudioData(bytes);this.petVoiceCache={data:recording.data,buffer};
+      }
+      const state=this.readMix();
+      if(this.closed||version!==this.petVoiceVersion||!state.playing||!state.mix.cat||this.ctx.state!=='running'||this.readPetVoice()?.data!==recording.data)return false;
+      const source=this.ctx.createBufferSource(),gain=this.ctx.createGain(),now=this.ctx.currentTime,duration=Math.min(8,buffer.duration);
+      const level=Math.min(.65,state.mix.cat/100*.8);
+      source.buffer=buffer;gain.gain.setValueAtTime(0,now);gain.gain.linearRampToValueAtTime(level,now+.025);gain.gain.setValueAtTime(level,now+Math.max(.025,duration-.05));gain.gain.linearRampToValueAtTime(0,now+duration);
+      source.connect(gain).connect(this.master);this.petVoiceSource=source;this.lastPetVoiceAt=now;
+      source.onended=()=>{source.disconnect();gain.disconnect();if(this.petVoiceSource===source)this.petVoiceSource=null};source.start();source.stop(now+duration);return true;
+    }catch{return false}finally{this.petVoiceLoading=false}
   }
   plantGrowthCue(stage=0) {
     const {mix,playing}=this.readMix();
@@ -158,6 +185,7 @@ class GardenAudio {
     }
   }
   close() {
+    this.stopPetVoice?.();
     this.closed=true; clearTimeout(this.suspendTimer);clearInterval(this.sceneTimer);this.ctx.onstatechange=null;
     if(this.plantCue)this.plantCue.stop();
     for(const source of this.sceneVoices)try{source.stop()}catch{}
