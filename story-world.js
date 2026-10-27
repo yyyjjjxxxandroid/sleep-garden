@@ -14,6 +14,8 @@ import { configureSkyBackground } from './world-sky.js';
 import { CityWorld } from './city-world.js';
 import { environmentTargets, approach } from './world-environment.js';
 import { createSnowfall, updateSnowfall } from './world-weather.js';
+import { mergeStaticMeshes } from './scene-batching.js';
+import { readNatureLOD, setNatureLOD, updateSceneryLOD } from './nature-lod.js';
 
 const seedModels={fern:'Grass_Common_Tall',bellflower:'Flower_4_Group',waterleaf:'Bush_Common_Flowers'};
 const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z),clamp=T.MathUtils.clamp;
@@ -287,12 +289,19 @@ class StoryWorld extends BaseWorld{
     const entries=Object.entries(bundle.models);
     await Promise.all(entries.map(async([name,json])=>{const data=typeof structuredClone==='function'?structuredClone(json):JSON.parse(JSON.stringify(json));for(const b of data.buffers||[])b.uri=bundle.files[b.uri];for(const im of data.images||[]){im.uri=bundle.files[im.uri];im.mimeType='image/webp'}this.models[name]=await loader.parseAsync(JSON.stringify(data),'')}));
     const q=this.quality;
+    if(q!=='high')for(const[name,gltf]of Object.entries(this.models))gltf.scene.traverse(mesh=>{
+      if(!mesh.isMesh)return;
+      setNatureLOD(mesh.geometry,readNatureLOD(bundle.lod?.[name]?.[mesh.material.name+':'+mesh.geometry.attributes.position.count]));
+    });
     for(const[name,gltf]of Object.entries(this.models)){gltf.scene.traverse(o=>{if(!o.isMesh)return;const m=o.material.clone();m.roughness=.88;m.metalness=0;m.envMapIntensity=.25;if(m.normalScale)m.normalScale.set(.28,.28);if(m.map){m.map.anisotropy=q==='high'?4:1;m.map.colorSpace=T.SRGBColorSpace}m.alphaTest=Math.max(m.alphaTest||0,.32);const foliage=/Leaves|Grass|Flowers/i.test(m.name);o.castShadow=!foliage&&q!=='low';o.receiveShadow=!foliage&&q!=='low';if(foliage){m.side=T.DoubleSide;m.emissive.set('#78955f');m.emissiveIntensity=.045;o.geometry.computeBoundingBox();const b=o.geometry.boundingBox;o.material=this.windMaterial(m,b.max.y-b.min.y,b.min.y,name.startsWith('CommonTree')?.22:.10);if(q==='high'){o.customDepthMaterial=new T.MeshDepthMaterial({depthPacking:T.RGBADepthPacking,map:m.map,alphaTest:m.alphaTest,side:T.DoubleSide});o.customDepthMaterial.onBeforeCompile=o.material.userData.windPatch;o.customDepthMaterial.customProgramCacheKey=o.material.customProgramCacheKey;}}else o.material=m;});this.rememberTemplate(name,gltf.scene)}
     this.staticRoots=[];this.place=(name,x,z,height,angle=rand()*6.28,options={})=>{
       if(!options.dynamic&&!/^CommonTree/.test(name)&&inPetClearing(x,z,Math.max(.3,height*.5)))return new T.Group();
       const o=this.cloneShared(name),t=this.templates[name],s=height/t.height,group=new T.Group();o.scale.setScalar(s);o.position.y=-t.minY*s;group.add(o);group.position.set(x,this.groundHeight(x,z)+(options.lift||0),z);group.rotation.y=angle;if(options.width){group.scale.x=options.width;group.scale.z=options.width}this.scene.add(group);if(/^CommonTree/.test(name))this.walkObstacles.push({x,z,radius:Math.max(.38,height*.06)});else if(/^Rock/.test(name)&&height>.22)this.walkObstacles.push({x,z,radius:Math.max(.22,height*.65)});else if(/^Bush/.test(name)&&!options.dynamic)this.walkObstacles.push({x,z,radius:height*.4});if(!options.dynamic)this.staticRoots.push(group);return group;
     };
     this.populateGarden();this.atmosphere=installAtmosphere(this,T);this.cozyContent=installGardenContent(this,T);this.outskirts=installGardenOutskirts(this,T);this.details=installDetails(this);this.batchScenery();this.makeCat();this.updateGrowth(true);this.buildBridge();this.addLilyPads();
+    for(const root of [this.cozyContent.root,this.outskirts.root,
+      this.scene.getObjectByName('planting-garden-fence'),this.scene.getObjectByName('garden-bridge'),
+      this.scene.getObjectByName('garden-bridge-connected-approaches')])if(root)mergeStaticMeshes(root);
     this.canvas.dataset.artVersion='storybook-v2';this.canvas.dataset.assets='Quaternius textured nature · CC0';
   }
   populateGarden(){
@@ -360,7 +369,7 @@ class StoryWorld extends BaseWorld{
     for(const[x,z,s]of [[-6,-4,.32],[-5,-4.5,.24],[-2,-5,.35],[-1,-3,.26]]){const o=this.mesh(new T.CircleGeometry(s,32,0,Math.PI*1.84),leafMat,x,-.104,z);o.rotation.x=-Math.PI/2;o.rotation.z=rand()*6;const stem=this.mesh(new T.SphereGeometry(1,12,8),petal,x,-.07,z);stem.scale.set(.12,.08,.12)}
   }
   makeCat(){
-    this.storyCat=createStoryCat();this.cat=this.storyCat.root;this.cat.scale.setScalar(.609375);this.scene.add(this.cat);this.catMixer={update(){}};this.catAction=null;
+    this.storyCat=createStoryCat({quality:this.quality});this.cat=this.storyCat.root;this.cat.scale.setScalar(.609375);this.scene.add(this.cat);this.catMixer={update(){}};this.catAction=null;
     this.catPath=new T.CatmullRomCurve3([V(1.7,0,4.4),V(4,0,3.2),V(5.3,0,1.5),V(7,0,3),V(6,0,6.6),V(3,0,8),V(-1.3,0,7.6),V(-2,0,5.2)],true,'catmullrom',.28);this.catDistance=0;this.pathLength=this.catPath.getLength();this.cat.position.copy(this.catPath.getPointAt(0));this.cat.position.y=this.groundHeight(this.cat.position.x,this.cat.position.z);const heading=this.catPath.getTangentAt(0);this.cat.rotation.y=Math.atan2(heading.x,heading.z);const c=document.createElement('canvas');c.width=c.height=128;const ctx=c.getContext('2d'),grad=ctx.createRadialGradient(64,64,8,64,64,64);grad.addColorStop(0,'rgba(20,35,17,.45)');grad.addColorStop(.5,'rgba(20,35,17,.17)');grad.addColorStop(1,'rgba(20,35,17,0)');ctx.fillStyle=grad;ctx.fillRect(0,0,128,128);this.catContact=new T.Mesh(new T.PlaneGeometry(2.3,2.5),new T.MeshBasicMaterial({map:new T.CanvasTexture(c),transparent:true,depthWrite:false,opacity:.62}));this.catContact.rotation.x=-Math.PI/2;this.scene.add(this.catContact);this.companion=new GardenCompanion(this);this.companion.stop();this.canvas.dataset.catSource='Original storybook cat';this.canvas.dataset.catAnimation='articulated walk, breathing, blinking, ears and tail';
   }
   updateGrowth(force=false){
@@ -553,7 +562,7 @@ class StoryWorld extends BaseWorld{
       this.pickDestination(e.clientX,e.clientY);
     },true);
     this.canvas.addEventListener('pointercancel',e=>{this.gesture=null;release(e)},true);
-    this.canvas.addEventListener('lostpointercapture',e=>{if(this.gesture?.id===e.pointerId){this.gesture=null;release(e)}},true);
+    this.canvas.addEventListener('lostpointercapture',e=>{this.activePointers.delete(e.pointerId);if(this.gesture?.id===e.pointerId){this.gesture=null;release(e)}},true);
     this.canvas.addEventListener('wheel',()=>{this.gesture=null;explore()},{passive:true,capture:true});
     this.canvas.addEventListener('pointerleave',()=>{if(!this.gesture)this.storyCat?.look(0,0)});
     this.canvas.addEventListener('keydown',e=>{
@@ -628,6 +637,7 @@ class StoryWorld extends BaseWorld{
     return false;
   }
   beforeRender(dt){
+    updateSceneryLOD(this.batches,this.camera);
     const n=this.skyMat.uniforms.night.value,light=this.skyMat.uniforms.light.value,t=this.t,targets=environmentTargets(this.state);
     const u=this.skyMat.uniforms;u.warmth.value=approach(u.warmth.value,targets.warmth,dt);u.cloudCover.value=approach(u.cloudCover.value,targets.cloud,dt);
     for(const key of ['dawn','noon','deepNight'])u[key].value=approach(u[key].value,targets[key],dt);

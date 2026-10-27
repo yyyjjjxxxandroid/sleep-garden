@@ -4,12 +4,13 @@ import { installCatCoat } from './story-cat-coat.js';
 
 // Reference-led plush kitten, driven by continuous articulated poses. Touch
 // remains independent of the audio/session clock and camera navigation.
-export function createStoryCat({random=Math.random,clock=()=>performance.now()/1000}={}){
+export function createStoryCat({random=Math.random,clock=()=>performance.now()/1000,quality='high'}={}){
+  const detailed=quality==='high';
   const root=new T.Group(),bodyRig=new T.Bone();root.add(bodyRig);bodyRig.name='companion-body';
   const velvet=color=>new T.MeshPhysicalMaterial({color,roughness:.97,metalness:0,sheen:1,sheenColor:new T.Color('#fff4df'),sheenRoughness:1,envMapIntensity:.35});
   const fur=velvet('#fff4e6'),white=velvet('#fff7ee'),patch=velvet('#f9efdf'),pink=velvet('#e9b5af');
   const ink=new T.MeshStandardMaterial({color:'#3b3530',roughness:.3}),noseMat=velvet('#ba8d88');
-  const unitSphere=new T.SphereGeometry(1,32,24);
+  const unitSphere=new T.SphereGeometry(1,detailed?32:20,detailed?24:14);
   function ball(parent,mat,x,y,z,sx,sy,sz){const mesh=new T.Mesh(unitSphere,mat);mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh}
   const torso=ball(bodyRig,fur,0,.63,-.20,.46,.43,.69);torso.name='companion-torso';
   const chest=ball(bodyRig,white,0,.62,.32,.37,.38,.30);chest.name='companion-chest';
@@ -19,7 +20,7 @@ export function createStoryCat({random=Math.random,clock=()=>performance.now()/1
   const face=ball(head,fur,0,0,0,.58,.51,.48);face.name='kitten-round-face';
   // One continuous cheek volume keeps the round silhouette, without stacked
   // white muzzle spheres or the previous large clay-like cheek tufts.
-  face.geometry=new T.SphereGeometry(1,64,48);
+  face.geometry=new T.SphereGeometry(1,detailed?64:32,detailed?48:24);
   const fp=face.geometry.attributes.position;
   for(let i=0;i<fp.count;i++){
     const x=fp.getX(i),y=fp.getY(i),z=fp.getZ(i);
@@ -126,7 +127,7 @@ export function createStoryCat({random=Math.random,clock=()=>performance.now()/1
   const coat=installCatCoat(root,[{mesh:face,count:10500,length:.075,groom:'face'},{mesh:torso,count:6200,length:.065},
     {mesh:chest,count:2400,length:.045},...ears.map(e=>({mesh:e.children[0],count:750,length:.032,groom:'ear'})),
     ...legs.map(l=>({mesh:l.upper,count:3900,length:.024,paw:l.foot,groom:'leg'})),
-    {mesh:tm,count:3200,length:.065,groom:'tail'},{mesh:tailTip,count:450,length:.046,groom:'tail'}]);
+    {mesh:tm,count:3200,length:.065,groom:'tail'},{mesh:tailTip,count:450,length:.046,groom:'tail'}],{quality});
   root.userData.storybook=true;
   const responses={
     head:[['nuzzle','它眯起眼，额头轻轻靠向你的手'],['tilt','它歪过脑袋，一只眼睛懒懒地眯着'],['bow','它低下头，让你顺着额头摸一摸']],

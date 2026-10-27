@@ -109,7 +109,7 @@ const shader={
 };
 
 export function createCityWater({resolution=512}={}){
-  const water=new Reflector(new T.PlaneGeometry(200,200,100,100),{
+  const water=new Reflector(new T.PlaneGeometry(200,200,24,24),{
     shader,color:'#284c43',textureWidth:resolution,textureHeight:resolution,
     multisample:0,clipBias:.003,
   });
@@ -123,9 +123,10 @@ export function createCityWater({resolution=512}={}){
   water.onBeforeRender=function(renderer,scene,camera){
     const time=water.material.uniforms.time.value;
     const moved=!camera.matrixWorld.equals(previousCamera);
-    // Static views refresh the reflection at 10 Hz while the normal field
-    // continues every frame. Orbiting refreshes immediately for correct parallax.
-    if(!moved&&time-reflectedAt<.10)return;
+    // Cap reflection passes even during an orbit: input and the main scene
+    // still render every frame, without rendering the whole city twice.
+    const interval=water.userData.reflectionInterval??0;
+    if(time-reflectedAt<(moved?interval:Math.max(.10,interval)))return;
     const hidden=[];
     scene.traverse(o=>{if(o.visible&&o.userData.skipWaterReflection){hidden.push(o);o.visible=false;}});
     try{reflect.call(water,renderer,scene,camera);previousCamera.copy(camera.matrixWorld);reflectedAt=time;}

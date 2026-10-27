@@ -3,17 +3,15 @@ import { environmentTargets, approach } from './world-environment.js';
 import { OrbitControls } from './vendor/three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from './vendor/three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries, mergeVertices } from './vendor/three/examples/jsm/utils/BufferGeometryUtils.js';
+import { deviceRenderProfile, AdaptiveResolution, updateRenderBudget } from './render-performance.js';
+import { instanceScenery } from './scene-batching.js';
 
 const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z);
 let seed=527;const rnd=()=>((seed=seed*16807%2147483647)-1)/2147483646;
 const mix=(a,b,t)=>a+(b-a)*t;
 const noiseGLSL=`float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+1.),f.x),f.y);}float fbm(vec2 p){return .54*noise(p)+.27*noise(p*2.03)+.13*noise(p*4.07)+.06*noise(p*8.11);}`;
 export function detectQuality(reduced=false){
-  if(reduced)return 'low';
-  const mem=navigator.deviceMemory,touch=navigator.maxTouchPoints>0,shortSide=Math.min(screen.width,screen.height),mobile=touch&&shortSide<920,dpr=window.devicePixelRatio||1;
-  if(mem&&mem<=2)return 'low';
-  if(mobile||(mem&&mem<=4)||dpr>=2.5)return 'mid';
-  return 'high';
+  return deviceRenderProfile(reduced).quality;
 }
 
 export class GardenWorld {
@@ -22,14 +20,16 @@ export class GardenWorld {
     svg.classList.add('legacy-world');
     this.scene=new T.Scene();this.scene.fog=new T.FogExp2('#c9dcd8',.009);
     this.camera=new T.PerspectiveCamera(44,1,.1,220);
+    this.renderProfile=deviceRenderProfile(state.reduced);this.adaptiveResolution=new AdaptiveResolution(this.renderProfile);
     const q=this.quality,high=q==='high';
     this.renderer=new T.WebGLRenderer({antialias:high,alpha:false,powerPreference:q==='low'?'low-power':'high-performance'});
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio,high?1.5:q==='mid'?1.25:1));this.renderer.shadowMap.enabled=q!=='low';this.renderer.shadowMap.type=high?T.PCFSoftShadowMap:T.PCFShadowMap;this.renderer.outputColorSpace=T.SRGBColorSpace;this.renderer.toneMapping=T.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.12;
+    this.renderer.setPixelRatio(this.renderProfile.pixelRatio);this.renderer.shadowMap.enabled=this.renderProfile.shadows;this.renderer.shadowMap.autoUpdate=false;this.renderer.shadowMap.type=high?T.PCFSoftShadowMap:T.PCFShadowMap;this.renderer.outputColorSpace=T.SRGBColorSpace;this.renderer.toneMapping=T.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.12;
     this.canvas=this.renderer.domElement;this.canvas.className='garden-3d';this.canvas.dataset.quality=q;this.canvas.setAttribute('aria-label','可旋转缩放的三维花园，拖动环绕，双指缩放，轻点小猫靠近');this.canvas.tabIndex=0;scene.prepend(this.canvas);
     this.controls=new OrbitControls(this.camera,this.canvas);Object.assign(this.controls,{enableDamping:true,dampingFactor:.06,minDistance:4,maxDistance:62,maxPolarAngle:Math.PI*.465,minPolarAngle:.22,enablePan:true,screenSpacePanning:false,rotateSpeed:.42,zoomSpeed:.7,panSpeed:.6});
+    this.controls.touches.ONE=T.TOUCH.ROTATE;this.controls.touches.TWO=T.TOUCH.DOLLY_PAN;
     this.controls.addEventListener('start',()=>{if(this.handleExploreStart?.()===false)return;this.follow=false;this.transition=null;onExplore()});
     this.hemi=new T.HemisphereLight('#edf3ed','#829078',2.0);this.scene.add(this.hemi);
-    this.sun=new T.DirectionalLight('#fff1d2',2.5);this.sun.position.set(-16,23,9);this.sun.castShadow=q!=='low';Object.assign(this.sun.shadow.camera,{left:-24,right:24,top:24,bottom:-24,near:.5,far:75});this.sun.shadow.mapSize.set(q==='high'?1024:512,q==='high'?1024:512);this.sun.shadow.bias=-.0004;this.sun.shadow.normalBias=.035;this.sun.shadow.radius=4;this.scene.add(this.sun);
+    this.sun=new T.DirectionalLight('#fff1d2',2.5);this.sun.position.set(-16,23,9);this.sun.castShadow=this.renderProfile.shadows;Object.assign(this.sun.shadow.camera,{left:-24,right:24,top:24,bottom:-24,near:.5,far:75});this.sun.shadow.mapSize.set(this.renderProfile.shadowSize,this.renderProfile.shadowSize);this.sun.shadow.bias=-.0004;this.sun.shadow.normalBias=.035;this.sun.shadow.radius=4;this.scene.add(this.sun);
     this.buildTerrain();this.buildSky();this.buildWater();this.buildParticles();this.buildPlots();
     this.home(true);this.resize();this.bindPicking();
     this.status=document.createElement('div');this.status.className='asset-status';this.status.innerHTML='<span class="loader-dot"></span>花园正在醒来';this.status.setAttribute('role','status');scene.append(this.status);
@@ -94,16 +94,7 @@ export class GardenWorld {
     return o;
   }
   batchScenery(){
-    this.scene.updateMatrixWorld(true);const buckets=new Map();
-    for(const root of this.staticRoots)root.traverse(o=>{if(!o.isMesh)return;const mats=Array.isArray(o.material)?o.material:[o.material];const key=o.geometry.uuid+':'+mats.map(m=>m.uuid).join();if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(o)});
-    this.batches=[];
-    for(const meshes of buckets.values()){
-      const first=meshes[0],batch=new T.InstancedMesh(first.geometry,first.material,meshes.length);
-      batch.castShadow=!!first.castShadow;batch.receiveShadow=!!first.receiveShadow;batch.customDepthMaterial=first.customDepthMaterial;batch.frustumCulled=false;
-      const matName=first.material?.name||'';if(/Leaves|Grass|Flowers|leaf|grass|color/i.test(matName))batch.userData.skipReflection=true;
-      meshes.forEach((m,i)=>{batch.setMatrixAt(i,m.matrixWorld);m.userData.flowerTarget?.userData.instances.push({mesh:batch,index:i,base:m.matrixWorld.clone()})});batch.instanceMatrix.needsUpdate=true;this.scene.add(batch);this.batches.push(batch);
-    }
-    for(const root of this.staticRoots)this.scene.remove(root);this.staticRoots.length=0;
+    this.batches=instanceScenery(this.scene,this.staticRoots);this.staticRoots.length=0;
     this.canvas.dataset.batches=String(this.batches.length);
   }
   buildWillow(x,z){
@@ -175,7 +166,7 @@ export class GardenWorld {
       if(this.follow&&!this.cat.userData.contact&&!this.gesture?.stroke){const view=this.catView?.(),target=view?.target||this.cat.position.clone().add(V(0,.8,0)),offset=view?.offset||V(2.5,1.65,4.4).applyAxisAngle(V(0,1,0),this.cat.rotation.y),pos=target.clone().add(offset);this.camera.position.lerp(pos,.06);this.controls.target.lerp(target,.07)}
     }
     if(this.transition){this.camera.position.lerp(this.transition.pos,.065);this.controls.target.lerp(this.transition.target,.065);if(this.camera.position.distanceTo(this.transition.pos)<.04)this.transition=null}
-    this.controls.target.x=T.MathUtils.clamp(this.controls.target.x,-42,42);this.controls.target.z=T.MathUtils.clamp(this.controls.target.z,-42,42);this.controls.target.y=T.MathUtils.clamp(this.controls.target.y,.5,7);this.controls.update();this.updateGrowth();this.beforeRender?.(dt);this.renderer.render(this.scene,this.camera);
+    this.controls.target.x=T.MathUtils.clamp(this.controls.target.x,-42,42);this.controls.target.z=T.MathUtils.clamp(this.controls.target.z,-42,42);this.controls.target.y=T.MathUtils.clamp(this.controls.target.y,.5,7);this.controls.update();this.updateGrowth();this.beforeRender?.(dt);updateRenderBudget(this,now);this.renderer.render(this.scene,this.camera);
     if(now%1000<35){this.canvas.dataset.drawCalls=this.renderer.info.render.calls;this.canvas.dataset.triangles=this.renderer.info.render.triangles;this.canvas.dataset.sunIntensity=this.sun.intensity.toFixed(2);this.canvas.dataset.weather=this.state.weather;const label=document.getElementById('zoomMeter');if(label)label.textContent=(35/this.camera.position.distanceTo(this.controls.target)).toFixed(1)+'×'}
   }
 }
