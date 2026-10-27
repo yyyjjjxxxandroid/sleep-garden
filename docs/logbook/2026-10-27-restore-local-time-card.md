@@ -14,8 +14,10 @@
 - `npm run build` 成功；`npm test`：261通过、0失败、0跳过。单测需允许监听本机 HTTP 测试端口。
 - `git diff --check` 通过。
 - 同类规则检查：源码 CSS 中仅发现这条因启用宠物而隐藏时间看板的规则；弹窗等有意避让规则保留。
-- `tests/browser-local-time-card.mjs` 覆盖宠物模块启用后的实际 computed style、8秒淡出、设置弹窗避让、390×844和320×640布局。浏览器定位授权提示交给用户处理，尚未运行完成，不能把该脚本的存在当作验证通过。
-- 浏览器修复前后对照计划：同一回归脚本先打开基线 HTML，再打开修复构建，确认基线因 display:none 失败、修复通过；此项仍待定位提示处理。
+- 用户处理定位提示后，ego 同一验证空间继续回归。`tests/browser-local-time-card.mjs` 在修复页7项检查通过：宠物初始化后的 computed style、实际时间文本、设置弹窗避让、390×844和320×640的显示及边界。
+- 最终浏览器脚本对照基线 HTML 时，在“The initialized pet module does not remove the time card”断言处失败，实际 display=none、petEnabled=true；修复页通过。
+- 已查看1440×1000、390×844和320×640实际页面截图，时间/日期/城市/天气清楚可见，没有与开始面板重叠。截图固定了临时页面的 is-visible 展示态，目的是避免控制工具延迟错过短暂提示；不把它当作自然显示时长证据，也没有延长产品的提示时间。
+- 八秒淡出、整点/地点变化和可见性策略由已通过的 `tests/garden-environment.test.cjs` 验证。尝试过浏览器虚拟时间，但它干扰加载，已弃用；最终回归使用同一空间的新标签页和正常浏览器时间。
 
 ## 复用经验
 
