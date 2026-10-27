@@ -37,7 +37,7 @@ html=html.replace('细雨 · 轻风 · 一点点呼噜','微风 · 流水 · 一
 html=html.replace('今晚的声音，已经准备好了','花园的声音，已经准备好了')
 html=html.replace('sun:10,wind:35,rain:60,bugs:16,cat:22,water:22','sun:10,wind:35,rain:0,bugs:16,cat:22,water:35')
 html=html.replace('已经恢复为细雨、轻风和一点点呼噜。','已经恢复为微风、流水和一点点呼噜。')
-html=html.replace('<title>眠境花园 · 把时间交给风</title>','<title>眠境花园 · 3D 声景世界</title>')
+html=html.replace('<title>眠境花园 · 把时间交给风</title>','<title>眠境花园 · 3D 陪伴世界</title>')
 html=html.replace('</main>','<details class="asset-credits"><summary>素材</summary><p>猫：<a href="https://sketchfab.com/3d-models/bicolor-cat-e623a618ca344a8393d7ba4d63ec23cf" target="_blank" rel="noreferrer">Bicolor Cat / kenchoo</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>，调整比例与材质。<br>植物与石头：Kenney Nature Kit · CC0。<br>Three.js · MIT。声音：Freesound CC0 自然实录与 Lo-fi 音乐，经频段、响度与循环处理；其余环境与天气为本 Demo 自制。</p></details></main>')
 html=html.replace('猫：<a href="https://sketchfab.com/3d-models/bicolor-cat-e623a618ca344a8393d7ba4d63ec23cf" target="_blank" rel="noreferrer">Bicolor Cat / kenchoo</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>，调整比例与材质。','猫：本 Demo 原创绘本造型与程序动画。').replace('Kenney Nature Kit · CC0','Quaternius Stylized Nature MegaKit · CC0')
 # Keep new weather credits in the saved deliverable, outside the presentation UI.

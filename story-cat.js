@@ -289,14 +289,17 @@ export function createStoryCat({random=Math.random,clock=()=>performance.now()/1
     for(const l of legs){
       const phase=(l.front?0:Math.PI)+(l.side>0?Math.PI:0),step=gait+phase;
       const washing=l.front&&l.side===1?groomPaw:0;
-      const angle=walk*Math.sin(step)*.30-washing*.8+(l.front?-lying*1.05:-seated*.90-lying*1.30),lift=walk*Math.max(0,Math.sin(step))**2*.09;
+      const lift=walk*Math.max(0,Math.sin(step))**2*.09;
       const reaching=l.front?(stretch+backStretch):0;
-      l.hip.rotation.set(angle,0,0);l.hip.position.x=l.side*(.29+(l.front?0:seated*.025))-washing*.06;l.hip.position.y=.48+washing*.16-reaching*.06+(l.front?lying*.04:-seated*.18+lying*.06);l.hip.position.z=(l.front?.32:-.56)+washing*.10+(l.front?0:seated*.14);
       const cycle=((step%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
       // Hermite swing shares the stance velocity at both ends, avoiding the
       // old zero-speed swing / constant-speed stance discontinuity.
       const u=cycle/Math.PI;
       const travel=(cycle<Math.PI?-1-2*u+12*u*u-8*u*u*u:1-2*(u-1))*Math.PI/16;
+      // Aim the short leg toward its paw: a forward-reaching paw needs a
+      // forward shoulder, rather than folding the upper leg in the opposite direction.
+      const angle=-Math.atan2(walk*travel,.33-lift)-washing*.8+(l.front?-lying*1.05:-seated*.90-lying*1.30);
+      l.hip.rotation.set(angle,0,0);l.hip.position.x=l.side*(.29+(l.front?0:seated*.025))-washing*.06;l.hip.position.y=.48+washing*.16-reaching*.06+(l.front?lying*.04:-seated*.18+lying*.06);l.hip.position.z=(l.front?.32:-.56)+washing*.10+(l.front?0:seated*.14);
       const y=.15+lift-bodyRig.position.y-l.hip.position.y,z=.045+walk*travel+reaching*.14-bodyRig.position.z+(l.front?lying*.22:-seated*.04+lying*.10);
       l.foot.position.set(-bodyRig.position.x,y*Math.cos(angle)+z*Math.sin(angle),-y*Math.sin(angle)+z*Math.cos(angle));
       if(washing>.001)l.foot.position.lerp(washingPaw,washing);

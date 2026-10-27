@@ -16,7 +16,7 @@ export class GardenCompanion{
     return !(w.walkObstacles||[]).some(o=>Math.hypot(x-o.x,z-o.z)<o.radius+.32);
   }
   resetFlower(){this.flower?.userData.sway?.(0);this.flower=null;this.action=null;}
-  stop(){this.quiet=false;this.resetFlower();this.route=[];this.managed=true;this.phase='idle';this.elapsed=0;this.autonomous=false;this.showMarker=false;if(this.marker)this.marker.visible=false;}
+  stop(){this.speed=0;this.quiet=false;this.resetFlower();this.route=[];this.managed=true;this.phase='idle';this.elapsed=0;this.autonomous=false;this.showMarker=false;if(this.marker)this.marker.visible=false;}
   rest(){this.stop();this.quiet=true;}
   routeTo(point){return findRoute(this.world.cat.position,point,(x,z)=>this.walkable(x,z));}
   goTo(point){
@@ -66,22 +66,27 @@ export class GardenCompanion{
     if(!this.managed)return false;
     const w=this.world,cat=w.cat;
     w.catMoving=false;
-    if(hold)return true;
+    if(hold){this.speed=0;return true;}
     this.elapsed+=dt;
     if(this.phase==='idle'&&!this.quiet&&this.elapsed>=5&&!w.state.reduced)this.startRoaming();
     if(this.phase==='walking'||this.phase==='roaming'){
-      let budget=dt*(this.autonomous?(w.state.reduced?0:.64):1.65);
+      let remaining=0,previous=cat.position;
+      for(const point of this.route){remaining+=Math.hypot(point.x-previous.x,point.z-previous.z);previous=point;}
+      const cruise=this.autonomous?(w.state.reduced?0:.64):1.65;
+      const targetSpeed=Math.min(cruise,Math.sqrt(2*3.4*remaining));
+      this.speed=T.MathUtils.damp(this.speed||0,targetSpeed,7,dt);
+      let budget=dt*this.speed;
       while(budget>0&&this.route.length){
         const next=this.route[0],dx=next.x-cat.position.x,dz=next.z-cat.position.z,distance=Math.hypot(dx,dz);
         if(distance<.001){this.route.shift();continue;}
         const step=Math.min(distance,budget),x=cat.position.x+dx/distance*step,z=cat.position.z+dz/distance*step;
         if(!this.walkable(x,z)){this.route=[];this.resetFlower();budget=0;break;}
         cat.position.x=x;cat.position.z=z;budget-=step;
-        const yaw=Math.atan2(dx,dz),difference=Math.atan2(Math.sin(yaw-cat.rotation.y),Math.cos(yaw-cat.rotation.y));cat.rotation.y+=difference*Math.min(1,dt*12);
+        const yaw=Math.atan2(dx,dz),difference=Math.atan2(Math.sin(yaw-cat.rotation.y),Math.cos(yaw-cat.rotation.y));cat.rotation.y+=difference*(1-Math.exp(-dt*9));
         w.catMoving=true;if(step>=distance)this.route.shift();
       }
       cat.position.y=w.groundHeight(cat.position.x,cat.position.z);
-      if(!this.route.length){this.phase=this.flower?'interacting':'idle';this.elapsed=0;w.catMoving=false;if(this.flower)w.onCatInteraction?.(this.action);}
+      if(!this.route.length){this.speed=0;this.phase=this.flower?'interacting':'idle';this.elapsed=0;w.catMoving=false;if(this.flower)w.onCatInteraction?.(this.action);}
     }
     if(this.phase==='interacting'){
       const dx=this.flower.position.x-cat.position.x,dz=this.flower.position.z-cat.position.z;

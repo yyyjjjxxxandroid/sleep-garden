@@ -3,6 +3,7 @@
 
 .companion-overlay{position:absolute;inset:0;z-index:70;display:flex;align-items:flex-end;justify-content:center;padding:20px;background:#182e3469;backdrop-filter:blur(5px);color:#344e42}
 .companion-overlay[hidden],.companion-overlay [hidden]{display:none!important}
+.companion-launch[hidden]{display:none!important}
 .companion-sheet{display:flex;flex-direction:column;width:min(440px,100%);max-height:calc(100% - 12px);padding:20px;border:1px solid #ffffe7a8;border-radius:28px;background:#f1f2e8f7;box-shadow:0 14px 65px #142b3240;overflow:auto;overscroll-behavior:contain}
 .companion-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.companion-head h2{margin:0;font-family:'Songti SC',serif;font-size:23px;font-weight:400;letter-spacing:2px}.companion-head small{display:block;margin-top:5px;font-size:10px;letter-spacing:1px;color:#7b8774}.companion-head button{min-width:44px;min-height:44px;border:1px solid #a7b79b66;border-radius:50%;font-size:23px;color:#4f6552}
 .companion-status{margin:12px 0 8px;min-height:17px;font-size:11px;line-height:1.6;color:#68806a}

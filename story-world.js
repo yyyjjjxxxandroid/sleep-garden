@@ -599,7 +599,10 @@ class StoryWorld extends BaseWorld{
     const support=this.petCare?.supportHeight||0;
     this.petSupport=T.MathUtils.damp(this.petSupport||0,support,8,dt);
     this.cat.position.y=this.groundHeight(this.cat.position.x,this.cat.position.z)+this.petSupport;
-    const distance=before.distanceTo(this.cat.position);this.catSpeed=dt?distance/dt:0;this.catDistance+=distance;
+    // Foot cycles follow horizontal travel in the cat's own scale. Vertical
+    // bedding/terrain adjustment must not make a standing cat march in place.
+    const distance=Math.hypot(this.cat.position.x-before.x,this.cat.position.z-before.z);this.catSpeed=dt?distance/dt:0;this.catDistance+=distance;
+    this.catStride=(this.catStride||0)+distance*8/Math.max(.01,this.cat.scale.x);
     this.canvas.dataset.catPosition=`${this.cat.position.x.toFixed(2)},${this.cat.position.z.toFixed(2)}`;
   }
   updateCatContext(){
@@ -644,7 +647,7 @@ class StoryWorld extends BaseWorld{
       this.chimeTubes.forEach((tube,i)=>tube.rotation.z=Math.sin(t*1.8+i*1.7)*w*.1);
       this.chimeContact=Math.floor(t*(.14+w*.56));
     }
-    if(this.cat)this.cat.userData.turning=0;if(this.catContact){this.catContact.position.copy(this.cat.position);this.catContact.position.y+=.013;this.catContact.rotation.z=-this.cat.rotation.y}if(this.storyCat){this.updateCatContext();const moving=this.catSpeed>.025&&!this.cat.userData.contact;this.storyCat.animate(t,moving,this.state.wind/100,!moving,dt,this.state.reduced,this.catDistance*8,this.petCare?.pose||this.companion?.pose||(['walking','roaming'].includes(this.companion?.phase)?{action:'walk',time:0}:null));this.canvas.dataset.catPose=this.cat.userData.pose;this.canvas.dataset.catExpression=this.cat.userData.expression;this.canvas.dataset.petCount=String(this.cat.userData.petCount||0);this.canvas.dataset.petting=String(this.cat.userData.petting);this.canvas.dataset.catReaction=this.cat.userData.reactionName||'';this.canvas.dataset.catAction=this.cat.userData.idleAction||'rest';this.canvas.dataset.catRest=this.cat.userData.nightRest?'sleeping':this.cat.userData.companionPhase;this.canvas.dataset.catEnvironment=this.cat.userData.environmentReaction||''}
+    if(this.cat)this.cat.userData.turning=0;if(this.catContact){this.catContact.position.copy(this.cat.position);this.catContact.position.y+=.013;this.catContact.rotation.z=-this.cat.rotation.y}if(this.storyCat){this.updateCatContext();const moving=this.catSpeed>.025&&!this.cat.userData.contact;this.storyCat.animate(t,moving,this.state.wind/100,!moving,dt,this.state.reduced,this.catStride||0,this.petCare?.pose||this.companion?.pose||(['walking','roaming'].includes(this.companion?.phase)?{action:'walk',time:0}:null));this.canvas.dataset.catPose=this.cat.userData.pose;this.canvas.dataset.catExpression=this.cat.userData.expression;this.canvas.dataset.petCount=String(this.cat.userData.petCount||0);this.canvas.dataset.petting=String(this.cat.userData.petting);this.canvas.dataset.catReaction=this.cat.userData.reactionName||'';this.canvas.dataset.catAction=this.cat.userData.idleAction||'rest';this.canvas.dataset.catRest=this.cat.userData.nightRest?'sleeping':this.cat.userData.companionPhase;this.canvas.dataset.catEnvironment=this.cat.userData.environmentReaction||''}
     if(this.cat&&!this.state.night&&t-(this.lastCatNatureNotice||0)>16){
       const butterfly=this.butterflies?.find(b=>b.group.visible&&b.group.position.distanceTo(this.cat.position)<4);
       if(butterfly&&this.catNotice('butterfly',butterfly.group.position))this.lastCatNatureNotice=t;
