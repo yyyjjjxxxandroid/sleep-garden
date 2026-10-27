@@ -24,7 +24,7 @@
 .pet-launcher svg{width:34px;height:34px}.pet-launcher[data-unread=true]::after,.pet-launcher[data-notice=true]::after{content:'';position:absolute;right:2px;top:3px;width:7px;height:7px;border-radius:50%;background:#c6a477;border:2px solid #f3f2e5}
 .pet-life-enabled .topbar{left:80px;right:18px}
 @media(max-width:380px){.pet-launcher{left:12px;width:44px;height:44px}.pet-life-enabled .topbar{left:66px;right:12px}.pet-life-enabled .top-actions{gap:4px}.pet-life-enabled .top-actions .round,.pet-life-enabled .top-actions .pill{width:44px;height:44px;min-height:44px;padding:0}.pet-life-enabled .top-actions .city-trigger{width:64px;min-width:64px;font-size:11px}}
-.pet-life-enabled .local-environment{display:none}.city-open .pet-launcher,.resting .pet-launcher{display:none}
+.city-open .pet-launcher,.resting .pet-launcher{display:none}
 .pet-life-enabled #controls.is-collapsed{left:auto;right:16px;transform:none}
 .pet-launcher[hidden]{display:none!important}
 .pet-card-grid.pet-hub-grid{grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:16px}.pet-hub-grid .pet-card{min-height:106px;flex-direction:row;gap:12px}.pet-hub-grid .pet-card svg{width:44px;height:44px}.pet-hub-grid .pet-card small{display:none}
