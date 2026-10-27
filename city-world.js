@@ -42,10 +42,10 @@ function detailedNatureAsset(template,height,width=1){
 // Movement is independent from the camera and audio clocks. Route clearance is
 // checked for the entire segment, so actors cannot cut through stones or water.
 export class CityCompanions {
-  constructor({onMessage=()=>{},reduced=false,walkable=cityWalkable,floor=CITY_FLOOR,start={x:.15,z:6.5},routeBound=44}={}){
+  constructor({onMessage=()=>{},reduced=false,quality='high',walkable=cityWalkable,floor=CITY_FLOOR,start={x:.15,z:6.5},routeBound=44}={}){
     this.onMessage=onMessage;this.reduced=reduced;this.time=0;this.idle=0;this.playing=false;
     this.walkable=walkable;this.floor=floor;this.start=start;this.routeBound=routeBound;
-    this.person=createCityPerson();this.kitten=createStoryCat({clock:()=>this.time});
+    this.person=createCityPerson();this.kitten=createStoryCat({clock:()=>this.time,quality});
     this.human=this.person.root;this.cat=this.kitten.root;this.cat.scale.setScalar(.38);
     this.human.name='city-person';this.cat.name='city-kitten';
     this.human.position.set(start.x,floor,start.z);this.cat.position.set(start.x-.85,floor,start.z+.5);
@@ -163,7 +163,7 @@ export class CityWorld {
     this.scenery.water.getRenderTarget().setSize(this.renderProfile.reflectionSize,this.renderProfile.reflectionSize);
     this.scenery.water.userData.reflectionInterval=this.renderProfile.reflectionInterval/1000;
     this.setMood(defaultCityMood(city),true);this.hideProceduralNature();this.batchStonework();this.installDetailedNature();
-    this.actors=new CityCompanions({onMessage,reduced:this.reduced,walkable:this.city.walkable,floor:this.city.floor,start:this.city.start,routeBound:city==='quanzhou'?70:44});this.scene.add(this.actors.human,this.actors.cat);
+    this.actors=new CityCompanions({onMessage,reduced:this.reduced,quality:this.renderProfile.quality,walkable:this.city.walkable,floor:this.city.floor,start:this.city.start,routeBound:city==='quanzhou'?70:44});this.scene.add(this.actors.human,this.actors.cat);
     this.marker=new T.Mesh(new T.RingGeometry(.25,.31,40),new T.MeshBasicMaterial({color:'#fff1b8',side:T.DoubleSide,transparent:true,opacity:.8,depthWrite:false}));this.marker.rotation.x=-Math.PI/2;this.marker.position.y=this.city.floor+.025;this.marker.visible=false;this.marker.userData.skipWaterReflection=true;this.scene.add(this.marker);
     this.ray=new T.Raycaster();this.pointer=new T.Vector2();this.gesture=new TapGesture();
     this.bindPicking();this.resizeObserver=new ResizeObserver(()=>this.resize());this.resizeObserver.observe(host);

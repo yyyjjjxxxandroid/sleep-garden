@@ -50,6 +50,18 @@ try{
     check(await page.locator('.city-3d-canvas').evaluate(c=>{const r=c.getBoundingClientRect();return r.width>0&&r.height>0&&r.left>=-1&&r.right<=innerWidth+1;}),`city canvas fits ${width}x${height}`);
     await shot('city-'+width);
   }
+  await page.setViewportSize({width:390,height:844});
+  for(const city of ['guangzhou','shenzhen']){
+    await page.locator('#cityBackButton').tap();
+    await page.locator(`[data-city-choice="${city}"]`).tap();
+    await page.locator('#cityLocateButton').tap();
+    await page.waitForFunction(city=>CityPrototype.world?.active&&CityPrototype.world.cityId===city,city);
+    await page.waitForFunction(()=>CityPrototype.world.canvas.dataset.nature==='textured-quaternius');
+    check(await page.evaluate(()=>!CityPrototype.world.renderer.shadowMap.enabled&&CityPrototype.world.renderer.getPixelRatio()<=1),`${city} uses the phone rendering budget`);
+    check(await page.evaluate(()=>CityPrototype.world.actors.goTo({x:0,z:4})),`${city} walkable path remains reachable`);
+    await page.waitForFunction(()=>Math.abs(CityPrototype.world.actors.human.position.z-4)<.1,{},{timeout:12000});
+    await shot(city+'-390');
+  }
   check(errors.length===0,'no browser exceptions');
   await writeFile('build/product-qa/mobile-results.json',JSON.stringify({checks,errors},null,2));
   console.log(JSON.stringify({passed:checks.length,checks,errors},null,2));

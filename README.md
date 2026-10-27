@@ -84,6 +84,15 @@ Responses 接口用 `AI_WIRE_API=responses`；兼容 Chat Completions 的平台�
 
 ## 修改源码后重新构建（开发者使用）
 
+手机端采用独立渲染预算：最高 1 倍像素比、关闭实时阴影与抗锯齿、水面倒影最多每 100ms 更新一次。连续慢帧会逐步降低渲染分辨率，稳定后再缓慢恢复。花园静态模型按空间分区合批并裁剪，远处植物自动切换低模，靠近恢复原模型；花园与城市小猫共用手机毛发预算，保留骨骼动作和换肤。桌面继续按设备性能选择画质。
+
+自然模型修改后，先离线生成远景低模，再构建，避免在手机动画线程上进行减面：
+
+```bash
+node scripts/build-nature-lod.mjs
+npm run build
+```
+
 修改源码后，使用 Node.js、esbuild 和 Python 3 重新生成 `index.html`：
 
 ```bash
@@ -101,6 +110,8 @@ python3 scripts/check_audio_assets.py
 ## 测试与验收
 
 第二轮修复、浏览器回归方法与验证边界见 [测试与优化记录](./测试与优化记录.md)。
+
+手机性能验证见 [手机性能优化记录](./docs/mobile-performance.md)。`tests/browser-performance.mjs` 检查花园及三座城市的静止/转动负载；`tests/browser-mobile.mjs` 检查触屏旋转、缩放、点击移动及屏幕布局。浏览器模拟的 FPS 不等于真手机帧率。
 
 ## 协作
 

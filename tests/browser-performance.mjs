@@ -39,11 +39,12 @@ async function measure(name,orbit=false){
     world.measurePerformance=false;world.controls.autoRotate=false;
     const samples=world.performanceSamples,mean=key=>samples.reduce((sum,sample)=>sum+sample[key],0)/Math.max(1,samples.length);
     const intervals=samples.slice(1).map((sample,i)=>sample.at-samples[i].at).sort((a,b)=>a-b);
+    const gl=world.renderer.getContext(),debug=gl.getExtension('WEBGL_debug_renderer_info');
     return {frames:samples.length,fps:samples.length>1?(samples.length-1)*1000/(samples.at(-1).at-samples[0].at):0,
       renderMs:mean('cpu'),drawCalls:mean('calls'),triangles:mean('triangles'),p95FrameMs:intervals[Math.floor(intervals.length*.95)]||0,
       pixelRatio:world.renderer.getPixelRatio(),shadows:world.renderer.shadowMap.enabled,
       reflectionSize:world.scenery?.water?.getRenderTarget().width,
-      gpu:world.renderer.getContext().getParameter(world.renderer.getContext().RENDERER)};
+      gpu:gl.getParameter(debug?debug.UNMASKED_RENDERER_WEBGL:gl.RENDERER)};
   },name);
   const scenario={scene:name==='GardenWorld'?'garden':await page.evaluate(()=>CityPrototype.world.cityId),orbit,...report};
   results.scenarios.push(scenario);console.log(JSON.stringify(scenario));
@@ -51,14 +52,25 @@ async function measure(name,orbit=false){
 try{
   await page.goto(process.env.GARDEN_URL||'http://127.0.0.1:8770/index.html');
   await page.waitForSelector('.garden-3d[data-ready="true"]',{timeout:90000});
+  await mkdir('build/product-qa',{recursive:true});
   await page.waitForTimeout(2000);
   await measure('GardenWorld');await measure('GardenWorld',true);
+  await page.screenshot({path:`build/product-qa/performance-${results.label}-garden.png`});
   await page.locator('#cityButton').tap();await page.locator('#cityLocateButton').tap();
   await page.waitForFunction(()=>window.CityPrototype?.world?.active);
   await page.waitForTimeout(2000);
   await measure('CityWorld');await measure('CityWorld',true);
-  await mkdir('build/product-qa',{recursive:true});
   await page.screenshot({path:`build/product-qa/performance-${results.label}.png`});
+  for(const city of ['guangzhou','shenzhen']){
+    await page.locator('#cityBackButton').tap();
+    await page.locator(`[data-city-choice="${city}"]`).tap();
+    await page.locator('#cityLocateButton').tap();
+    await page.waitForFunction(city=>CityPrototype.world?.active&&CityPrototype.world.cityId===city,city);
+    await page.waitForFunction(()=>CityPrototype.world.canvas.dataset.nature==='textured-quaternius');
+    await page.waitForTimeout(2000);
+    await measure('CityWorld');await measure('CityWorld',true);
+    await page.screenshot({path:`build/product-qa/performance-${results.label}-${city}.png`});
+  }
   await writeFile(`build/product-qa/performance-${results.label}.json`,JSON.stringify(results,null,2));
   if(errors.length)throw Error(errors.join('\n'));
 }finally{await context.close();await browser.close();}
