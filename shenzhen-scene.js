@@ -10,8 +10,9 @@ const obstacles=[{x:0,z:-11.5,hx:1.7,hz:1.05},{x:-4.65,z:-7,hx:1.05,hz:.58},{x:4
 // visible from the opening camera; navigation excludes every piece of furniture.
 export function shenzhenWalkable(x,z,radius=.32){
   const plaza=x>-6.45+radius&&x<6.45-radius&&z>-3.8+radius&&z<12-radius;
-  const boardwalk=x>-6.45+radius&&x<6.45-radius&&z>=-39+radius&&z<=-3.25-radius;
-  if(!plaza&&!boardwalk)return false;
+  const boardwalk=x>-6.45+radius&&x<6.45-radius&&z>=-39+radius&&z<=-3.2;
+  const turningDeck=x>5.15+radius&&x<10.2-radius&&z>=-39.8+radius&&z<-34.6-radius;
+  if(!plaza&&!boardwalk&&!turningDeck)return false;
   return !obstacles.some(o=>o.r?Math.hypot(x-o.x,z-o.z)<o.r+radius:Math.abs(x-o.x)<o.hx+radius&&Math.abs(z-o.z)<o.hz+radius);
 }
 
@@ -28,8 +29,16 @@ export function buildShenzhenScene(){
   box(17.2,2.25,58,bankEarth,2,-1.27,-13.2,bayPark).name='shenzhen-waterfront-promenade-foundation';
   box(3.6,.16,51.5,parkPaving,8.15,-.01,-13.2,bayPark).name='shenzhen-near-bank-promenade';
   box(.30,.52,51.5,stone,-6.44,-.08,-13.2,bayPark).name='shenzhen-bay-retaining-edge';
-  walk(box(12.9,.46,16.1,wood,0,-.17,4),'shenzhen-bay-arrival-deck');
+  // Stop at the exact head of the long deck so the two base plates meet
+  // cleanly instead of occupying the same 0.9m strip of the boardwalk.
+  walk(box(12.9,.46,15.2,wood,0,-.17,4.45),'shenzhen-bay-arrival-deck');
   walk(box(12.9,.48,36.3,wood,0,-.18,-21.3),'shenzhen-bay-continuous-boardwalk');
+  // The long deck ends in a deliberate turning platform and opens onto the
+  // shore promenade. It should read as one waterfront route, not a cut bridge.
+  const connector=walk(box(5.25,.48,5.25,wood,7.58,-.18,-37.18),'shenzhen-boardwalk-promenade-connector');
+  connector.userData.cityRouteConnection=true;
+  const shoreThreshold=walk(box(3.75,.22,3.15,parkPaving,8.15,-.08,-33.85),'shenzhen-boardwalk-shore-threshold');
+  shoreThreshold.userData.cityRouteConnection=true;
   const planks=new T.InstancedMesh(new T.BoxGeometry(1,1,1),woodLight,294),d=new T.Object3D();let count=0;
   for(let row=0;row<42;row++)for(let col=0;col<7;col++){d.position.set(-5.48+col*1.82,.075,11.3-row*1.2);d.scale.set(1.69,.065,1.1);d.rotation.y=((row+col)%3-1)*.006;d.updateMatrix();planks.setMatrixAt(count,d.matrix);planks.setColorAt(count,new T.Color('#c3a37c').lerp(new T.Color('#735c49'),((row*7+col*13)%9)/22));count++;}
   planks.count=count;planks.name='shenzhen-bay-timber-planks';planks.receiveShadow=true;root.add(planks);walkSurfaces.push(planks);
@@ -51,9 +60,13 @@ export function buildShenzhenScene(){
   for(let row=0;row<42;row++)for(const x of [-5.64,5.64]){d.position.set(x,.145,11.3-row*1.2);d.scale.setScalar(1);d.rotation.set(0,0,0);d.updateMatrix();fasteners.setMatrixAt(fastener++,d.matrix);}fasteners.name='shenzhen-deck-fasteners';root.add(fasteners);
   const deckInlays=new T.Group();deckInlays.name='shenzhen-boardwalk-cross-inlays';root.add(deckInlays);
   for(let z=8.8;z>-38;z-=6.0){const band=box(11.35,.025,.075,steel,0,.145,z,deckInlays);band.castShadow=false;for(const x of [-4.7,0,4.7]){const light=box(.36,.018,.13,z%12>0?warm:cyan,x,.165,z,deckInlays);light.castShadow=false;lights.push(light.material);}}
-  const parkEdge=new T.Group();parkEdge.name='shenzhen-promenade-edge';root.add(parkEdge);box(.28,.30,51,stone,6.42,.02,-13.2,parkEdge);
-  const drainage=new T.Group();drainage.name='shenzhen-boardwalk-drainage-detail';root.add(drainage);box(.24,.025,50.7,steel,5.96,.13,-13.1,drainage);
-  for(let z=10.8;z>-38;z-=.42){const slot=box(.18,.014,.12,new T.MeshStandardMaterial({color:'#34413d',roughness:.9,metalness:.12}),5.96,.151,z,drainage);slot.castShadow=false;}
+  const connectorPlanks=new T.Group();connectorPlanks.name='shenzhen-turning-platform-planks';root.add(connectorPlanks);
+  for(let z=-39.25;z<-34.7;z+=.62)for(let x=5.35;x<10;x+=1.12){const plank=box(1.02,.06,.54,woodLight,x,.075,z,connectorPlanks);plank.castShadow=false;}
+  const thresholdSeams=new T.Group();thresholdSeams.name='shenzhen-shore-threshold-seams';root.add(thresholdSeams);
+  for(const z of [-35.05,-34.25,-33.45]){const seam=box(3.18,.018,.055,steel,8.15,.045,z,thresholdSeams);seam.castShadow=false;}
+  const parkEdge=new T.Group();parkEdge.name='shenzhen-promenade-edge';root.add(parkEdge);box(.28,.30,47.2,stone,6.42,.02,-11.3,parkEdge);
+  const drainage=new T.Group();drainage.name='shenzhen-boardwalk-drainage-detail';root.add(drainage);box(.24,.025,46.9,steel,5.96,.13,-11.2,drainage);
+  for(let z=10.8;z>-34.7;z-=.42){const slot=box(.18,.014,.12,new T.MeshStandardMaterial({color:'#34413d',roughness:.9,metalness:.12}),5.96,.151,z,drainage);slot.castShadow=false;}
   const plantDummy=new T.Object3D();
   const promenadeLights=new T.Group();promenadeLights.name='shenzhen-near-bank-bollard-lights';bayPark.add(promenadeLights);
   for(let z=7;z>-38;z-=9){box(.12,.72,.12,steel,8.05,.37,z,promenadeLights);const lamp=mesh(new T.SphereGeometry(.12,10,8),warm,8.05,.78,z,promenadeLights);lamp.castShadow=false;lights.push(lamp.material);}
@@ -129,6 +142,6 @@ export function buildShenzhenScene(){
   for(let i=0;i<130;i++){const side=i%2?-1:1,x=side*(8.1+(i*29%29)*.72),z=7-(i*23%63),s=.032+(i%7)*.013;plantDummy.position.set(x,-1.116+(i%4)*.004,z);plantDummy.rotation.set(-Math.PI/2,0,i*.91);plantDummy.scale.set(s,s*.72,1);plantDummy.updateMatrix();duckweed.setMatrixAt(i,plantDummy.matrix);duckweed.setColorAt(i,new T.Color('#667957').lerp(new T.Color('#9fa981'),(i%9)/12));}duckweed.userData.skipWaterReflection=true;duckweed.castShadow=false;
   const reflections=new T.Group();reflections.name='shenzhen-bay-broken-light-reflections';root.add(reflections);for(let i=0;i<96;i++){const side=i%2?-1:1,x=side*(7.1+(i*11%18)*.62),z=8-(i*13%74),length=.22+(i%8)*.13,material=glow(i%5===0?'#e8c895':'#b9d1bf');material.transparent=true;material.opacity=.07+(i%4)*.018;const line=box(.035+(i%3)*.018,.009,length,material,x,-1.155,z,reflections);line.userData.skipWaterReflection=true;lights.push(material);}
 
-  const sky=createCitySky('night'),skyMat=sky.material;root.add(sky);
+  const sky=createCitySky('dusk'),skyMat=sky.material;root.add(sky);
   return {root,walkSurfaces,water,update(time){water.material.uniforms.time.value=time;skyMat.uniforms.time.value=time;lights.forEach((m,i)=>m.emissiveIntensity=.68+.16*Math.sin(time*.72+i*.51));boats.forEach((boat,i)=>{boat.position.y=-1.03+Math.sin(time*.62+i)*.035;boat.position.x+=Math.sin(time*.11+i)*.0015;boat.rotation.z=Math.sin(time*.39+i)*.01;});}};
 }

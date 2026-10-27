@@ -131,7 +131,7 @@ export class CityWorld {
     this.host=host;this.onMessage=onMessage;this.onView=onView;this.onError=onError;
     // 默认镜头以滨水步道为前景，让人物、小猫和城市地标同时进入画面。
     // 旧镜头从停车带后方俯拍，首屏会被大块空地占掉，地标也容易被截在屏幕边缘。
-    this.cityId=city;this.city=city==='shenzhen'?{build:buildShenzhenScene,walkable:shenzhenWalkable,floor:SHENZHEN_FLOOR,start:{x:0,z:7},destination:{x:0,z:-19},bounds:{x:32,zMin:-116,zMax:15},presets:CITY_VIEWS.shenzhen}:city==='guangzhou'?{build:buildGuangzhouScene,walkable:guangzhouWalkable,floor:GUANGZHOU_FLOOR,start:{x:0,z:7},destination:{x:0,z:-19},bounds:{x:34,zMin:-96,zMax:15},presets:CITY_VIEWS.guangzhou}:{build:buildCityScene,walkable:cityWalkable,floor:CITY_FLOOR,start:{x:.15,z:6.5},destination:{x:0,z:-12},bounds:{x:18,zMin:-68,zMax:15},presets:null};
+    this.cityId=city;this.city=city==='shenzhen'?{build:buildShenzhenScene,walkable:shenzhenWalkable,floor:SHENZHEN_FLOOR,start:{x:0,z:7},destination:{x:8.0,z:-36.7},bounds:{x:32,zMin:-116,zMax:15},presets:CITY_VIEWS.shenzhen}:city==='guangzhou'?{build:buildGuangzhouScene,walkable:guangzhouWalkable,floor:GUANGZHOU_FLOOR,start:{x:0,z:7},destination:{x:10.1,z:-37.2},bounds:{x:34,zMin:-96,zMax:15},presets:CITY_VIEWS.guangzhou}:{build:buildCityScene,walkable:cityWalkable,floor:CITY_FLOOR,start:{x:.15,z:6.5},destination:{x:0,z:-12},bounds:{x:18,zMin:-68,zMax:15},presets:null};
     this.active=false;this.last=0;this.time=0;this.frame=0;this.follow=false;this.disposed=false;this.listeners=[];
     this.reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches||false;
     // Keep stone close and tangible; let the town recede into estuary air.
@@ -163,7 +163,7 @@ export class CityWorld {
     this.scenery.water.getRenderTarget().setSize(this.renderProfile.reflectionSize,this.renderProfile.reflectionSize);
     this.scenery.water.userData.reflectionInterval=this.renderProfile.reflectionInterval/1000;
     this.setMood(defaultCityMood(city),true);this.hideProceduralNature();this.batchStonework();this.installDetailedNature();
-    this.actors=new CityCompanions({onMessage,reduced:this.reduced,quality:this.renderProfile.quality,walkable:this.city.walkable,floor:this.city.floor,start:this.city.start,routeBound:city==='quanzhou'?70:44});this.scene.add(this.actors.human,this.actors.cat);
+    this.actors=new CityCompanions({onMessage,reduced:this.reduced,quality:this.renderProfile.quality,walkable:this.city.walkable,floor:this.city.floor,start:this.city.start,routeBound:city==='quanzhou'?70:58});this.scene.add(this.actors.human,this.actors.cat);
     this.marker=new T.Mesh(new T.RingGeometry(.25,.31,40),new T.MeshBasicMaterial({color:'#fff1b8',side:T.DoubleSide,transparent:true,opacity:.8,depthWrite:false}));this.marker.rotation.x=-Math.PI/2;this.marker.position.y=this.city.floor+.025;this.marker.visible=false;this.marker.userData.skipWaterReflection=true;this.scene.add(this.marker);
     this.ray=new T.Raycaster();this.pointer=new T.Vector2();this.gesture=new TapGesture();
     this.bindPicking();this.resizeObserver=new ResizeObserver(()=>this.resize());this.resizeObserver.observe(host);

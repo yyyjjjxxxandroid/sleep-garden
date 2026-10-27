@@ -17,7 +17,7 @@ export const CITY_OBSTACLES=[
 // the river, the monument plinth and banyan roots cannot become destinations.
 export function cityWalkable(x,z,radius=.32){
   const plaza=x>-8+radius&&x<8-radius&&z>-4+radius&&z<12-radius;
-  const bridge=Math.abs(x)<2.25-radius&&z>=-40+radius&&z<=-3.4;
+  const bridge=Math.abs(x)<2.25-radius&&z>=-40+radius&&z<=-3.2;
   const farLanding=Math.abs(x)<5.7-radius&&z>=-43.5+radius&&z<-39.6;
   const villageApproach=Math.abs(x)<2.25-radius&&z>=-65+radius&&z<-43.2;
   if(!plaza&&!bridge&&!farLanding&&!villageApproach)return false;
@@ -249,6 +249,22 @@ export function buildCityScene({text=true}={}){
   const farEarth=box(150,4.8,29,new T.MeshStandardMaterial({color:'#626652',roughness:1}),0,-2.46,-54.3,farShore);farEarth.name='solid-northern-riverbank';
   const farLanding=box(11.4,.22,8.6,lightStone,0,-.055,-43.9,farShore);farLanding.name='northern-stone-bridge-landing';walkSurfaces.push(farLanding);
   const villagePath=box(4.5,.18,17.2,stone,0,-.035,-56.7,farShore);villagePath.name='northern-village-approach-path';
+  // Give the bridge a readable arrival sequence: landing, shallow steps and a
+  // planted village edge. This hides the hard seam where the bridge meets the
+  // otherwise broad northern riverbank.
+  const landingGarden=new T.Group();landingGarden.name='northern-landing-garden';farShore.add(landingGarden);
+  const landingStepMaterial=stoneMaterial('#8d907d');
+  for(const [width,depth,z,y] of [[8.6,.72,-48.45,.02],[7.1,.72,-49.20,-.015],[5.8,.72,-49.95,-.05]]){
+    const step=box(width,.16,depth,landingStepMaterial,0,y,z,landingGarden);step.name='northern-landing-step';
+  }
+  const landingGreen=new T.MeshStandardMaterial({color:'#65785d',roughness:1});
+  for(const [x,z,s] of [[-5.2,-49.5,1.15],[5.2,-49.5,1.05],[-4.4,-53.2,.85],[4.4,-53.2,.92]]){
+    const shrub=mesh(new T.IcosahedronGeometry(1,1),landingGreen,x,-.10,z,landingGarden);shrub.name='northern-landing-shrub';shrub.scale.set(s,.58*s,s*.82);
+  }
+  const landingGate=new T.Group();landingGate.name='northern-village-gate';landingGate.position.set(0,0,-51.0);farShore.add(landingGate);
+  for(const x of [-2.15,2.15])box(.24,1.75,.28,lightStone,x,.78,0,landingGate);
+  box(4.8,.20,.34,darkStone,0,1.67,0,landingGate);
+  mesh(new T.ConeGeometry(2.7,.62,4),new T.MeshStandardMaterial({color:'#9b745e',roughness:.92}),0,2.08,0,landingGate).rotation.y=Math.PI/4;
   for(const side of [-1,1]){
     box(69,1.72,.62,darkStone,side*40.2,-.91,-40.1,farShore);
     box(69,.18,.82,lightStone,side*40.2,-.01,-40.1,farShore);

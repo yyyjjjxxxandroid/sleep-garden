@@ -1,4 +1,25 @@
 /* All pet features share one quiet top-left entry. */
+.pet-life-enabled .topbar{top:max(22px,env(safe-area-inset-top));justify-content:flex-end}
+.pet-life-enabled .top-actions{align-items:center;gap:8px}
+.pet-life-enabled .top-actions #dayToggle[hidden]{display:none!important}
+.pet-life-enabled .top-actions #environmentButton{display:flex;align-items:center;justify-content:center;gap:6px;min-width:72px;width:auto;height:48px;min-height:48px;padding:0 13px}
+#environmentButton svg{width:20px;height:20px}
+#environmentButton span{display:inline!important;font-size:12px}
+.daylight-row{justify-content:flex-end;margin:0 0 12px}
+.daylight-row button{min-height:44px;padding:0 16px;border:1px solid #81977455;border-radius:24px}
+#petCareOverlay.pet-hub .pet-card-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#petCareOverlay.pet-hub .pet-card{min-height:90px;padding:12px;grid-template-columns:48px 1fr}
+#petCareOverlay.pet-hub .pet-card-visual{width:48px;height:48px}
+#petCareOverlay.pet-hub .pet-card strong{font-size:14px}
+.companion-options{flex:none;margin-top:10px;color:#6e8067;font-size:11px}
+.companion-options summary{min-height:36px;display:flex;align-items:center;cursor:pointer}
+.companion-options summary::after{content:'⌄';margin-left:6px}
+.companion-options[open] summary::after{content:'⌃'}
+.companion-sheet{height:min(65svh,580px)}
+.companion-sheet .companion-log{max-height:none}
+.companion-sheet .companion-suggestions{flex-wrap:nowrap;overflow-x:auto;flex-shrink:0}
+.companion-suggestions button{white-space:nowrap}
+.companion-options summary:focus-visible{outline:2px solid #a68b52;outline-offset:2px}
 .pet-launcher{position:absolute;z-index:8;top:max(22px,env(safe-area-inset-top));left:18px;width:48px;height:48px;background:#f3f2e5de;color:#365348;border:1px solid #ffffff65;backdrop-filter:blur(12px);display:grid;place-items:center}
 .pet-launcher svg{width:34px;height:34px}.pet-launcher[data-unread=true]::after,.pet-launcher[data-notice=true]::after{content:'';position:absolute;right:2px;top:3px;width:7px;height:7px;border-radius:50%;background:#c6a477;border:2px solid #f3f2e5}
 .pet-life-enabled .topbar{left:80px;right:18px}

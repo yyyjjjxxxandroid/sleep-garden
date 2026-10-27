@@ -10,8 +10,9 @@ const obstacles=[{x:0,z:-10.4,hx:1.55,hz:1.28},{x:-6.8,z:-6.1,hx:1.16,hz:.66},{x
 // 人物只在可见铺装上行走；树池、观景亭、灯柱和珠江水面均不接受导航终点。
 export function guangzhouWalkable(x,z,radius=.32){
   const plaza=x>-9.2+radius&&x<9.2-radius&&z>-3.8+radius&&z<12-radius;
-  const promenade=x>-9.2+radius&&x<9.2-radius&&z>=-39+radius&&z<=-3.25-radius;
-  if(!plaza&&!promenade)return false;
+  const promenade=x>-9.2+radius&&x<9.2-radius&&z>=-39+radius&&z<=-3.2;
+  const turningPlaza=x>4.65+radius&&x<15.0-radius&&z>-40.4+radius&&z<-34.55-radius;
+  if(!plaza&&!promenade&&!turningPlaza)return false;
   return !obstacles.some(o=>o.r?Math.hypot(x-o.x,z-o.z)<o.r+radius:Math.abs(x-o.x)<o.hx+radius&&Math.abs(z-o.z)<o.hz+radius);
 }
 
@@ -31,6 +32,14 @@ export function buildGuangzhouScene(){
   for(let z=9;z>-38;z-=5.4){box(.07,.025,1.6,new T.MeshStandardMaterial({color:'#d1c9ae',roughness:.8}),20.3,.11,z,cityBank);}
   // 入口广场与连续滨江步道采用错缝石材，近景足够细密而不依赖外部贴图。
   addWalk(box(18.4,.48,16.2,pavingDark,0,-.18,4.1),'pearl-river-arrival-plaza');addWalk(box(18.4,.48,36.4,pavingDark,0,-.18,-21.4),'pearl-river-walkable-promenade');
+  // The promenade turns into the city-side greenway instead of ending over the river.
+  const turningPlaza=addWalk(box(10.35,.42,5.85,pavingDark,9.85,-.16,-37.45),'pearl-river-promenade-turning-plaza');
+  turningPlaza.userData.cityRouteConnection=true;
+  const turningInlays=new T.Group();turningInlays.name='pearl-river-turning-plaza-inlays';root.add(turningInlays);
+  for(const x of [6.25,8.65,11.05,13.45]){const seam=box(.055,.018,5.15,brass,x,.075,-37.45,turningInlays);seam.castShadow=false;}
+  const turningRail=new T.Group();turningRail.name='pearl-river-turning-plaza-rail';root.add(turningRail);
+  box(.24,.46,5.35,stone,14.92,.08,-37.45,turningRail);
+  for(let z=-39.4;z<-35.4;z+=1.25){box(.12,.88,.12,brass,14.55,.52,z,turningRail);}
   const slabs=new T.InstancedMesh(createWornStoneGeometry(9137),paving,370),dummy=new T.Object3D();let slab=0;
   for(let row=0;row<37;row++)for(let col=0;col<10;col++){const x=-8.25+col*1.83+(row%2?.19:0),z=11.2-row*1.36;dummy.position.set(x,.075,z);dummy.scale.set(1.74,.075,1.26);dummy.rotation.y=((row*13+col*7)%5-2)*.006;dummy.updateMatrix();slabs.setMatrixAt(slab,dummy.matrix);slabs.setColorAt(slab,new T.Color('#b8b4a5').lerp(new T.Color('#7b827a'),((row*17+col*11)%9)/28));slab++;}slabs.count=slab;slabs.name='pearl-river-interlocking-stone-paving';slabs.receiveShadow=true;root.add(slabs);walkSurfaces.push(slabs);
   const joints=new T.Group();joints.name='pearl-river-aged-paving-details';root.add(joints);const jointMat=new T.MeshStandardMaterial({color:'#424a47',roughness:1});for(let i=0;i<58;i++){const row=i%37,col=(i*7)%10,x=-8.1+col*1.83+(row%2?.19:0),z=11.2-row*1.36;const crack=mesh(new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(x-.43,.117,z-.18),new T.Vector3(x-.09,.119,z+.03),new T.Vector3(x+.34,.117,z-.12)]),7,.008,3,false),jointMat,0,0,0,joints);crack.castShadow=false;}

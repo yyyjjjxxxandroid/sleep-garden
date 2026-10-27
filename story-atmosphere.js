@@ -162,7 +162,7 @@ function makeClouds(world, T) {
 export function installAtmosphere(world, T) {
   if (!world?.place || !world?.scene) throw new Error('installAtmosphere requires loaded StoryWorld assets');
   const trees = placeForest(world);
-  const mountainRange = makeMountains(world,T);
+
   const clouds = makeClouds(world, T);
   return {
     update(dt = 0, t = 0, night = 0) {
@@ -175,12 +175,10 @@ export function installAtmosphere(world, T) {
         cloud.material.opacity = daylight * (.76 + .12 * Math.sin(t * .07 + phase));
         cloud.material.color.set(night > .45 ? '#8fa6b4' : '#fff9e8');
       });
-      mountainRange.baseMaterial.color.set('#78877e').lerp(new T.Color('#31464b'),night);
-      mountainRange.rockMaterial.color.set('#87918f').lerp(new T.Color('#3c4b56'),night);
-      mountainRange.capMaterial.color.set('#c4c9bf').lerp(new T.Color('#71808c'),night);
+
     },
     trees,
-    mountains: mountainRange.mountains,
+    mountains: [],
     clouds: clouds.map(entry => entry.cloud),
   };
 }

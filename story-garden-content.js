@@ -54,42 +54,7 @@ export function installGardenContent(world,T){
     return group;
   }
 
-  // A tiny cat cottage sits behind the pond, framed by the existing woodland.
-  const house=new T.Group();house.name='cat-cottage';
-  const hx=-12,hz=-13;house.position.set(hx,world.groundHeight(hx,hz),hz);house.rotation.y=-.10;root.add(house);
-  add(house,new T.BoxGeometry(5.3,.26,4.0),stone,0,.13,0);
-  add(house,new T.BoxGeometry(4.7,2.25,3.45),plaster,0,1.34,0);
-  add(house,new T.BoxGeometry(2.8,.10,4.25),roof,-1.18,2.83,0).rotation.z=-.61;
-  add(house,new T.BoxGeometry(2.8,.10,4.25),roof,1.18,2.83,0).rotation.z=.61;
-  // Exposed timber keeps the procedural house in the same chunky, illustrated language as the trees.
-  for(const x of [-2.17,0,2.17])add(house,new T.BoxGeometry(.13,2.28,.09),wood,x,1.36,1.79);
-  add(house,new T.BoxGeometry(4.52,.13,.09),wood,0,.38,1.79);
-  add(house,new T.BoxGeometry(4.52,.13,.09),wood,0,2.42,1.79);
-  add(house,new T.BoxGeometry(1.08,1.55,.08),woodDark,0,1.02,1.77,'cat-cottage-door');
-  const doorGlow=material('#f2d69b',{emissive:'#ffbd65'});glowMaterials.push(doorGlow);
-  add(house,new T.BoxGeometry(.62,.66,.055),doorGlow,0,1.38,1.825);
-  for(const side of [-1,1]){
-    add(house,new T.BoxGeometry(.92,.78,.06),doorGlow,side*1.48,1.52,1.79);
-    add(house,new T.BoxGeometry(.07,.82,.08),wood,side*1.48,1.52,1.84);
-    add(house,new T.BoxGeometry(.96,.07,.08),wood,side*1.48,1.52,1.84);
-  }
-  // The side window is visible in the default portrait camera.
-  add(house,new T.BoxGeometry(.06,.92,1.18),doorGlow,2.38,1.48,-.25);
-  add(house,new T.BoxGeometry(.09,1.0,.08),wood,2.42,1.48,-.25);
-  add(house,new T.BoxGeometry(.09,.08,1.26),wood,2.42,1.48,-.25);
-  add(house,new T.BoxGeometry(.48,1.15,.48),woodDark,-1.35,3.25,-.45,'cat-cottage-chimney');
-  add(house,new T.BoxGeometry(5.0,.12,.72),woodLight,0,.42,2.03);
-  for(const x of [-2.18,2.18])add(house,new T.CylinderGeometry(.06,.07,.66,7),wood,x,.72,2.24);
-  const sign=add(house,new T.BoxGeometry(1.55,.42,.08),woodLight,0,2.34,1.86,'cat-cottage-sign');
-  sign.rotation.z=-.025;
-  // Paw mark, deliberately icon-like rather than text that would blur in 3D.
-  const paw=material('#75614e');
-  add(house,new T.SphereGeometry(.11,10,7),paw,0,2.32,1.92).scale.set(1.25,.9,.35);
-  for(const x of [-.18,-.06,.08,.20])add(house,new T.SphereGeometry(.045,8,6),paw,x,2.47-Math.abs(x)*.2,1.92).scale.set(1,.9,.3);
-  const flowerBox=add(house,new T.BoxGeometry(1.25,.22,.28),woodLight,1.48,.96,1.92);
-  for(const x of [-.42,-.14,.15,.42]){
-    const bloom=add(house,new T.SphereGeometry(.11,7,5),x<0?cushion:linen,1.48+x,1.18,2.0);bloom.scale.y=.72;
-  }
+
 
   // Pond-side reading bench: one recognisable lived-in vignette, not decoration everywhere.
   const bench=new T.Group();bench.name='pond-resting-corner';
@@ -100,19 +65,7 @@ export function installGardenContent(world,T){
   add(bench,new T.BoxGeometry(.74,.17,.52),cushion,-.55,.80,-.02).rotation.y=.06;
   const blanket=add(bench,new T.BoxGeometry(.62,.045,.78),linen,.52,.77,.11);blanket.rotation.y=-.14;blanket.rotation.z=.035;
 
-  // South entrance: a flowered timber arch makes the large map feel intentional from its first step.
-  const entrance=new T.Group();entrance.name='garden-entrance-arch';
-  const ex=world.pathX?.(15)??5,ez=15;entrance.position.set(ex,world.groundHeight(ex,ez),ez);root.add(entrance);
-  for(const x of [-1.55,1.55]){
-    add(entrance,new T.CylinderGeometry(.11,.15,2.9,8),wood,x,1.45,0);
-    add(entrance,new T.CylinderGeometry(.19,.21,.22,8),stone,x,.11,0);
-  }
-  add(entrance,new T.BoxGeometry(3.6,.22,.30),woodLight,0,2.72,0);
-  add(entrance,new T.BoxGeometry(3.0,.12,.22),wood,0,3.02,0).rotation.z=.025;
-  for(const x of [-1.35,-.85,-.35,.2,.72,1.24]){
-    const leaf=add(entrance,new T.SphereGeometry(.25,7,5),x%1>.4?linen:roof,x,2.83+Math.sin(x*3)*.13,.05);leaf.scale.set(1.15,.65,.7);
-  }
-  makeLantern(ex-1.95,ez-.25,.66,false);makeLantern(ex+1.95,ez-.25,.66,false);
+  const ex=world.pathX?.(15)??5,ez=15;
 
   // East flower hill: an open hexagonal pavilion stays airy among the existing flower beds.
   const pavilion=new T.Group();pavilion.name='flower-hill-pavilion';
@@ -225,7 +178,7 @@ export function installGardenContent(world,T){
   const fireflies=new T.Points(fireflyGeometry,fireflyMaterial);fireflies.name='garden-fireflies';fireflies.frustumCulled=false;root.add(fireflies);
 
   world.walkObstacles?.push(
-    {x:hx,z:hz,radius:3.45},{x:bx,z:bz,radius:1.5},
+    {x:bx,z:bz,radius:1.5},
     {x:px,z:pz,radius:2.65},{x:gx,z:gz,radius:2.7},
     {x:tx,z:tz,radius:2.0},{x:qx,z:qz,radius:1.2},{x:sx,z:sz,radius:2.0},{x:wx,z:wz,radius:1.7}
   );
@@ -277,7 +230,7 @@ export function installGardenContent(world,T){
   }
 
   return {
-    root,house,bench,entrance,pavilion,grove,moonGarden,teaNook,birdBath,swing,well,fireflies,lamps,
+    root,bench,pavilion,grove,moonGarden,teaNook,birdBath,swing,well,fireflies,lamps,
     update(time=0,night=0){
       const dusk=clamp((night-.12)/.62),pulse=.94+Math.sin(time*1.25)*.035;
       glowMaterials.forEach((m,i)=>{m.emissiveIntensity=dusk*(i?1.35:1.7)*pulse});

@@ -12,6 +12,7 @@ const names={meal:'猫粮',treat:'小鱼零食',water:'清水',box:'纸箱',scra
 const outfits={collar:[['none','不佩戴'],['sage','鼠尾草项圈'],['rose','玫瑰项圈']],scarf:[['none','不佩戴'],['cream','奶油围巾'],['blue','雾蓝围巾']],head:[['none','不佩戴'],['flower','小雏菊'],['bow','蝴蝶结'],['rose','小玫瑰']]};
 const weatherNames={clear:'晴天',cloudy:'多云',rain:'细雨',rainbow:'彩虹',aurora:'极光',meteor:'流星',snow:'落雪',fog:'薄雾'};
 const iconPaths={
+ voice:'<rect x="24" y="10" width="16" height="29" rx="8" fill="#c5d0be"/><path d="M17 29v3a15 15 0 0 0 30 0v-3M32 47v9M24 56h16"/>',
  meal:'<path d="M10 31h44l-6 18H16Z" fill="#b7c8a3"/><ellipse cx="32" cy="31" rx="22" ry="7" fill="#d9c5a1"/><g fill="#9b8060"><circle cx="23" cy="29" r="3"/><circle cx="31" cy="33" r="3"/><circle cx="39" cy="29" r="3"/></g><path d="M24 46h16"/>',
  treat:'<path d="M14 32c7-15 25-15 34 0-9 15-27 15-34 0Z" fill="#c7b99c"/><path d="m48 32 10-10v20Z" fill="#b4bba2"/><circle cx="23" cy="29" r="2" fill="#5a6d59"/>',
  water:'<path d="M12 34h40l-5 16H17Z" fill="#b6c6cf"/><ellipse cx="32" cy="34" rx="20" ry="6" fill="#cbe0de"/><path d="M30 10q-12 15 0 17 12-2 0-17Z" fill="#9cbdc4"/>',
@@ -182,9 +183,9 @@ export class PetCare{
     const status=element('div','pet-status');status.append(element('i'),element('span',null,relationship(this.data.care)),element('span',null,`${this.data.memories.length} 张回忆`));this.body.append(status);
     if(this.page==='home'){
       const grid=element('div','pet-card-grid pet-hub-grid');
+      this.card(grid,'pet','定制小猫','',()=>this.open('customize'),null).id='petCustomizeEntry';
+      this.card(grid,'voice','录下声音','',()=>this.open('voice'),null).id='petVoiceEntry';
       for(const [page,title,ico]of [['feed','喂养','meal'],['play','陪玩','ball'],['dress','装扮','collar'],['memories','回忆','album']])this.card(grid,ico,title,'',()=>this.open(page),null);
-      const custom=element('button','pet-custom-entry');custom.id='petCustomizeEntry';custom.append(element('span',null,'用照片定制我的小猫'),element('small',null,'毛色、花纹与名字 · 演示版'),element('b',null,'›'));custom.onclick=()=>this.open('customize');this.body.append(custom);
-      const voice=element('button','pet-custom-entry pet-voice-entry');voice.id='petVoiceEntry';voice.append(element('span',null,'录下宠物的声音'),element('small',null,this.voice.saved?'已使用它的叫声 · 可试听或重录':'让摸摸小猫时的叫声，也属于它'),element('b',null,'›'));voice.onclick=()=>this.open('voice');this.body.append(voice);
       this.body.append(grid);
       return;
     }
