@@ -18,7 +18,18 @@ export async function readSettings(env=process.env){
   if(url.protocol!=='https:'&&!(url.protocol==='http:'&&['127.0.0.1','localhost','[::1]'].includes(url.hostname)))throw Error('Invalid API address');
   if(url.username||url.password||url.search||url.hash)throw Error('Invalid API address');
   if(!['responses','chat'].includes(mode))throw Error('Unsupported API protocol');
-  return {configured:true,base:base.replace(/\/$/,''),key,mode,model:env.AI_MODEL||'gpt-5.6-sol'};
+  const chatOptions={};
+  if(mode==='chat'){
+    if(env.AI_THINKING){
+      if(!['enabled','disabled'].includes(env.AI_THINKING))throw Error('Unsupported thinking mode');
+      chatOptions.thinking={type:env.AI_THINKING};
+    }
+    if(env.AI_REASONING_EFFORT){
+      if(!['low','medium','high','max'].includes(env.AI_REASONING_EFFORT))throw Error('Unsupported reasoning effort');
+      chatOptions.reasoning_effort=env.AI_REASONING_EFFORT;
+    }
+  }
+  return {configured:true,base:base.replace(/\/$/,''),key,mode,model:env.AI_MODEL||'gpt-5.6-sol',...(Object.keys(chatOptions).length?{chatOptions}:{})};
 }
 
 export const instructions=`你是“眠境花园”里的小猫，一个温柔、自然、有分寸的音乐伙伴。用中文和用户说话，不自称医生，不诊断、不推断用户已经睡着、不承诺疗效。
@@ -48,6 +59,12 @@ export async function askCompanion(body,settings,{fetcher=fetch,signal}={}){
   const input=sanitizeInput(body);
   const messages=[{role:'system',content:instructions+'\n当前状态和用户已确认的偏好：'+JSON.stringify({context:input.context,memory:input.memory})},...input.history,{role:'user',content:input.message}];
   const payload=settings.mode==='chat'?{model:settings.model,messages,response_format:{type:'json_object'},max_completion_tokens:1600}:{model:settings.model,input:messages,store:false,max_output_tokens:1600,reasoning:{effort:'low'},text:{format:{type:'json_object'}}};
+  if(settings.mode==='chat'&&settings.chatOptions){
+    // DeepSeek uses max_tokens; leave room for thinking before the JSON reply.
+    delete payload.max_completion_tokens;
+    payload.max_tokens=settings.chatOptions.thinking?.type==='enabled'?8192:1600;
+    Object.assign(payload,settings.chatOptions,{stream:false});
+  }
   const response=await fetcher(settings.base+(settings.mode==='chat'?'/chat/completions':'/responses'),{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+settings.key},body:JSON.stringify(payload),signal});
   if(!response.ok){await response.body?.cancel();throw Error(response.status===401||response.status===403?'credentials_rejected':response.status===429?'provider_busy':'provider_error');}
   const data=await response.json();

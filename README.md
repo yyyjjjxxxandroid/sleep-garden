@@ -7,16 +7,21 @@
 ## 启动 AI 小猫
 
 ```bash
-cp .env.example .env
-# 在本机 .env 填写自己的 AI_API_KEY
+# 仅首次配置、项目还没有 .env 时执行；已有配置请保留
+cp -n .env.example .env
+# 首次配置时在 .env 填写 AI_API_KEY
 npm start
 ```
 
-需要 Node.js 20 或更新版本。打开 <http://127.0.0.1:8766/index.html>，点击“和小猫说说”。项目现在通过服务端直连 YLS 的 `https://code.ylsagi.com/codex`，选择 `gpt-5.6-sol`；队友不需要安装 Codex 或启动本机模型转发服务。已提交的 `index.html` 可直接运行，仅修改源码并重新构建时需要安装开发依赖。
+需要 Node.js 20 或更新版本。打开 <http://127.0.0.1:8766/index.html>，点击“和小猫说说”。项目现在通过服务端直连 DeepSeek 的 `https://api.deepseek.com/chat/completions`，选择 `deepseek-flash`，启用思考并设置 `reasoning_effort=high`；队友不需要安装 Codex 或启动本机模型转发服务。已提交的 `index.html` 可直接运行，仅修改源码并重新构建时需要安装开发依赖。
 
 Git 仓库不包含真实 Key。团队成员拉取 `main` 分支后，复制 `.env.example` 为 `.env`，填写**各自的 API Key**（确认文件名不是 `.env.txt`），再运行 `npm start`。请勿把 `.env` 上传到仓库。修改配置后重启服务；每人的模型权限、余额与额度取决于自己的账号。
 
+同一 Wi-Fi 下的手机或其他电脑可共用当前电脑的 AI 配置：在这台电脑运行 `npm run start:lan`，其他设备打开终端显示的「手机访问」地址即可，无需在各端填写 Key。若在另一台电脑独立运行项目，需通过私密方式一并传输项目根目录的 `.env`，再运行 `npm start`；仅拉取 Git 仓库不会同步该文件。已有 `.env` 时直接启动，不要用示例覆盖。
+
 Responses 接口用 `AI_WIRE_API=responses`；兼容 Chat Completions 的平台用 `AI_WIRE_API=chat`。更换平台时一起修改 `AI_BASE_URL`、`AI_API_KEY` 和 `AI_MODEL`。凭证仅在服务端读取，不进入浏览器和构建产物，`.env` 已被 Git 忽略。开发者仍可显式设置 `AI_USE_CODEX_PROVIDER=true`，从本机 `~/.codex/config.toml` 读取所选 provider 的普通 API Token，不读取 ChatGPT/OAuth 登录凭证。
+
+DeepSeek 配置的 `AI_BASE_URL` 只填写 `https://api.deepseek.com`，服务端会自动拼接 `/chat/completions`。`AI_THINKING=enabled`、`AI_REASONING_EFFORT=high` 对应思考参数，非流式返回；更换不支持这些参数的平台时删除这两项。启用思考时输出预算为 8192 tokens，包含思考与最终 JSON 回复。
 
 在浏览器访问 <http://127.0.0.1:8766/api/companion/status> 可检查配置；`configured:true` 只说明配置已读取，模型调用权限需要实际给小猫发送一句话验证。若只用静态文件预览或 Python 静态服务器，AI 接口不可用，请通过 `npm start` 启动。
 

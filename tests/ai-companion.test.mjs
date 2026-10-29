@@ -47,6 +47,25 @@ test('failed, incomplete, or non-JSON model results never become executable plan
  const empty=await readSettings({});assert.equal(empty.configured,false);
 });
 
+test('DeepSeek chat settings send thinking options and parse the final JSON instead of reasoning',async()=>{
+ const config=await readSettings({AI_BASE_URL:'https://api.deepseek.com',AI_API_KEY:'PRIVATE_TEST_KEY',AI_MODEL:'deepseek-flash',AI_WIRE_API:'chat',AI_THINKING:'enabled',AI_REASONING_EFFORT:'high'});
+ const result=await askCompanion({message:'去深圳湾'},config,{fetcher:async(url,options)=>{
+  assert.equal(url,'https://api.deepseek.com/chat/completions');
+  const payload=JSON.parse(options.body);
+  assert.equal(payload.model,'deepseek-flash');
+  assert.deepEqual(payload.thinking,{type:'enabled'});
+  assert.equal(payload.reasoning_effort,'high');
+  assert.equal(payload.stream,false);
+  assert.equal(payload.max_tokens,8192);
+  assert.equal(payload.max_completion_tokens,undefined);
+  assert.deepEqual(payload.response_format,{type:'json_object'});
+  return new Response(JSON.stringify({choices:[{message:{reasoning_content:'private reasoning',content:JSON.stringify(reply)}}]}));
+ }});
+ assert.equal(result.plan.scene,'shenzhen');
+ assert.ok(!JSON.stringify(result).includes('private reasoning'));
+ await assert.rejects(readSettings({AI_BASE_URL:'https://api.deepseek.com',AI_API_KEY:'PRIVATE_TEST_KEY',AI_WIRE_API:'chat',AI_THINKING:'unknown'}),/Unsupported thinking mode/);
+});
+
 test('local server protects credentials and static secrets and rejects foreign-origin requests',async t=>{
  const root=await mkdtemp(join(tmpdir(),'garden-ai-test-'));await writeFile(join(root,'index.html'),'garden');await writeFile(join(root,'.env'),'SECRET');await writeFile(join(root,'ai-service.mjs'),'SECRET');
  const server=createGardenServer({root,settings:async()=>settings,fetcher:upstream(reply)});server.listen(0,'127.0.0.1');await once(server,'listening');
